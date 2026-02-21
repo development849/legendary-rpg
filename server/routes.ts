@@ -1,16 +1,280 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { WebSocketServer, WebSocket } from "ws";
+import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
+import {
+  createCharacter, getUserCharacters, getCharacter, updateCharacter,
+  createCampaign, getCampaign, getUserCampaigns,
+  createParty, getParty, getPartyByInviteCode, getCampaignParties, getUserParties,
+  joinParty, getPartyMembers, setMemberReady,
+  saveChatMessage, getPartyMessages, getWorldState,
+} from "./storage";
+import { rollDice } from "./gameEngine";
+import { runGM } from "./gmOrchestrator";
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+// WebSocket connections per party
+const partyConnections = new Map<string, Set<WebSocket>>();
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+function broadcastToParty(partyId: string, data: any) {
+  const connections = partyConnections.get(partyId);
+  if (!connections) return;
+  const msg = JSON.stringify(data);
+  Array.from(connections).forEach((ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(msg);
+    }
+  });
+}
+
+export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+  // Auth
+  await setupAuth(app);
+  registerAuthRoutes(app);
+
+  // ── Characters ──────────────────────────────────────────────────────────────
+
+  app.get("/api/characters", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const chars = await getUserCharacters(userId);
+      res.json(chars);
+    } catch (e) { res.status(500).json({ error: "Failed to get characters" }); }
+  });
+
+  app.post("/api/characters", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, class: cls, race, background, appearance } = req.body;
+      if (!name || !cls || !race || !background) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      const char = await createCharacter(userId, { name, class: cls, race, background, appearance });
+      res.status(201).json(char);
+    } catch (e) { res.status(500).json({ error: "Failed to create character" }); }
+  });
+
+  app.get("/api/characters/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const char = await getCharacter(req.params.id);
+      if (!char) return res.status(404).json({ error: "Not found" });
+      res.json(char);
+    } catch (e) { res.status(500).json({ error: "Failed to get character" }); }
+  });
+
+  // ── Campaigns ───────────────────────────────────────────────────────────────
+
+  app.get("/api/campaigns", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const camps = await getUserCampaigns(userId);
+      res.json(camps);
+    } catch (e) { res.status(500).json({ error: "Failed to get campaigns" }); }
+  });
+
+  app.post("/api/campaigns", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, description, setting, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack } = req.body;
+      if (!name) return res.status(400).json({ error: "Name required" });
+      const campaign = await createCampaign(userId, { name, description, setting, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack });
+      // Auto-create a party for solo play
+      const party = await createParty(campaign.id, "The Company");
+      res.status(201).json({ campaign, party });
+    } catch (e) { res.status(500).json({ error: "Failed to create campaign" }); }
+  });
+
+  app.get("/api/campaigns/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const campaign = await getCampaign(req.params.id);
+      if (!campaign) return res.status(404).json({ error: "Not found" });
+      const partyList = await getCampaignParties(campaign.id);
+      res.json({ campaign, parties: partyList });
+    } catch (e) { res.status(500).json({ error: "Failed to get campaign" }); }
+  });
+
+  // ── Parties ─────────────────────────────────────────────────────────────────
+
+  app.get("/api/parties", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const parties = await getUserParties(userId);
+      res.json(parties);
+    } catch (e) { res.status(500).json({ error: "Failed to get parties" }); }
+  });
+
+  app.get("/api/parties/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const party = await getParty(req.params.id);
+      if (!party) return res.status(404).json({ error: "Not found" });
+      const members = await getPartyMembers(party.id);
+      const campaign = await getCampaign(party.campaignId);
+      const worldSnap = await getWorldState(party.id);
+      res.json({ party, members, campaign, worldState: worldSnap });
+    } catch (e) { res.status(500).json({ error: "Failed to get party" }); }
+  });
+
+  app.post("/api/parties/join", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { inviteCode, characterId } = req.body;
+      if (!inviteCode || !characterId) return res.status(400).json({ error: "Missing fields" });
+
+      const party = await getPartyByInviteCode(inviteCode.toUpperCase());
+      if (!party) return res.status(404).json({ error: "Invalid invite code" });
+
+      const member = await joinParty(party.id, userId, characterId);
+      res.json({ party, member });
+    } catch (e) { res.status(500).json({ error: "Failed to join party" }); }
+  });
+
+  app.post("/api/parties/:id/join", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { characterId } = req.body;
+      if (!characterId) return res.status(400).json({ error: "characterId required" });
+
+      const party = await getParty(req.params.id);
+      if (!party) return res.status(404).json({ error: "Party not found" });
+
+      const member = await joinParty(party.id, userId, characterId);
+      res.json({ party, member });
+    } catch (e) { res.status(500).json({ error: "Failed to join party" }); }
+  });
+
+  app.post("/api/parties/:id/ready", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isReady } = req.body;
+      await setMemberReady(req.params.id, userId, isReady);
+
+      // Broadcast ready state to party
+      const members = await getPartyMembers(req.params.id);
+      broadcastToParty(req.params.id, { type: "MEMBER_UPDATE", members });
+      res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: "Failed to update ready state" }); }
+  });
+
+  // ── Messages ────────────────────────────────────────────────────────────────
+
+  app.get("/api/parties/:id/messages", isAuthenticated, async (req, res) => {
+    try {
+      const msgs = await getPartyMessages(req.params.id as string, 100);
+      res.json(msgs);
+    } catch (e) { res.status(500).json({ error: "Failed to get messages" }); }
+  });
+
+  // Player action → GM response (streaming)
+  app.post("/api/parties/:id/action", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const partyId = req.params.id;
+      const { content, playerName } = req.body;
+      if (!content) return res.status(400).json({ error: "content required" });
+
+      // Get party to find campaign
+      const party = await getParty(partyId);
+      if (!party) return res.status(404).json({ error: "Party not found" });
+
+      // Save player message
+      const playerMsg = await saveChatMessage({
+        partyId,
+        userId,
+        role: "player",
+        content,
+        metadata: { playerName: playerName || "Adventurer" },
+      });
+
+      // Broadcast player message
+      broadcastToParty(partyId, { type: "MESSAGE", message: playerMsg });
+
+      // Set up SSE for streaming GM response
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      let gmFullText = "";
+
+      await runGM(
+        {
+          partyId,
+          campaignId: party.campaignId,
+          userId,
+          userName: playerName || "Adventurer",
+          playerIntent: content,
+        },
+        (chunk) => {
+          gmFullText += chunk;
+          res.write(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`);
+        },
+        async (fullText, updates) => {
+          // Save GM message
+          const gmMsg = await saveChatMessage({
+            partyId,
+            userId: undefined,
+            role: "gm",
+            content: fullText,
+            metadata: { updates },
+          });
+
+          // Broadcast GM message and any updates
+          broadcastToParty(partyId, { type: "MESSAGE", message: gmMsg });
+          if (updates.length > 0) {
+            broadcastToParty(partyId, { type: "STATE_UPDATE", updates });
+          }
+
+          res.write(`data: ${JSON.stringify({ type: "done", message: gmMsg, updates })}\n\n`);
+          res.end();
+        },
+      );
+    } catch (e: any) {
+      if (!res.headersSent) {
+        res.status(500).json({ error: "GM action failed" });
+      } else {
+        res.write(`data: ${JSON.stringify({ type: "error", error: e.message })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  // Dice roll endpoint
+  app.post("/api/dice/roll", isAuthenticated, async (req: any, res) => {
+    try {
+      const { die, count = 1, modifier = 0, advantageState = "normal", label } = req.body;
+      if (!die) return res.status(400).json({ error: "die required" });
+      const result = rollDice(die, count, modifier, advantageState, label);
+      res.json(result);
+    } catch (e) { res.status(500).json({ error: "Roll failed" }); }
+  });
+
+  // ── WebSocket ────────────────────────────────────────────────────────────────
+
+  const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+
+  wss.on("connection", (ws, req) => {
+    let partyId: string | null = null;
+
+    ws.on("message", (data) => {
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === "JOIN_PARTY") {
+          partyId = msg.partyId;
+          if (!partyConnections.has(partyId!)) {
+            partyConnections.set(partyId!, new Set());
+          }
+          partyConnections.get(partyId!)!.add(ws);
+          ws.send(JSON.stringify({ type: "JOINED", partyId }));
+        } else if (msg.type === "PING") {
+          ws.send(JSON.stringify({ type: "PONG" }));
+        }
+      } catch (_) {}
+    });
+
+    ws.on("close", () => {
+      if (partyId) {
+        partyConnections.get(partyId)?.delete(ws);
+      }
+    });
+  });
 
   return httpServer;
 }

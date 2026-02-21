@@ -137,13 +137,69 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       });
 
-      const baseDesc = [char.appearance, appearanceDetails].filter(Boolean).join(", ");
+      const stats = (char.stats as Record<string, number>) || {};
+
+      const classOutfitMap: Record<string, string> = {
+        fighter: "plate armour with battle-worn engravings, a great sword at their side",
+        barbarian: "fur-lined war leathers, tribal markings on bare skin, raw power in every line",
+        rogue: "dark leather armour with concealed blades, shadow-drenched silhouette",
+        wizard: "flowing arcane robes with glowing sigils, long elegant sleeves, a mystical tome or staff",
+        cleric: "ornate ceremonial vestments with divine light at their hands, holy sigils embossed in gold",
+        ranger: "layered wilderness armour, a longbow over one shoulder, nature-worn cloaks",
+        paladin: "shining crusader plate adorned with sacred emblems, emanating a faint holy radiance",
+        bard: "flamboyant adventurer's coat with musical instruments or fine embroidery, charismatic bearing",
+      };
+
+      const backgroundAtmosphereMap: Record<string, string> = {
+        soldier: "battle-worn military encampment with distant fires or banners in a dark sky",
+        criminal: "rain-slicked cobblestone alley, dim lantern light, urban shadows",
+        scholar: "ancient candlelit library, spiralling stone architecture, dusty arcane tomes",
+        noble: "opulent palace interior with arched stone columns, silk drapes, candlelit chandeliers",
+        hunter: "misty forest edge at dusk, gnarled ancient trees, fading amber light",
+        hermit: "remote mountain cliffside, starlit sky, wild wind-swept environment",
+        acolyte: "sacred temple interior, divine stained light streaming through high windows",
+        merchant: "grand bazaar at twilight, rich fabrics and lantern-lit stalls",
+        entertainer: "ornate theatre stage, velvet curtains, dramatic spotlighting",
+        sailor: "sea-sprayed ship deck in a storm, crashing waves, salt air atmosphere",
+        folk_hero: "cobblestone village square at golden hour, ordinary folk watching in admiration",
+        outlander: "vast ancient wilderness, towering rock formations, enormous sky",
+      };
+
+      const physique: string[] = [];
+      if ((stats.might ?? 10) >= 15) physique.push("powerfully built, strong broad shoulders");
+      if ((stats.agility ?? 10) >= 15) physique.push("lithe and graceful, light on their feet");
+      if ((stats.presence ?? 10) >= 15) physique.push("magnetically charismatic, commanding bearing");
+      if ((stats.intellect ?? 10) >= 15) physique.push("sharp, perceptive eyes that miss nothing");
+      if ((stats.will ?? 10) >= 15) physique.push("unwavering gaze, iron composure");
+
+      const levelDesc = char.level >= 8 ? "legendary, battle-hardened veteran" :
+                        char.level >= 5 ? "seasoned adventurer with hard-won experience" :
+                        char.level >= 3 ? "capable young adventurer, determined expression" :
+                        "fresh-faced but resolute novice adventurer";
+
+      const appearanceParts = [
+        char.appearance,
+        physique.join(", "),
+        appearanceDetails,
+      ].filter(Boolean).join(", ");
+
+      const outfitHint = classOutfitMap[char.class as string] ?? "detailed fantasy adventurer outfit";
+      const bgAtmosphere = backgroundAtmosphereMap[char.background as string] ?? "dramatic dark fantasy environment with atmospheric depth";
+
+      const backstoryHint = char.backstory
+        ? `Their story: ${char.backstory.slice(0, 200).replace(/\n/g, " ")}.`
+        : "";
+
       const prompt = [
-        `Detailed fantasy portrait of a ${char.race} ${char.class},`,
-        baseDesc ? baseDesc + "," : "",
-        `digital painting in the style of WLOP, luminous ethereal atmosphere, dramatic cinematic lighting from above,`,
-        `richly detailed face and eyes, intricate fantasy costume, painterly brushwork, soft glowing edges,`,
-        `deep dramatic background with misty bokeh, masterpiece quality illustration, high detail, 4K`,
+        `Cinematic fantasy portrait painting of a ${levelDesc} ${char.race} ${char.class} named ${char.name},`,
+        appearanceParts ? `${appearanceParts},` : "",
+        `wearing ${outfitHint},`,
+        `set against ${bgAtmosphere},`,
+        backstoryHint,
+        `Art style: WLOP and Guweiz inspired — ultra-detailed digital painting, photorealistic face with expressive eyes,`,
+        `dramatic volumetric rim lighting, deep cinematic colour palette with rich shadows and glowing highlights,`,
+        `intricate costume and fabric detail, painterly brushwork with cinematic depth of field,`,
+        `moody atmospheric bokeh background, portrait to waist framing, masterpiece illustration quality, 4K`,
       ].filter(Boolean).join(" ");
 
       const response = await openai.images.generate({

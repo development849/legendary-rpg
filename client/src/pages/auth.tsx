@@ -99,14 +99,17 @@ export default function AuthPage() {
   const watchPassword = registerForm.watch("password");
 
   async function verifySession(): Promise<any | null> {
-    try {
-      const check = await fetch("/api/auth/user", { credentials: "include" });
-      if (check.ok) {
-        const verified = await check.json();
-        queryClient.setQueryData(["/api/auth/user"], verified);
-        return verified;
-      }
-    } catch {}
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 400 * attempt));
+        const check = await fetch("/api/auth/user", { credentials: "include" });
+        if (check.ok) {
+          const verified = await check.json();
+          queryClient.setQueryData(["/api/auth/user"], verified);
+          return verified;
+        }
+      } catch {}
+    }
     return null;
   }
 

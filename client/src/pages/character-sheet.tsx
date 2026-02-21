@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Sword, Heart, Star, Package, Zap } from "lucide-react";
+import { ArrowLeft, Sword, Heart, Star, Package, Zap, ScrollText } from "lucide-react";
 
 interface CharacterSheetPageProps {
   characterId: string;
@@ -110,6 +110,20 @@ export default function CharacterSheetPage({ characterId }: CharacterSheetPagePr
             </div>
           </div>
         </div>
+
+        {/* Backstory */}
+        {(char as any).backstory && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                <ScrollText className="w-3.5 h-3.5 text-primary" /> Chronicle
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="font-serif text-sm leading-relaxed text-foreground/85 whitespace-pre-wrap">{(char as any).backstory}</p>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid md:grid-cols-3 gap-4">
           {/* HP */}

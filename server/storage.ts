@@ -15,7 +15,7 @@ import { getDefaultStats, getStartingInventory, getStartingAbilities, CLASS_BASE
 // ─── Character Storage ─────────────────────────────────────────────────────────
 
 export async function createCharacter(userId: string, data: {
-  name: string; class: string; race: string; background: string; appearance?: string;
+  name: string; class: string; race: string; background: string; appearance?: string; backstory?: string;
 }): Promise<Character> {
   const cls = data.class;
   const baseHp = CLASS_BASE_HP[cls] ?? 10;
@@ -34,6 +34,7 @@ export async function createCharacter(userId: string, data: {
     race: data.race,
     background: data.background,
     appearance: data.appearance ?? "",
+    backstory: data.backstory ?? "",
     level: 1,
     xp: 0,
     maxHp: baseHp,

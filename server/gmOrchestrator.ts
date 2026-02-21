@@ -24,7 +24,7 @@ HP: ${c.currentHp}/${c.maxHp} | XP: ${c.xp}
 Stats: ${JSON.stringify(c.stats)}
 Inventory: ${(c.inventory as any[]).map((i: any) => `${i.name} x${i.qty}`).join(", ")}
 Conditions: ${((c.conditions as any[]) || []).join(", ") || "none"}
-Abilities: ${(c.abilities as any[]).map((a: any) => a.name).join(", ")}
+Abilities: ${(c.abilities as any[]).map((a: any) => a.name).join(", ")}${c.backstory ? `\nBackstory: ${c.backstory}` : ""}
 `.trim()).join("\n\n");
 
   const recentSummaries = summaries.slice(-3).map(s => s.summary).join("\n---\n");

@@ -15,6 +15,7 @@ export const characters = pgTable("characters", {
   race: text("race").notNull(),
   background: text("background").notNull(),
   appearance: text("appearance").default(""),
+  backstory: text("backstory").default(""),
   level: integer("level").notNull().default(1),
   xp: integer("xp").notNull().default(0),
   maxHp: integer("max_hp").notNull().default(10),

@@ -32,9 +32,10 @@ Mythweave is an online fantasy RPG where an AI Game Master (powered by GPT-4o) r
 ## Game Data Model
 
 ### Characters
-4 classes: Fighter (d12 HP), Rogue (d8), Wizard (d6), Cleric (d10)
-8 races, 12 backgrounds
+8 classes: Fighter, Rogue, Wizard, Cleric, Ranger, Paladin, Barbarian, Bard
+12 races: Human, Elf, Dwarf, Halfling, Half-Orc, Tiefling, Dragonborn, Gnome, Aasimar, Tabaxi, Genasi, Firbolg (each with racial stat bonuses)
 Stats: Might, Agility, Endurance, Intellect, Will, Presence
+Backstory: AI-generated (via GPT-4o) or manually written; includes personality traits, motivation, flaw; stored in DB and shown on character sheet + wired into GM prompt
 Event-sourced: HP, XP, inventory, conditions, abilities all updatable by GM
 
 ### Campaigns → Parties
@@ -79,8 +80,9 @@ WS   /ws                       — Party WebSocket room
 - Defined in `client/src/index.css` with CSS custom properties
 
 ## Auth
-- Replit Auth via `server/replit_integrations/auth`
-- Session stored in PostgreSQL
+- Email/password registration and login (bcrypt hashed passwords)
+- Passport.js local strategy, session stored in PostgreSQL
+- Replit OAuth available as optional secondary login (hidden from UI, accessible at /api/auth/replit)
 
 ## Environment Variables
 - `DATABASE_URL` — PostgreSQL connection

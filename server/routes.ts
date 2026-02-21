@@ -57,14 +57,55 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) { res.status(500).json({ error: "Failed to get characters" }); }
   });
 
+  app.post("/api/characters/generate-backstory", requireAuth, async (req: any, res) => {
+    try {
+      const { name, cls, race, background, personality, motivation, flaw } = req.body;
+      if (!cls || !race || !background) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const OpenAI = (await import("openai")).default;
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const prompt = [
+        `Write a compelling 2–3 paragraph backstory for a fantasy RPG character with the following details:`,
+        `Name: ${name || "Unknown"}`,
+        `Race: ${race}`,
+        `Class: ${cls}`,
+        `Background: ${background}`,
+        personality ? `Personality traits: ${personality}` : null,
+        motivation ? `Core motivation: ${motivation}` : null,
+        flaw ? `Flaw or dark secret: ${flaw}` : null,
+        ``,
+        `Write in third person. Make it vivid, immersive, and true to high fantasy. Focus on formative events, key relationships, and the moment that set them on an adventuring path. Do not include game stats or mechanics. 2–3 paragraphs only.`,
+      ].filter(Boolean).join("\n");
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 400,
+        temperature: 0.85,
+      });
+
+      const backstory = completion.choices[0]?.message?.content?.trim() ?? "";
+      res.json({ backstory });
+    } catch (e: any) {
+      console.error("Backstory generation error:", e);
+      res.status(500).json({ error: "Failed to generate backstory" });
+    }
+  });
+
   app.post("/api/characters", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
-      const { name, class: cls, race, background, appearance } = req.body;
+      const { name, class: cls, race, background, appearance, backstory } = req.body;
       if (!name || !cls || !race || !background) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-      const char = await createCharacter(userId, { name, class: cls, race, background, appearance });
+      const char = await createCharacter(userId, { name, class: cls, race, background, appearance, backstory });
       res.status(201).json(char);
     } catch (e) { res.status(500).json({ error: "Failed to create character" }); }
   });

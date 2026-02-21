@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Sword, Dices, Shield, ScrollText, CheckCircle2, Target, Star, Flame, Music } from "lucide-react";
+import { ArrowLeft, Sword, Dices, Shield, ScrollText, CheckCircle2, Target, Star, Flame, Music, Sparkles, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
@@ -166,6 +166,23 @@ const BACKGROUNDS = [
   "Sailor", "Folk Hero", "Hermit", "Charlatan", "Guild Artisan",
 ];
 
+const PERSONALITY_TRAITS = [
+  "Brave", "Cunning", "Compassionate", "Ruthless", "Wise", "Reckless",
+  "Honourable", "Ambitious", "Haunted", "Cheerful", "Stoic", "Pious",
+  "Sarcastic", "Curious", "Loyal", "Mysterious",
+];
+
+const MOTIVATIONS = [
+  "Vengeance", "Redemption", "Wealth", "Knowledge", "Fame", "Justice",
+  "Protect loved ones", "Freedom", "Power", "Belonging", "Duty", "Survival",
+];
+
+const FLAWS = [
+  "Crippling guilt", "Blind rage", "Cowardice at heart", "Greed",
+  "Dark secret", "Reckless pride", "Betrayed a friend", "Addiction",
+  "Owes a dangerous debt", "Fears death above all", "Cannot trust anyone", "Lost faith",
+];
+
 type Step = "class" | "race" | "details" | "confirm";
 
 export default function CreateCharacterPage() {
@@ -179,10 +196,54 @@ export default function CreateCharacterPage() {
   const [name, setName] = useState("");
   const [background, setBackground] = useState("");
   const [appearance, setAppearance] = useState("");
+  const [selectedTraits, setSelectedTraits] = useState<string[]>([]);
+  const [motivation, setMotivation] = useState("");
+  const [flaw, setFlaw] = useState("");
+  const [backstory, setBackstory] = useState("");
+  const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const steps: Step[] = ["class", "race", "details", "confirm"];
   const stepIdx = steps.indexOf(step);
+
+  function toggleTrait(trait: string) {
+    setSelectedTraits(prev =>
+      prev.includes(trait)
+        ? prev.filter(t => t !== trait)
+        : prev.length < 3 ? [...prev, trait] : prev
+    );
+  }
+
+  async function generateBackstory() {
+    if (!selectedClass || !selectedRace || !background) {
+      toast({ title: "Fill in class, race, and background first", variant: "destructive" });
+      return;
+    }
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/characters/generate-backstory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: name.trim() || undefined,
+          cls: selectedClass,
+          race: selectedRace,
+          background,
+          personality: selectedTraits.join(", ") || undefined,
+          motivation: motivation.trim() || undefined,
+          flaw: flaw.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setBackstory(data.backstory);
+    } catch (e: any) {
+      toast({ title: "Generation failed", description: e.message, variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function handleCreate() {
     if (!name.trim() || !selectedClass || !selectedRace || !background) {
@@ -197,6 +258,7 @@ export default function CreateCharacterPage() {
         race: selectedRace,
         background,
         appearance,
+        backstory: backstory.trim() || undefined,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/characters"] });
       toast({ title: "Hero created!", description: `${name} stands ready for adventure.` });
@@ -320,31 +382,47 @@ export default function CreateCharacterPage() {
         {step === "details" && (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-sans font-bold tracking-widest">Name Your Hero</h2>
-              <p className="text-muted-foreground font-serif italic">Give life to your legend</p>
+              <h2 className="text-2xl font-sans font-bold tracking-widest">Shape Your Legend</h2>
+              <p className="text-muted-foreground font-serif italic">Name your hero and forge their story</p>
             </div>
-            <div className="max-w-lg mx-auto space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Hero Name *</label>
-                <input
-                  className="w-full bg-input border border-border rounded-md px-4 py-3 text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-                  placeholder="Ser Aldric the Bold"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  maxLength={50}
-                  data-testid="input-character-name"
-                />
+            <div className="max-w-2xl mx-auto space-y-6">
+
+              {/* Name & Background row */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Hero Name *</label>
+                  <input
+                    className="w-full bg-input border border-border rounded-md px-4 py-3 text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+                    placeholder="Ser Aldric the Bold"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    maxLength={50}
+                    data-testid="input-character-name"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Appearance (optional)</label>
+                  <input
+                    className="w-full bg-input border border-border rounded-md px-4 py-3 text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+                    placeholder="Tall, silver-streaked hair, storm-grey eyes..."
+                    value={appearance}
+                    onChange={e => setAppearance(e.target.value)}
+                    maxLength={200}
+                    data-testid="input-appearance"
+                  />
+                </div>
               </div>
 
+              {/* Background */}
               <div className="space-y-1.5">
                 <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Background *</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {BACKGROUNDS.map((bg) => (
                     <button
                       key={bg}
                       onClick={() => setBackground(bg)}
                       data-testid={`button-background-${bg.toLowerCase().replace(" ", "-")}`}
-                      className={`py-2.5 px-3 rounded-md border text-sm font-serif text-left transition-all hover-elevate ${
+                      className={`py-2 px-3 rounded-md border text-sm font-serif text-center transition-all hover-elevate ${
                         background === bg
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border bg-card text-foreground"
@@ -356,20 +434,139 @@ export default function CreateCharacterPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Appearance (optional)</label>
-                <textarea
-                  className="w-full bg-input border border-border rounded-md px-4 py-3 text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-                  placeholder="Tall and weathered, with silver-streaked hair and eyes like storm clouds..."
-                  value={appearance}
-                  onChange={e => setAppearance(e.target.value)}
-                  rows={3}
-                  maxLength={300}
-                  data-testid="textarea-appearance"
+              {/* Divider */}
+              <div className="relative flex items-center gap-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Backstory</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
+              {/* Personality traits */}
+              <div className="space-y-2">
+                <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">
+                  Personality Traits <span className="normal-case text-muted-foreground/50">(pick up to 3)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {PERSONALITY_TRAITS.map(trait => (
+                    <button
+                      key={trait}
+                      onClick={() => toggleTrait(trait)}
+                      data-testid={`button-trait-${trait.toLowerCase()}`}
+                      className={`px-3 py-1.5 rounded-full border text-xs font-sans tracking-wide transition-all ${
+                        selectedTraits.includes(trait)
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                      }`}
+                    >
+                      {trait}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Motivation */}
+              <div className="space-y-2">
+                <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Core Motivation</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {MOTIVATIONS.map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setMotivation(motivation === m ? "" : m)}
+                      data-testid={`button-motivation-${m.toLowerCase().replace(/ /g, "-")}`}
+                      className={`px-3 py-1.5 rounded-full border text-xs font-sans tracking-wide transition-all ${
+                        motivation === m
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  className="w-full bg-input border border-border rounded-md px-4 py-2.5 text-sm text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+                  placeholder="Or describe your own motivation..."
+                  value={motivation}
+                  onChange={e => setMotivation(e.target.value)}
+                  maxLength={120}
+                  data-testid="input-motivation"
                 />
               </div>
+
+              {/* Flaw */}
+              <div className="space-y-2">
+                <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Flaw or Dark Secret</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {FLAWS.map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setFlaw(flaw === f ? "" : f)}
+                      data-testid={`button-flaw-${f.toLowerCase().replace(/ /g, "-")}`}
+                      className={`px-3 py-1.5 rounded-full border text-xs font-sans tracking-wide transition-all ${
+                        flaw === f
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  className="w-full bg-input border border-border rounded-md px-4 py-2.5 text-sm text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+                  placeholder="Or write your own flaw..."
+                  value={flaw}
+                  onChange={e => setFlaw(e.target.value)}
+                  maxLength={120}
+                  data-testid="input-flaw"
+                />
+              </div>
+
+              {/* Backstory textarea + generate */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Backstory</label>
+                  <div className="flex gap-2">
+                    {backstory && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setBackstory("")}
+                        className="h-7 px-2 text-xs text-muted-foreground"
+                        data-testid="button-clear-backstory"
+                      >
+                        <RotateCcw className="w-3 h-3 mr-1" /> Clear
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={generateBackstory}
+                      disabled={generating || !background || !selectedClass || !selectedRace}
+                      className="h-7 px-3 text-xs border-primary/40 text-primary hover:bg-primary/10"
+                      data-testid="button-generate-backstory"
+                    >
+                      <Sparkles className="w-3 h-3 mr-1.5" />
+                      {generating ? "Weaving tale..." : "Generate with AI"}
+                    </Button>
+                  </div>
+                </div>
+                <textarea
+                  className="w-full bg-input border border-border rounded-md px-4 py-3 text-sm text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring resize-none leading-relaxed"
+                  placeholder="Write your own backstory, or use AI to generate one based on your choices above..."
+                  value={backstory}
+                  onChange={e => setBackstory(e.target.value)}
+                  rows={6}
+                  maxLength={2000}
+                  data-testid="textarea-backstory"
+                />
+                <p className="text-xs text-muted-foreground/50 font-sans text-right">{backstory.length}/2000</p>
+              </div>
             </div>
-            <div className="flex justify-between max-w-lg mx-auto">
+
+            <div className="flex justify-between max-w-2xl mx-auto">
               <Button variant="outline" onClick={() => setStep("race")} data-testid="button-back-race">Back</Button>
               <Button
                 onClick={() => setStep("confirm")}
@@ -436,10 +633,38 @@ export default function CreateCharacterPage() {
                       <span className="font-serif text-foreground text-right max-w-xs">{cls.gear}</span>
                     </div>
                   </div>
-                  {appearance && (
-                    <div className="bg-secondary/30 rounded-md p-3">
-                      <p className="text-muted-foreground text-xs font-sans tracking-wide mb-1 uppercase">Appearance</p>
-                      <p className="font-serif text-sm italic text-foreground/80">{appearance}</p>
+                  {(appearance || selectedTraits.length > 0) && (
+                    <div className="bg-secondary/30 rounded-md p-3 space-y-2">
+                      {appearance && (
+                        <>
+                          <p className="text-muted-foreground text-xs font-sans tracking-wide uppercase">Appearance</p>
+                          <p className="font-serif text-sm italic text-foreground/80">{appearance}</p>
+                        </>
+                      )}
+                      {selectedTraits.length > 0 && (
+                        <>
+                          <p className="text-muted-foreground text-xs font-sans tracking-wide uppercase mt-2">Personality</p>
+                          <p className="font-serif text-sm text-foreground/80">{selectedTraits.join(", ")}</p>
+                        </>
+                      )}
+                      {motivation && (
+                        <>
+                          <p className="text-muted-foreground text-xs font-sans tracking-wide uppercase mt-2">Motivation</p>
+                          <p className="font-serif text-sm text-foreground/80">{motivation}</p>
+                        </>
+                      )}
+                      {flaw && (
+                        <>
+                          <p className="text-muted-foreground text-xs font-sans tracking-wide uppercase mt-2">Flaw</p>
+                          <p className="font-serif text-sm text-foreground/80">{flaw}</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {backstory && (
+                    <div className="bg-secondary/20 rounded-md p-3 border border-border/40">
+                      <p className="text-muted-foreground text-xs font-sans tracking-wide uppercase mb-2">Backstory</p>
+                      <p className="font-serif text-sm leading-relaxed text-foreground/85 whitespace-pre-wrap">{backstory}</p>
                     </div>
                   )}
                 </CardContent>

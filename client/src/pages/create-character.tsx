@@ -166,6 +166,56 @@ const BACKGROUNDS = [
   "Sailor", "Folk Hero", "Hermit", "Charlatan", "Guild Artisan",
 ];
 
+const STAT_KEYS = ["might", "agility", "endurance", "intellect", "will", "presence"] as const;
+const STAT_LABELS: Record<string, string> = {
+  might: "Might", agility: "Agility", endurance: "Endurance",
+  intellect: "Intellect", will: "Will", presence: "Presence",
+};
+
+// Mirrors server/gameEngine.ts — getDefaultStats
+const CLASS_BASE_STATS: Record<string, Record<string, number>> = {
+  fighter:   { might: 14, agility: 10, endurance: 12, intellect: 10, will: 10, presence: 10 },
+  rogue:     { might: 10, agility: 14, endurance: 10, intellect: 10, will: 10, presence: 12 },
+  wizard:    { might: 10, agility: 10, endurance: 10, intellect: 14, will: 12, presence: 10 },
+  cleric:    { might: 10, agility: 10, endurance: 10, intellect: 10, will: 14, presence: 12 },
+  ranger:    { might: 10, agility: 14, endurance: 12, intellect: 10, will: 10, presence: 10 },
+  paladin:   { might: 14, agility: 10, endurance: 10, intellect: 10, will: 12, presence: 10 },
+  barbarian: { might: 14, agility: 10, endurance: 14, intellect: 10, will: 10, presence: 10 },
+  bard:      { might: 10, agility: 10, endurance: 10, intellect: 10, will: 12, presence: 14 },
+};
+
+// Mirrors server/gameEngine.ts — getBackgroundAbility (preview names + descriptions)
+const BACKGROUND_ABILITIES: Record<string, { name: string; description: string }> = {
+  "Soldier":       { name: "Battle-Hardened",     description: "Advantage on Might saves vs. fear/exhaustion. Once per rest, rally an ally for +1d6 on their next attack." },
+  "Scholar":       { name: "Wealth of Knowledge", description: "Identify magical items and recall lore without rolling. +2 to Intellect checks when researching with texts." },
+  "Criminal":      { name: "Street Network",      description: "Once per session, locate a contact who can provide information, fenced goods, or a safe house." },
+  "Acolyte":       { name: "Deity's Favor",       description: "Once per day, pray for 10 minutes. The GM truthfully answers one yes/no question about your path forward." },
+  "Merchant":      { name: "Appraiser's Eye",     description: "Know the exact value of any item at a glance. Advantage on Presence checks to negotiate." },
+  "Noble":         { name: "Noble Authority",     description: "Aristocrats treat you as an equal. Once per session, invoke noble status to gain an audience or dismiss minor threats." },
+  "Outlander":     { name: "Pathfinder",          description: "Never lost in wilderness. Always find food, water, shelter outdoors. Advantage tracking creatures across natural terrain." },
+  "Sailor":        { name: "Salt & Sinew",        description: "Immune to sea sickness. Advantage on Agility checks aboard ships or on treacherous wet terrain." },
+  "Folk Hero":     { name: "Champion's Welcome",  description: "Commoners trust you instinctively. Once per session, a willing commoner provides unexpected aid." },
+  "Hermit":        { name: "Still Mind",          description: "Advantage on Will saves vs. mind magic. Once per day, meditate 10 min for advantage on your next Will or Intellect check." },
+  "Charlatan":     { name: "Thousand Faces",      description: "Advantage on Presence checks to deceive or impersonate. Maintain a false identity for up to one week effortlessly." },
+  "Guild Artisan": { name: "Master Crafter",      description: "Craft, identify, or repair any mundane item given materials. Advantage on Intellect checks relating to your craft." },
+};
+
+// Racial bonuses — mirrors server/gameEngine.ts getRaceBonuses
+const RACE_BONUSES: Record<string, Record<string, number>> = {
+  "Human":      { might: 1, agility: 1, endurance: 1, intellect: 1, will: 1, presence: 1 },
+  "Elf":        { agility: 2 },
+  "Dwarf":      { endurance: 2 },
+  "Halfling":   { agility: 2 },
+  "Half-Orc":   { might: 2, endurance: 1 },
+  "Tiefling":   { presence: 2, intellect: 1 },
+  "Dragonborn": { might: 2, presence: 1 },
+  "Gnome":      { intellect: 2 },
+  "Aasimar":    { will: 2, presence: 1 },
+  "Tabaxi":     { agility: 2, presence: 1 },
+  "Genasi":     { intellect: 2, endurance: 1 },
+  "Firbolg":    { will: 2, might: 1 },
+};
+
 const PERSONALITY_TRAITS = [
   "Brave", "Cunning", "Compassionate", "Ruthless", "Wise", "Reckless",
   "Honourable", "Ambitious", "Haunted", "Cheerful", "Stoic", "Pious",
@@ -183,7 +233,7 @@ const FLAWS = [
   "Owes a dangerous debt", "Fears death above all", "Cannot trust anyone", "Lost faith",
 ];
 
-type Step = "class" | "race" | "details" | "confirm";
+type Step = "class" | "race" | "stats" | "details" | "confirm";
 
 export default function CreateCharacterPage() {
   const [, navigate] = useLocation();
@@ -193,6 +243,7 @@ export default function CreateCharacterPage() {
   const [step, setStep] = useState<Step>("class");
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedRace, setSelectedRace] = useState<string>("");
+  const [customStats, setCustomStats] = useState<Record<string, number> | null>(null);
   const [name, setName] = useState("");
   const [background, setBackground] = useState("");
   const [appearance, setAppearance] = useState("");
@@ -203,8 +254,47 @@ export default function CreateCharacterPage() {
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const steps: Step[] = ["class", "race", "details", "confirm"];
+  const steps: Step[] = ["class", "race", "stats", "details", "confirm"];
   const stepIdx = steps.indexOf(step);
+
+  // Stat customization helpers
+  function getClassDefaults(): Record<string, number> {
+    return CLASS_BASE_STATS[selectedClass] ?? { might: 10, agility: 10, endurance: 10, intellect: 10, will: 10, presence: 10 };
+  }
+
+  function getCurrentStats(): Record<string, number> {
+    return customStats ?? getClassDefaults();
+  }
+
+  function getStatEnvelope(): number {
+    return Object.values(getClassDefaults()).reduce((a, b) => a + b, 0);
+  }
+
+  function getPointsSpent(): number {
+    return Object.values(getCurrentStats()).reduce((a, b) => a + b, 0);
+  }
+
+  function getPointsRemaining(): number {
+    return getStatEnvelope() - getPointsSpent();
+  }
+
+  function adjustStat(stat: string, delta: number) {
+    const current = getCurrentStats();
+    const newVal = (current[stat] ?? 10) + delta;
+    if (newVal < 8 || newVal > 16) return;
+    const newSpent = getPointsSpent() + delta;
+    if (newSpent > getStatEnvelope()) return;
+    setCustomStats({ ...current, [stat]: newVal });
+  }
+
+  function resetStats() {
+    setCustomStats({ ...getClassDefaults() });
+  }
+
+  function goToStats() {
+    if (!customStats) setCustomStats({ ...getClassDefaults() });
+    setStep("stats");
+  }
 
   function toggleTrait(trait: string) {
     setSelectedTraits(prev =>
@@ -259,6 +349,7 @@ export default function CreateCharacterPage() {
         background,
         appearance,
         backstory: backstory.trim() || undefined,
+        customBaseStats: customStats ?? undefined,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/characters"] });
       toast({ title: "Hero created!", description: `${name} stands ready for adventure.` });
@@ -373,7 +464,106 @@ export default function CreateCharacterPage() {
             </div>
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setStep("class")} data-testid="button-back-class">Back</Button>
-              <Button onClick={() => setStep("details")} disabled={!selectedRace} data-testid="button-next-details">Next: Details</Button>
+              <Button onClick={goToStats} disabled={!selectedRace} data-testid="button-next-stats">Next: Attributes</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Stats */}
+        {step === "stats" && selectedClass && selectedRace && (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-sans font-bold tracking-widest">Allocate Attributes</h2>
+              <p className="text-muted-foreground font-serif italic">Redistribute your class stat points freely — the total must stay within your class envelope</p>
+            </div>
+
+            <div className="max-w-lg mx-auto space-y-5">
+              {/* Budget bar */}
+              <div className="flex items-center justify-between rounded-md border border-border bg-card p-3">
+                <div>
+                  <p className="text-xs font-sans uppercase tracking-widest text-muted-foreground">Points Remaining</p>
+                  <p className="text-xs font-serif italic text-muted-foreground/60 mt-0.5">Min 8 · Max 16 per stat (before racial bonuses)</p>
+                </div>
+                <span className={`font-sans font-bold text-2xl tabular-nums ${
+                  getPointsRemaining() === 0 ? "text-primary" : getPointsRemaining() > 0 ? "text-amber-400" : "text-red-400"
+                }`} data-testid="text-points-remaining">
+                  {getPointsRemaining()}
+                </span>
+              </div>
+
+              {/* Stat rows */}
+              <div className="space-y-2">
+                {STAT_KEYS.map((stat) => {
+                  const baseVal = getCurrentStats()[stat] ?? 10;
+                  const racialBonus = (RACE_BONUSES[selectedRace] ?? {})[stat] ?? 0;
+                  const finalVal = baseVal + racialBonus;
+                  const defaults = getClassDefaults();
+                  const isHighlighted = defaults[stat] > 10;
+                  return (
+                    <div key={stat} className={`flex items-center gap-3 rounded-md p-3 border transition-colors ${isHighlighted ? "border-primary/30 bg-primary/5" : "border-border bg-card"}`}>
+                      <div className="w-24 flex-shrink-0">
+                        <p className={`text-xs font-sans uppercase tracking-wide ${isHighlighted ? "text-primary/80" : "text-muted-foreground"}`}>
+                          {STAT_LABELS[stat]}
+                        </p>
+                        {isHighlighted && <p className="text-[10px] text-primary/50 font-sans mt-0.5">Class primary</p>}
+                      </div>
+                      <button
+                        onClick={() => adjustStat(stat, -1)}
+                        disabled={baseVal <= 8}
+                        data-testid={`button-stat-minus-${stat}`}
+                        className="w-8 h-8 rounded-md border border-border bg-secondary flex items-center justify-center text-sm font-bold text-muted-foreground hover:text-foreground hover:border-primary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                      >−</button>
+                      <div className="flex-1 text-center">
+                        <span className="font-sans font-bold text-xl tabular-nums" data-testid={`text-stat-base-${stat}`}>{baseVal}</span>
+                        {racialBonus !== 0 && (
+                          <span className="text-xs text-primary font-sans ml-1">+{racialBonus}</span>
+                        )}
+                        <span className="text-muted-foreground text-xs font-sans ml-2">
+                          = <span className="font-semibold text-foreground" data-testid={`text-stat-final-${stat}`}>{finalVal}</span>
+                        </span>
+                        <div className="mt-1.5 h-1 bg-secondary rounded-full overflow-hidden mx-2">
+                          <div
+                            className={`h-full rounded-full transition-all ${isHighlighted ? "bg-primary" : "bg-secondary-foreground/30"}`}
+                            style={{ width: `${Math.min(100, ((baseVal - 8) / 8) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => adjustStat(stat, +1)}
+                        disabled={baseVal >= 16 || getPointsRemaining() <= 0}
+                        data-testid={`button-stat-plus-${stat}`}
+                        className="w-8 h-8 rounded-md border border-border bg-secondary flex items-center justify-center text-sm font-bold text-muted-foreground hover:text-foreground hover:border-primary/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                      >+</button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={resetStats}
+                  data-testid="button-reset-stats"
+                  className="text-xs text-muted-foreground/60 hover:text-muted-foreground font-sans tracking-wide flex items-center gap-1 transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" /> Reset to class defaults
+                </button>
+                {getPointsRemaining() > 0 && (
+                  <p className="text-xs text-amber-400/80 font-serif italic">
+                    {getPointsRemaining()} point{getPointsRemaining() !== 1 ? "s" : ""} unspent
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-between max-w-lg mx-auto">
+              <Button variant="outline" onClick={() => setStep("race")} data-testid="button-back-race-from-stats">Back</Button>
+              <Button
+                onClick={() => setStep("details")}
+                disabled={getPointsRemaining() !== 0}
+                data-testid="button-next-details-from-stats"
+              >
+                {getPointsRemaining() !== 0 ? `Spend ${getPointsRemaining()} more point${getPointsRemaining() !== 1 ? "s" : ""}` : "Next: Story"}
+              </Button>
             </div>
           </div>
         )}
@@ -432,6 +622,17 @@ export default function CreateCharacterPage() {
                     </button>
                   ))}
                 </div>
+                {/* Background ability preview */}
+                {background && BACKGROUND_ABILITIES[background] && (
+                  <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-primary/70 flex-shrink-0" />
+                      <p className="text-xs font-sans tracking-widest text-primary/80 uppercase">Background Ability</p>
+                    </div>
+                    <p className="text-sm font-sans font-semibold text-foreground">{BACKGROUND_ABILITIES[background].name}</p>
+                    <p className="text-xs font-serif text-muted-foreground leading-relaxed">{BACKGROUND_ABILITIES[background].description}</p>
+                  </div>
+                )}
               </div>
 
               {/* Divider */}
@@ -567,7 +768,7 @@ export default function CreateCharacterPage() {
             </div>
 
             <div className="flex justify-between max-w-2xl mx-auto">
-              <Button variant="outline" onClick={() => setStep("race")} data-testid="button-back-race">Back</Button>
+              <Button variant="outline" onClick={() => setStep("stats")} data-testid="button-back-stats">Back</Button>
               <Button
                 onClick={() => setStep("confirm")}
                 disabled={!name.trim() || !background}
@@ -613,11 +814,26 @@ export default function CreateCharacterPage() {
                       <p className="font-sans font-bold text-lg text-foreground">1</p>
                     </div>
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between py-1.5 border-b border-border/50">
-                      <span className="text-muted-foreground font-sans tracking-wide text-xs uppercase">Primary Stats</span>
-                      <span className="font-serif text-foreground">{cls.stats}</span>
+                  {/* Final stat grid */}
+                  <div>
+                    <p className="text-xs font-sans tracking-widest uppercase text-muted-foreground mb-2">Final Attributes</p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {STAT_KEYS.map(stat => {
+                        const base = getCurrentStats()[stat] ?? 10;
+                        const racialBonus = (RACE_BONUSES[selectedRace] ?? {})[stat] ?? 0;
+                        const final = base + racialBonus;
+                        const mod = Math.floor((final - 10) / 2);
+                        return (
+                          <div key={stat} className="bg-secondary/40 rounded-md p-2 text-center">
+                            <p className="text-[10px] font-sans uppercase tracking-wide text-muted-foreground">{STAT_LABELS[stat]}</p>
+                            <p className="font-sans font-bold text-base mt-0.5">{final}</p>
+                            <p className="text-[10px] text-muted-foreground/60">{mod >= 0 ? `+${mod}` : mod}</p>
+                          </div>
+                        );
+                      })}
                     </div>
+                  </div>
+                  <div className="space-y-2 text-sm">
                     {raceData && (
                       <div className="flex justify-between py-1.5 border-b border-border/50">
                         <span className="text-muted-foreground font-sans tracking-wide text-xs uppercase">Racial Traits</span>
@@ -625,9 +841,15 @@ export default function CreateCharacterPage() {
                       </div>
                     )}
                     <div className="flex justify-between py-1.5 border-b border-border/50">
-                      <span className="text-muted-foreground font-sans tracking-wide text-xs uppercase">Abilities</span>
-                      <span className="font-serif text-foreground">{cls.abilities}</span>
+                      <span className="text-muted-foreground font-sans tracking-wide text-xs uppercase">Class Abilities</span>
+                      <span className="font-serif text-foreground text-right max-w-xs">{cls.abilities}</span>
                     </div>
+                    {background && BACKGROUND_ABILITIES[background] && (
+                      <div className="flex justify-between py-1.5 border-b border-border/50">
+                        <span className="text-muted-foreground font-sans tracking-wide text-xs uppercase">Background Ability</span>
+                        <span className="font-serif text-foreground text-right max-w-xs">{BACKGROUND_ABILITIES[background].name}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between py-1.5">
                       <span className="text-muted-foreground font-sans tracking-wide text-xs uppercase">Starting Gear</span>
                       <span className="font-serif text-foreground text-right max-w-xs">{cls.gear}</span>

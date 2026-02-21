@@ -37,6 +37,8 @@ Mythweave is an online fantasy RPG where an AI Game Master (powered by GPT-4o) r
 Stats: Might, Agility, Endurance, Intellect, Will, Presence
 Backstory: AI-generated (via GPT-4o) or manually written; includes personality traits, motivation, flaw; stored in DB and shown on character sheet + wired into GM prompt
 Portrait: AI-generated via DALL-E 3 in WLOP fantasy style; users can describe appearance, generate, regenerate, and save; stored as base64 data URL; displayed on character sheet and dashboard cards
+Stat customization: Point-envelope system in character creation step 3 "Allocate Attributes" — player redistributes class stat budget (min 8, max 16 per stat); racial bonuses shown separately; total envelope fixed per class
+Background abilities: 12 background-specific abilities (Battle-Hardened, Street Network, Pathfinder, etc.) granted at creation alongside class abilities; displayed separately on character sheet with visual distinction
 Event-sourced: HP, XP, inventory, conditions, abilities all updatable by GM
 
 ### Campaigns → Parties

@@ -278,6 +278,117 @@ export function getRaceBonuses(race: string): Record<string, number> {
   }
 }
 
+// Background ability — one bonus ability tied to character background
+export function getBackgroundAbility(background: string, cls: string): any {
+  const bg = background.toLowerCase().replace(/\s+/g, "_");
+  switch (bg) {
+    case "soldier":
+      return {
+        id: "battle_hardened",
+        name: "Battle-Hardened",
+        description: "Advantage on Might saves against fear and exhaustion. Once per rest, call out a rallying order to grant an ally +1d6 on their next attack roll.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+    case "scholar":
+      return {
+        id: "wealth_of_knowledge",
+        name: "Wealth of Knowledge",
+        description: "Identify magical items and recall obscure lore without rolling. +2 bonus to all Intellect checks when researching a topic with access to texts.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+    case "criminal":
+      return {
+        id: "street_network",
+        name: "Street Network",
+        description: "Once per session, locate a criminal contact in the current settlement who can provide information, fenced goods, or a safe house.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+    case "acolyte":
+      return {
+        id: "deitys_favor",
+        name: "Deity's Favor",
+        description: "Once per day, spend 10 minutes in prayer. The GM truthfully answers one yes/no question about the safest or most righteous path forward.",
+        usesMax: 1, usesLeft: 1,
+        source: "background",
+      };
+    case "merchant":
+      return {
+        id: "appraisers_eye",
+        name: "Appraiser's Eye",
+        description: "Determine exact market value of any item at a glance. Advantage on Presence checks to negotiate prices, debts, or favors.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+    case "noble":
+      return {
+        id: "noble_authority",
+        name: "Noble Authority",
+        description: "Aristocrats and officials treat you as a social equal. Once per session, invoke your noble status to gain an audience, dismiss minor threats, or avoid arrest.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+    case "outlander":
+      return {
+        id: "pathfinder",
+        name: "Pathfinder",
+        description: "Never lost in wilderness. Always locate food, water, and shelter outdoors without rolling. Advantage on checks to track creatures across natural terrain.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+    case "sailor":
+      return {
+        id: "salt_and_sinew",
+        name: "Salt & Sinew",
+        description: "Immune to sea sickness and unstable footing aboard vessels. Advantage on Agility checks made on ships, in storms, or on treacherous wet terrain.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+    case "folk_hero":
+      return {
+        id: "champions_welcome",
+        name: "Champion's Welcome",
+        description: "Common folk are predisposed to trust and shelter you. Once per session, a willing commoner provides unexpected aid — shelter, information, or a diversion.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+    case "hermit":
+      return {
+        id: "still_mind",
+        name: "Still Mind",
+        description: "Advantage on Will saves against mind-affecting magic and illusions. Once per day, meditate for 10 minutes to gain advantage on your next Will or Intellect check.",
+        usesMax: 1, usesLeft: 1,
+        source: "background",
+      };
+    case "charlatan":
+      return {
+        id: "thousand_faces",
+        name: "Thousand Faces",
+        description: "Advantage on Presence checks to deceive, impersonate, or bluff. Can maintain a convincing false identity for up to one week without active effort.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+    case "guild_artisan":
+      return {
+        id: "master_crafter",
+        name: "Master Crafter",
+        description: "Craft, identify, or repair any mundane item given materials and time. Advantage on all Intellect checks relating to your craft or trade.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+    default:
+      return {
+        id: "worldly_experience",
+        name: "Worldly Experience",
+        description: "Your varied past gives you advantage on one Presence or Intellect check per session when drawing on life experience outside your class training.",
+        usesMax: -1, usesLeft: -1,
+        source: "background",
+      };
+  }
+}
+
 // XP thresholds per level (Mythweave Lite)
 export const XP_THRESHOLDS = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000];
 

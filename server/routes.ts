@@ -98,14 +98,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/game/class-defaults/:cls", (req, res) => {
+    const { getDefaultStats, CLASS_BASE_HP } = require("./gameEngine");
+    const cls = req.params.cls;
+    res.json({ stats: getDefaultStats(cls), hp: CLASS_BASE_HP[cls] ?? 10 });
+  });
+
   app.post("/api/characters", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
-      const { name, class: cls, race, background, appearance, backstory } = req.body;
+      const { name, class: cls, race, background, appearance, backstory, customBaseStats } = req.body;
       if (!name || !cls || !race || !background) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-      const char = await createCharacter(userId, { name, class: cls, race, background, appearance, backstory });
+      const char = await createCharacter(userId, { name, class: cls, race, background, appearance, backstory, customBaseStats });
       res.status(201).json(char);
     } catch (e) { res.status(500).json({ error: "Failed to create character" }); }
   });

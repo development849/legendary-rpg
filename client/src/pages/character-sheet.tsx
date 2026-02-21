@@ -264,21 +264,47 @@ export default function CharacterSheetPage({ characterId }: CharacterSheetPagePr
               {abilities.length === 0 ? (
                 <p className="text-muted-foreground font-serif italic text-sm">No special abilities yet</p>
               ) : (
-                <div className="space-y-3">
-                  {abilities.map((ability: any) => (
-                    <div key={ability.id} className="space-y-0.5" data-testid={`ability-${ability.id}`}>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-sans font-semibold text-sm tracking-wide">{ability.name}</span>
-                        {ability.usesMax > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {ability.usesLeft}/{ability.usesMax} uses
-                          </Badge>
-                        )}
-                        {ability.usesMax === -1 && (
-                          <Badge variant="outline" className="text-xs">At will</Badge>
-                        )}
+                <div className="space-y-4">
+                  {/* Class abilities */}
+                  {abilities.filter((a: any) => a.source !== "background").length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-sans uppercase tracking-widest text-muted-foreground/60 capitalize">{char.class} abilities</p>
+                      {abilities.filter((a: any) => a.source !== "background").map((ability: any) => (
+                        <div key={ability.id} className="space-y-0.5 pl-2 border-l-2 border-primary/20" data-testid={`ability-${ability.id}`}>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-sans font-semibold text-sm tracking-wide">{ability.name}</span>
+                            {ability.usesMax > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {ability.usesLeft}/{ability.usesMax} uses
+                              </Badge>
+                            )}
+                            {ability.usesMax === -1 && (
+                              <Badge variant="outline" className="text-xs">At will</Badge>
+                            )}
+                          </div>
+                          <p className="text-muted-foreground text-xs font-serif leading-relaxed">{ability.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Background ability */}
+                  {abilities.filter((a: any) => a.source === "background").map((ability: any) => (
+                    <div key={ability.id} className="space-y-3 pt-3 border-t border-border/50">
+                      <p className="text-[10px] font-sans uppercase tracking-widest text-primary/60">{char.background} ability</p>
+                      <div className="space-y-0.5 pl-2 border-l-2 border-primary/50" data-testid={`ability-${ability.id}`}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-sans font-semibold text-sm tracking-wide">{ability.name}</span>
+                          {ability.usesMax > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {ability.usesLeft}/{ability.usesMax} uses
+                            </Badge>
+                          )}
+                          {ability.usesMax === -1 && (
+                            <Badge variant="outline" className="text-xs">At will</Badge>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground text-xs font-serif leading-relaxed">{ability.description}</p>
                       </div>
-                      <p className="text-muted-foreground text-xs font-serif leading-relaxed">{ability.description}</p>
                     </div>
                   ))}
                 </div>

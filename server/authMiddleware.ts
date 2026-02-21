@@ -1,5 +1,4 @@
 import type { RequestHandler, Request } from "express";
-import { isAuthenticated as replitIsAuthenticated } from "./replit_integrations/auth";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { eq } from "drizzle-orm";
@@ -13,18 +12,32 @@ export function getUserId(req: Request): string | null {
   const user = req.user as any;
   if (!user) return null;
   if (user.provider === "local") return user.id;
+  // Replit OAuth fallback
   return user.claims?.sub ?? null;
 }
 
 export const requireAuth: RequestHandler = (req, res, next) => {
-  const user = req.user as any;
-
-  if (user?.provider === "local") {
-    if (req.isAuthenticated()) return next();
+  if (!req.isAuthenticated() || !req.user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  return replitIsAuthenticated(req, res, next);
+  const user = req.user as any;
+
+  // Local email/password user — session is sufficient proof
+  if (user.provider === "local") {
+    return next();
+  }
+
+  // Replit OAuth user — check token expiry
+  if (!user.expires_at) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const now = Math.floor(Date.now() / 1000);
+  if (now <= user.expires_at) {
+    return next();
+  }
+
+  return res.status(401).json({ message: "Unauthorized" });
 };
 
 export async function getCurrentUser(req: Request): Promise<any | null> {

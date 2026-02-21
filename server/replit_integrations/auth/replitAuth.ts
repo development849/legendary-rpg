@@ -27,7 +27,7 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
-  const isProd = process.env.NODE_ENV === "production";
+  const isReplit = !!process.env.REPL_ID;
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -35,8 +35,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: isProd,
-      sameSite: "lax",
+      secure: isReplit,
+      sameSite: isReplit ? "none" : "lax",
       maxAge: sessionTtl,
     },
   });

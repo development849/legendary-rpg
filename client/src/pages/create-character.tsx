@@ -99,7 +99,68 @@ const CLASSES = [
   },
 ];
 
-const RACES = ["Human", "Elf", "Dwarf", "Halfling", "Half-Orc", "Tiefling", "Dragonborn", "Gnome"];
+const RACES = [
+  {
+    name: "Human",
+    description: "Adaptable and endlessly driven, humans spread across every corner of the world through ambition and will.",
+    traits: "+1 to all stats · Bonus Proficiency · Extra Language",
+  },
+  {
+    name: "Elf",
+    description: "Ancient and graceful, elves carry millennia of memory in their eyes and move like living poetry through any landscape.",
+    traits: "+2 Agility · Darkvision · Trance (4-hr rest) · Keen Senses",
+  },
+  {
+    name: "Dwarf",
+    description: "Born of stone and tradition, dwarves are unyielding in battle and fiercely loyal to kin, clan, and craft.",
+    traits: "+2 Endurance · Darkvision · Poison Resistance · Stone Sense",
+  },
+  {
+    name: "Halfling",
+    description: "Small in stature but boundless in courage, halflings carry an uncanny luck that bends fate to their favor.",
+    traits: "+2 Agility · Lucky (reroll 1s) · Brave · Naturally Stealthy",
+  },
+  {
+    name: "Half-Orc",
+    description: "Born between two worlds, half-orcs channel primal fury into devastating strength and shrug off blows that fell others.",
+    traits: "+2 Might · +1 Endurance · Relentless Endurance · Savage Attacks",
+  },
+  {
+    name: "Tiefling",
+    description: "Touched by infernal blood, tieflings bear the mark of the lower planes but forge their own destiny through will alone.",
+    traits: "+2 Presence · +1 Intellect · Darkvision · Hellish Rebuke · Fire Resistance",
+  },
+  {
+    name: "Dragonborn",
+    description: "Proud descendants of dragonkind who carry draconic power in their blood, unleashing elemental breath in battle.",
+    traits: "+2 Might · +1 Presence · Breath Weapon · Draconic Ancestry · Damage Resistance",
+  },
+  {
+    name: "Gnome",
+    description: "Inventive and irrepressibly curious, gnomes approach every problem with a tinkerer's mind and a trickster's heart.",
+    traits: "+2 Intellect · Gnome Cunning (adv. mental saves) · Darkvision · Tinker",
+  },
+  {
+    name: "Aasimar",
+    description: "Blessed with celestial lineage, aasimar radiate an inner light and are called by divine forces to champion the innocent.",
+    traits: "+2 Will · +1 Presence · Healing Hands · Radiant Soul · Celestial Resistance",
+  },
+  {
+    name: "Tabaxi",
+    description: "Feline wanderers driven by insatiable curiosity, tabaxi move with preternatural speed and strike like an uncoiled spring.",
+    traits: "+2 Agility · +1 Presence · Cat's Claws · Feline Agility · Darkvision",
+  },
+  {
+    name: "Genasi",
+    description: "Born of elemental fire and mortal blood, genasi blaze with inner heat that shapes their personality and powers alike.",
+    traits: "+2 Intellect · +1 Endurance · Fire Resistance · Reach to the Blaze · Darkvision",
+  },
+  {
+    name: "Firbolg",
+    description: "Gentle giants of the ancient forests, firbolgs commune with nature and prefer diplomacy — but are terrifying when roused.",
+    traits: "+2 Will · +1 Might · Detect Magic · Hidden Step · Powerful Build",
+  },
+];
 const BACKGROUNDS = [
   "Soldier", "Scholar", "Criminal", "Acolyte", "Merchant", "Noble", "Outlander",
   "Sailor", "Folk Hero", "Hermit", "Charlatan", "Guild Artisan",
@@ -148,6 +209,7 @@ export default function CreateCharacterPage() {
   }
 
   const cls = CLASSES.find(c => c.id === selectedClass);
+  const raceData = RACES.find(r => r.name === selectedRace);
 
   return (
     <div className="min-h-screen bg-background">
@@ -222,20 +284,28 @@ export default function CreateCharacterPage() {
               <h2 className="text-2xl font-sans font-bold tracking-widest">Choose Your Race</h2>
               <p className="text-muted-foreground font-serif italic">Your heritage shapes your place in the world</p>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {RACES.map((race) => (
                 <button
-                  key={race}
-                  onClick={() => setSelectedRace(race)}
-                  data-testid={`button-race-${race.toLowerCase()}`}
-                  className={`py-4 px-3 rounded-md border text-center font-sans text-sm tracking-wide transition-all hover-elevate ${
-                    selectedRace === race
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-card text-foreground"
+                  key={race.name}
+                  onClick={() => setSelectedRace(race.name)}
+                  data-testid={`button-race-${race.name.toLowerCase().replace(" ", "-")}`}
+                  className={`p-4 rounded-md border text-left transition-all hover-elevate ${
+                    selectedRace === race.name
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card"
                   }`}
                 >
-                  {race}
-                  {selectedRace === race && <CheckCircle2 className="w-3.5 h-3.5 text-primary mx-auto mt-1.5" />}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className={`font-sans font-bold text-sm tracking-wide ${selectedRace === race.name ? "text-primary" : "text-foreground"}`}>
+                      {race.name}
+                    </span>
+                    {selectedRace === race.name && <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground font-serif leading-relaxed mb-2">{race.description}</p>
+                  <p className={`text-xs font-sans tracking-wide ${selectedRace === race.name ? "text-primary/80" : "text-muted-foreground/60"}`}>
+                    {race.traits}
+                  </p>
                 </button>
               ))}
             </div>
@@ -351,6 +421,12 @@ export default function CreateCharacterPage() {
                       <span className="text-muted-foreground font-sans tracking-wide text-xs uppercase">Primary Stats</span>
                       <span className="font-serif text-foreground">{cls.stats}</span>
                     </div>
+                    {raceData && (
+                      <div className="flex justify-between py-1.5 border-b border-border/50">
+                        <span className="text-muted-foreground font-sans tracking-wide text-xs uppercase">Racial Traits</span>
+                        <span className="font-serif text-foreground text-right max-w-xs">{raceData.traits}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between py-1.5 border-b border-border/50">
                       <span className="text-muted-foreground font-sans tracking-wide text-xs uppercase">Abilities</span>
                       <span className="font-serif text-foreground">{cls.abilities}</span>

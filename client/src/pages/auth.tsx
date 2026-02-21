@@ -39,7 +39,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 type LoginForm = z.infer<typeof loginSchema>;
 
 const FEATURES = [
-  { icon: Sword, label: "Choose your class and race", detail: "Fighter, Rogue, Wizard, or Cleric" },
+  { icon: Sword, label: "Choose your class and race", detail: "8 classes, 12 races, countless legends" },
   { icon: Scroll, label: "AI-powered Game Master", detail: "GPT-4o narrates your story in real time" },
   { icon: Users, label: "Solo or party play", detail: "Join friends with invite codes" },
   { icon: Sparkles, label: "Persistent world", detail: "Your choices shape the chronicle forever" },

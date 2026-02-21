@@ -245,6 +245,39 @@ export function getStartingAbilities(cls: string): any[] {
   }
 }
 
+// Racial stat bonuses
+export function getRaceBonuses(race: string): Record<string, number> {
+  const r = race.toLowerCase();
+  switch (r) {
+    case "human":
+      return { might: 1, agility: 1, endurance: 1, intellect: 1, will: 1, presence: 1 };
+    case "elf":
+      return { agility: 2 };
+    case "dwarf":
+      return { endurance: 2 };
+    case "halfling":
+      return { agility: 2 };
+    case "half-orc":
+      return { might: 2, endurance: 1 };
+    case "tiefling":
+      return { presence: 2, intellect: 1 };
+    case "dragonborn":
+      return { might: 2, presence: 1 };
+    case "gnome":
+      return { intellect: 2 };
+    case "aasimar":
+      return { will: 2, presence: 1 };
+    case "tabaxi":
+      return { agility: 2, presence: 1 };
+    case "genasi":
+      return { intellect: 2, endurance: 1 };
+    case "firbolg":
+      return { will: 2, might: 1 };
+    default:
+      return {};
+  }
+}
+
 // XP thresholds per level (Mythweave Lite)
 export const XP_THRESHOLDS = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000];
 

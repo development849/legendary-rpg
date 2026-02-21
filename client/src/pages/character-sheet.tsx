@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Sword, Heart, Star, Package, Zap, ScrollText } from "lucide-react";
+import { ArrowLeft, Sword, Heart, Star, Package, Zap, ScrollText, Camera } from "lucide-react";
 
 interface CharacterSheetPageProps {
   characterId: string;
@@ -87,6 +87,33 @@ export default function CharacterSheetPage({ characterId }: CharacterSheetPagePr
         <div className={`relative rounded-md border border-border p-6 ${classColors[char.class] ?? ""} overflow-hidden`}>
           <div className="absolute inset-0 bg-gradient-to-br from-current/5 to-transparent" />
           <div className="relative flex items-start gap-4 flex-wrap">
+            {/* Portrait */}
+            <div className="flex-shrink-0">
+              {(char as any).profilePicture ? (
+                <div
+                  className="w-20 h-20 rounded-md overflow-hidden border border-border/60 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                  onClick={() => navigate(`/characters/${characterId}/appearance`)}
+                  data-testid="img-portrait-header"
+                  title="Edit portrait"
+                >
+                  <img
+                    src={(char as any).profilePicture}
+                    alt={char.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => navigate(`/characters/${characterId}/appearance`)}
+                  data-testid="button-add-portrait"
+                  className="w-20 h-20 rounded-md border border-dashed border-border/60 bg-secondary/30 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-secondary/50 transition-all cursor-pointer text-muted-foreground/50 hover:text-primary/70"
+                  title="Add portrait"
+                >
+                  <Camera className="w-6 h-6" />
+                  <span className="text-[10px] font-sans uppercase tracking-wide">Portrait</span>
+                </button>
+              )}
+            </div>
             <div>
               <h1 className="text-3xl font-sans font-bold tracking-widest">{char.name}</h1>
               <p className="text-muted-foreground font-serif mt-1 capitalize">
@@ -95,6 +122,14 @@ export default function CharacterSheetPage({ characterId }: CharacterSheetPagePr
               {char.appearance && (
                 <p className="text-muted-foreground/60 font-serif italic text-sm mt-2 max-w-md">{char.appearance}</p>
               )}
+              <button
+                onClick={() => navigate(`/characters/${characterId}/appearance`)}
+                data-testid="button-edit-portrait"
+                className="mt-2 text-xs text-primary/60 hover:text-primary font-sans tracking-wide flex items-center gap-1 transition-colors"
+              >
+                <Camera className="w-3 h-3" />
+                {(char as any).profilePicture ? "Edit portrait" : "Generate portrait"}
+              </button>
             </div>
             <div className="ml-auto text-right">
               <Badge variant="default" className="text-sm px-3 py-1 font-sans tracking-wider">

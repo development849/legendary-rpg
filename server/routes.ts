@@ -118,6 +118,65 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) { res.status(500).json({ error: "Failed to get character" }); }
   });
 
+  app.post("/api/characters/:id/generate-portrait", requireAuth, async (req: any, res) => {
+    try {
+      const char = await getCharacter(req.params.id);
+      if (!char) return res.status(404).json({ error: "Character not found" });
+
+      const { appearanceDetails } = req.body;
+
+      const OpenAI = (await import("openai")).default;
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const baseDesc = [char.appearance, appearanceDetails].filter(Boolean).join(", ");
+      const prompt = [
+        `Detailed fantasy portrait of a ${char.race} ${char.class},`,
+        baseDesc ? baseDesc + "," : "",
+        `digital painting in the style of WLOP, luminous ethereal atmosphere, dramatic cinematic lighting from above,`,
+        `richly detailed face and eyes, intricate fantasy costume, painterly brushwork, soft glowing edges,`,
+        `deep dramatic background with misty bokeh, masterpiece quality illustration, high detail, 4K`,
+      ].filter(Boolean).join(" ");
+
+      const response = await openai.images.generate({
+        model: "dall-e-3",
+        prompt,
+        n: 1,
+        size: "1024x1024",
+        response_format: "b64_json",
+        quality: "hd",
+      });
+
+      const b64 = response.data[0]?.b64_json;
+      if (!b64) return res.status(500).json({ error: "No image returned" });
+
+      const dataUrl = `data:image/png;base64,${b64}`;
+      res.json({ portrait: dataUrl });
+    } catch (e: any) {
+      console.error("Portrait generation error:", e);
+      res.status(500).json({ error: "Failed to generate portrait" });
+    }
+  });
+
+  app.patch("/api/characters/:id/portrait", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const char = await getCharacter(req.params.id);
+      if (!char) return res.status(404).json({ error: "Not found" });
+      if (char.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+
+      const { portrait } = req.body;
+      if (!portrait) return res.status(400).json({ error: "Portrait data required" });
+
+      const updated = await updateCharacter(req.params.id, { profilePicture: portrait } as any);
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to save portrait" });
+    }
+  });
+
   // ── Campaigns ───────────────────────────────────────────────────────────────
 
   app.get("/api/campaigns", requireAuth, async (req: any, res) => {

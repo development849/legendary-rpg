@@ -12,6 +12,7 @@ import CreateCampaignPage from "@/pages/create-campaign";
 import GameSessionPage from "@/pages/game-session";
 import CharacterSheetPage from "@/pages/character-sheet";
 import LobbyPage from "@/pages/lobby";
+import AppearanceEditorPage from "@/pages/appearance-editor";
 
 function LoadingScreen() {
   return (
@@ -47,6 +48,7 @@ function Router() {
       }} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/characters/new" component={() => <ProtectedRoute component={CreateCharacterPage} />} />
+      <Route path="/characters/:id/appearance" component={({ params }: any) => <ProtectedRoute component={AppearanceEditorPage} characterId={params.id} />} />
       <Route path="/characters/:id" component={({ params }: any) => <ProtectedRoute component={CharacterSheetPage} characterId={params.id} />} />
       <Route path="/campaigns/new" component={() => <ProtectedRoute component={CreateCampaignPage} />} />
       <Route path="/lobby/:partyId" component={({ params }: any) => <ProtectedRoute component={LobbyPage} partyId={params.partyId} />} />

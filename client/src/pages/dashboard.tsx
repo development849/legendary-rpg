@@ -134,8 +134,17 @@ export default function DashboardPage() {
                         className="group flex items-center gap-4 p-4 rounded-md border border-border bg-card hover-elevate cursor-pointer transition-all duration-200"
                         data-testid={`card-character-${char.id}`}
                       >
-                        <div className={`flex-shrink-0 w-10 h-10 rounded-md bg-secondary flex items-center justify-center ${colorClass}`}>
-                          <Icon className="w-5 h-5" />
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-md overflow-hidden bg-secondary flex items-center justify-center ${colorClass}`}>
+                          {(char as any).profilePicture ? (
+                            <img
+                              src={(char as any).profilePicture}
+                              alt={char.name}
+                              className="w-full h-full object-cover"
+                              data-testid={`img-portrait-${char.id}`}
+                            />
+                          ) : (
+                            <Icon className="w-5 h-5" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">

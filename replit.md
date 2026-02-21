@@ -36,6 +36,7 @@ Mythweave is an online fantasy RPG where an AI Game Master (powered by GPT-4o) r
 12 races: Human, Elf, Dwarf, Halfling, Half-Orc, Tiefling, Dragonborn, Gnome, Aasimar, Tabaxi, Genasi, Firbolg (each with racial stat bonuses)
 Stats: Might, Agility, Endurance, Intellect, Will, Presence
 Backstory: AI-generated (via GPT-4o) or manually written; includes personality traits, motivation, flaw; stored in DB and shown on character sheet + wired into GM prompt
+Portrait: AI-generated via DALL-E 3 in WLOP fantasy style; users can describe appearance, generate, regenerate, and save; stored as base64 data URL; displayed on character sheet and dashboard cards
 Event-sourced: HP, XP, inventory, conditions, abilities all updatable by GM
 
 ### Campaigns → Parties

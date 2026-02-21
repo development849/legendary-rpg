@@ -6,7 +6,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Scroll } from "lucide-react";
+import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Scroll, Target, Star, Flame, Music } from "lucide-react";
 import type { Character } from "@shared/schema";
 
 export default function DashboardPage() {
@@ -27,6 +27,10 @@ export default function DashboardPage() {
     rogue: "text-emerald-400",
     wizard: "text-violet-400",
     cleric: "text-amber-400",
+    ranger: "text-teal-400",
+    paladin: "text-yellow-300",
+    barbarian: "text-orange-400",
+    bard: "text-rose-400",
   };
 
   const classIcons: Record<string, typeof Sword> = {
@@ -34,6 +38,10 @@ export default function DashboardPage() {
     rogue: Dices,
     wizard: ScrollText,
     cleric: Shield,
+    ranger: Target,
+    paladin: Star,
+    barbarian: Flame,
+    bard: Music,
   };
 
   return (

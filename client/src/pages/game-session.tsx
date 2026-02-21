@@ -307,6 +307,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const classColors: Record<string, string> = {
     fighter: "text-red-400", rogue: "text-emerald-400",
     wizard: "text-violet-400", cleric: "text-amber-400",
+    ranger: "text-teal-400", paladin: "text-yellow-300",
+    barbarian: "text-orange-400", bard: "text-rose-400",
   };
 
   function renderMessage(msg: ChatMsg) {

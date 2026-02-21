@@ -54,6 +54,10 @@ export default function CharacterSheetPage({ characterId }: CharacterSheetPagePr
     rogue: "text-emerald-400 bg-emerald-950/30",
     wizard: "text-violet-400 bg-violet-950/30",
     cleric: "text-amber-400 bg-amber-950/30",
+    ranger: "text-teal-400 bg-teal-950/30",
+    paladin: "text-yellow-300 bg-yellow-950/30",
+    barbarian: "text-orange-400 bg-orange-950/30",
+    bard: "text-rose-400 bg-rose-950/30",
   };
 
   const typeColors: Record<string, string> = {

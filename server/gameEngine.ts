@@ -89,6 +89,10 @@ export const CLASS_BASE_HP: Record<string, number> = {
   rogue: 8,
   wizard: 6,
   cleric: 10,
+  ranger: 10,
+  paladin: 10,
+  barbarian: 12,
+  bard: 8,
 };
 
 // Default stats by class
@@ -103,6 +107,14 @@ export function getDefaultStats(cls: string): Record<string, number> {
       return { ...base, intellect: 14, will: 12 };
     case "cleric":
       return { ...base, will: 14, presence: 12 };
+    case "ranger":
+      return { ...base, agility: 14, endurance: 12 };
+    case "paladin":
+      return { ...base, might: 14, will: 12 };
+    case "barbarian":
+      return { ...base, might: 14, endurance: 14 };
+    case "bard":
+      return { ...base, presence: 14, will: 12 };
     default:
       return base;
   }
@@ -143,6 +155,37 @@ export function getStartingInventory(cls: string): any[] {
         { name: "Holy Symbol", type: "misc", qty: 1, properties: {} },
         { name: "Prayer Beads", type: "misc", qty: 1, properties: { focus: 2 } },
       ];
+    case "ranger":
+      return [...common,
+        { name: "Longbow", type: "weapon", qty: 1, properties: { damage: "1d8", range: 150 } },
+        { name: "Arrows", type: "consumable", qty: 20, properties: {} },
+        { name: "Short Sword", type: "weapon", qty: 1, properties: { damage: "1d6", bonus: 1 } },
+        { name: "Studded Leather Armor", type: "armor", qty: 1, properties: { ac: 12 } },
+        { name: "Herbalism Kit", type: "tool", qty: 1, properties: {} },
+      ];
+    case "paladin":
+      return [...common,
+        { name: "Longsword", type: "weapon", qty: 1, properties: { damage: "1d8", bonus: 2 } },
+        { name: "Shield", type: "armor", qty: 1, properties: { ac_bonus: 2 } },
+        { name: "Half-Plate", type: "armor", qty: 1, properties: { ac: 15 } },
+        { name: "Holy Symbol", type: "misc", qty: 1, properties: { focus: 3 } },
+        { name: "Healing Potion", type: "consumable", qty: 1, properties: { heal: "2d4+2" } },
+      ];
+    case "barbarian":
+      return [...common,
+        { name: "Greataxe", type: "weapon", qty: 1, properties: { damage: "1d12", bonus: 2, two_handed: true } },
+        { name: "Handaxe", type: "weapon", qty: 2, properties: { damage: "1d6", thrown: true } },
+        { name: "Hide Armor", type: "armor", qty: 1, properties: { ac: 12 } },
+        { name: "Hunting Trap", type: "tool", qty: 1, properties: {} },
+      ];
+    case "bard":
+      return [...common,
+        { name: "Rapier", type: "weapon", qty: 1, properties: { damage: "1d8", bonus: 1, finesse: true } },
+        { name: "Lute", type: "misc", qty: 1, properties: { focus: 3 } },
+        { name: "Leather Armor", type: "armor", qty: 1, properties: { ac: 11 } },
+        { name: "Component Pouch", type: "misc", qty: 1, properties: {} },
+        { name: "Disguise Kit", type: "tool", qty: 1, properties: {} },
+      ];
     default:
       return common;
   }
@@ -172,6 +215,30 @@ export function getStartingAbilities(cls: string): any[] {
         { id: "sacred_flame", name: "Sacred Flame", description: "Ranged spell attack dealing 1d8 radiant damage", usesMax: -1, usesLeft: -1 },
         { id: "healing_word", name: "Healing Word", description: "Heal a creature for 1d4+will modifier HP (uses 1 Focus)", usesMax: -1, usesLeft: -1 },
         { id: "divine_smite", name: "Divine Smite", description: "Add 2d8 radiant damage to a melee hit (uses 1 Focus)", usesMax: -1, usesLeft: -1 },
+      ];
+    case "ranger":
+      return [
+        { id: "hunters_mark", name: "Hunter's Mark", description: "Mark a creature as your quarry. Deal 1d6 extra damage against it and track it unerringly (concentration)", usesMax: -1, usesLeft: -1 },
+        { id: "volley", name: "Volley", description: "Fire a hail of arrows in a 10ft radius; each creature makes an Agility save (DC 13) or takes 1d8 damage", usesMax: 2, usesLeft: 2 },
+        { id: "natural_explorer", name: "Natural Explorer", description: "Advantage on Endurance checks in wilderness, never lost outdoors, double rations foraged", usesMax: -1, usesLeft: -1 },
+      ];
+    case "paladin":
+      return [
+        { id: "lay_on_hands", name: "Lay on Hands", description: "Touch a creature to restore up to 5 HP from a shared pool (pool refreshes on rest)", usesMax: 5, usesLeft: 5 },
+        { id: "paladin_divine_smite", name: "Divine Smite", description: "After hitting with a melee weapon, expend 1 Focus to deal an extra 2d8 radiant damage", usesMax: -1, usesLeft: -1 },
+        { id: "aura_of_protection", name: "Aura of Protection", description: "Allies within 10ft add your Will modifier to all saving throws", usesMax: -1, usesLeft: -1 },
+      ];
+    case "barbarian":
+      return [
+        { id: "rage", name: "Rage", description: "Enter a furious rage for 1 minute: +2 damage on melee attacks, resistance to physical damage, advantage on Might checks (2 uses per rest)", usesMax: 2, usesLeft: 2 },
+        { id: "reckless_attack", name: "Reckless Attack", description: "Attack with advantage, but enemies also have advantage against you until your next turn", usesMax: -1, usesLeft: -1 },
+        { id: "danger_sense", name: "Danger Sense", description: "Advantage on Agility saving throws against effects you can see (traps, spells, hazards)", usesMax: -1, usesLeft: -1 },
+      ];
+    case "bard":
+      return [
+        { id: "bardic_inspiration", name: "Bardic Inspiration", description: "Grant an ally a d6 they can add to any roll in the next 10 minutes (Presence modifier uses per rest)", usesMax: 3, usesLeft: 3 },
+        { id: "cutting_words", name: "Cutting Words", description: "Spend Bardic Inspiration to reduce an enemy's attack roll, damage roll, or ability check by 1d6", usesMax: -1, usesLeft: -1 },
+        { id: "vicious_mockery", name: "Vicious Mockery", description: "Psychic insult deals 1d4 damage and gives the target disadvantage on its next attack (Will save DC 13 to resist)", usesMax: -1, usesLeft: -1 },
       ];
     default:
       return [];

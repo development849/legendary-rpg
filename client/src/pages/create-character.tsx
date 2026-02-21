@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Sword, Dices, Shield, ScrollText, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Sword, Dices, Shield, ScrollText, CheckCircle2, Target, Star, Flame, Music } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
@@ -52,6 +52,50 @@ const CLASSES = [
     stats: "Will 14, Presence 12",
     abilities: "Sacred Flame, Healing Word, Divine Smite",
     gear: "Mace, Scale Mail, Holy Symbol",
+  },
+  {
+    id: "ranger",
+    name: "Ranger",
+    icon: Target,
+    color: "text-teal-400",
+    hp: 10,
+    description: "Hunters of the wild. Expert trackers who blend martial skill with nature magic to stalk their prey.",
+    stats: "Agility 14, Endurance 12",
+    abilities: "Hunter's Mark, Volley, Natural Explorer",
+    gear: "Longbow, Short Sword, Studded Leather",
+  },
+  {
+    id: "paladin",
+    name: "Paladin",
+    icon: Star,
+    color: "text-yellow-300",
+    hp: 10,
+    description: "Holy warriors bound by sacred oaths. Combine martial prowess with divine grace to protect the innocent.",
+    stats: "Might 14, Will 12",
+    abilities: "Lay on Hands, Divine Smite, Aura of Protection",
+    gear: "Longsword, Half-Plate, Shield, Holy Symbol",
+  },
+  {
+    id: "barbarian",
+    name: "Barbarian",
+    icon: Flame,
+    color: "text-orange-400",
+    hp: 12,
+    description: "Primal warriors who tap into a furious rage. Fearsome and nigh-unstoppable on the battlefield.",
+    stats: "Might 14, Endurance 14",
+    abilities: "Rage, Reckless Attack, Danger Sense",
+    gear: "Greataxe, Handaxe, Hide Armor",
+  },
+  {
+    id: "bard",
+    name: "Bard",
+    icon: Music,
+    color: "text-rose-400",
+    hp: 8,
+    description: "Virtuosos of magic and charm. Inspire allies, confound enemies, and bend fate with song and story.",
+    stats: "Presence 14, Will 12",
+    abilities: "Bardic Inspiration, Cutting Words, Vicious Mockery",
+    gear: "Rapier, Lute, Leather Armor, Component Pouch",
   },
 ];
 

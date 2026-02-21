@@ -131,10 +131,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const { appearanceDetails } = req.body;
 
-      const OpenAI = (await import("openai")).default;
-      const openai = new OpenAI({
-        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      const { GoogleGenAI, Modality } = await import("@google/genai");
+      const ai = new GoogleGenAI({
+        apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+        httpOptions: {
+          apiVersion: "",
+          baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+        },
       });
 
       const stats = (char.stats as Record<string, number>) || {};
@@ -197,18 +200,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         `fantasy concept art, high quality illustration`,
       ].filter(Boolean).join(" ");
 
-      const response = await openai.images.generate({
-        model: "gpt-image-1",
-        prompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "high",
-      } as any);
+      const response = await ai.models.generateContent({
+        model: "gemini-3-pro-image-preview",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+      });
 
-      const b64 = response.data[0]?.b64_json;
-      if (!b64) return res.status(500).json({ error: "No image returned" });
+      const imagePart = response.candidates?.[0]?.content?.parts?.find(
+        (p: any) => p.inlineData?.data
+      );
 
-      const dataUrl = `data:image/png;base64,${b64}`;
+      if (!imagePart?.inlineData?.data) {
+        return res.status(500).json({ error: "No image returned" });
+      }
+
+      const mimeType = imagePart.inlineData.mimeType || "image/png";
+      const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
       res.json({ portrait: dataUrl });
     } catch (e: any) {
       console.error("Portrait generation error:", e);

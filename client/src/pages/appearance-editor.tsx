@@ -263,7 +263,7 @@ export default function AppearanceEditorPage({ characterId }: AppearanceEditorPr
                     </button>
                   </div>
                   <p className="font-serif text-xs text-muted-foreground/70 italic">
-                    WLOP & Guweiz-inspired — cinematic digital portraiture with dramatic rim lighting, ultra-detailed costuming, deep atmospheric backgrounds, and luminous painterly finishes.
+                    Cinematic digital fantasy portraiture — dramatic rim lighting, ultra-detailed costuming, deep atmospheric backgrounds, and luminous painterly finishes.
                   </p>
                   {showStyleRef && (
                     <div className="mt-2 rounded overflow-hidden border border-border/40">

@@ -140,42 +140,42 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const stats = (char.stats as Record<string, number>) || {};
 
       const classOutfitMap: Record<string, string> = {
-        fighter: "plate armour with battle-worn engravings, a great sword at their side",
-        barbarian: "fur-lined war leathers, tribal markings on bare skin, raw power in every line",
-        rogue: "dark leather armour with concealed blades, shadow-drenched silhouette",
-        wizard: "flowing arcane robes with glowing sigils, long elegant sleeves, a mystical tome or staff",
-        cleric: "ornate ceremonial vestments with divine light at their hands, holy sigils embossed in gold",
-        ranger: "layered wilderness armour, a longbow over one shoulder, nature-worn cloaks",
-        paladin: "shining crusader plate adorned with sacred emblems, emanating a faint holy radiance",
-        bard: "flamboyant adventurer's coat with musical instruments or fine embroidery, charismatic bearing",
+        fighter: "storied full plate armour with engraved pauldrons, a longsword at their hip",
+        barbarian: "fur-trimmed leather vest, runic tribal tattoos, athletic muscular build",
+        rogue: "fitted dark leather traveller's coat, hood half-raised, swift agile posture",
+        wizard: "flowing arcane robes with glowing sigils, long elegant sleeves, a mystical tome nearby",
+        cleric: "ornate ceremonial vestments with holy emblems embossed in gold, radiant light at their hands",
+        ranger: "layered forest leather, a recurve bow over one shoulder, weathered travelling cloaks",
+        paladin: "shining ceremonial plate adorned with sacred emblems, a faint aura of divine light",
+        bard: "flamboyant traveller's coat with fine embroidery, charismatic poised bearing",
       };
 
       const backgroundAtmosphereMap: Record<string, string> = {
-        soldier: "battle-worn military encampment with distant fires or banners in a dark sky",
-        criminal: "rain-slicked cobblestone alley, dim lantern light, urban shadows",
-        scholar: "ancient candlelit library, spiralling stone architecture, dusty arcane tomes",
-        noble: "opulent palace interior with arched stone columns, silk drapes, candlelit chandeliers",
-        hunter: "misty forest edge at dusk, gnarled ancient trees, fading amber light",
-        hermit: "remote mountain cliffside, starlit sky, wild wind-swept environment",
-        acolyte: "sacred temple interior, divine stained light streaming through high windows",
-        merchant: "grand bazaar at twilight, rich fabrics and lantern-lit stalls",
-        entertainer: "ornate theatre stage, velvet curtains, dramatic spotlighting",
-        sailor: "sea-sprayed ship deck in a storm, crashing waves, salt air atmosphere",
-        folk_hero: "cobblestone village square at golden hour, ordinary folk watching in admiration",
-        outlander: "vast ancient wilderness, towering rock formations, enormous sky",
+        soldier: "a weathered military camp at night, distant torchlight, regimental banners in a dramatic sky",
+        criminal: "rain-slicked cobblestone alley, dim lantern glow, atmospheric urban shadows",
+        scholar: "ancient candlelit library, spiralling stone arches, dusty arcane manuscripts",
+        noble: "opulent palace interior, arched stone columns, silk drapes, candlelit chandeliers",
+        hunter: "misty forest edge at dusk, gnarled ancient trees, fading golden amber light",
+        hermit: "remote mountain cliffside, vast starlit sky, wind-swept rocky landscape",
+        acolyte: "sacred temple interior, coloured light streaming through high stained windows",
+        merchant: "grand bazaar at twilight, rich fabrics, lantern-lit market stalls",
+        entertainer: "ornate theatre stage, velvet curtains, warm dramatic spotlighting",
+        sailor: "a ship's prow at sea, churning ocean waves, salt-spray and open sky",
+        folk_hero: "cobblestone village square at golden hour, warm community atmosphere",
+        outlander: "vast ancient wilderness, towering rock formations, enormous dramatic sky",
       };
 
       const physique: string[] = [];
-      if ((stats.might ?? 10) >= 15) physique.push("powerfully built, strong broad shoulders");
-      if ((stats.agility ?? 10) >= 15) physique.push("lithe and graceful, light on their feet");
-      if ((stats.presence ?? 10) >= 15) physique.push("magnetically charismatic, commanding bearing");
-      if ((stats.intellect ?? 10) >= 15) physique.push("sharp, perceptive eyes that miss nothing");
-      if ((stats.will ?? 10) >= 15) physique.push("unwavering gaze, iron composure");
+      if ((stats.might ?? 10) >= 15) physique.push("athletic powerful build, broad shoulders");
+      if ((stats.agility ?? 10) >= 15) physique.push("lithe graceful posture, light on their feet");
+      if ((stats.presence ?? 10) >= 15) physique.push("commanding charismatic bearing");
+      if ((stats.intellect ?? 10) >= 15) physique.push("sharp perceptive gaze");
+      if ((stats.will ?? 10) >= 15) physique.push("composed unwavering expression");
 
-      const levelDesc = char.level >= 8 ? "legendary, battle-hardened veteran" :
-                        char.level >= 5 ? "seasoned adventurer with hard-won experience" :
-                        char.level >= 3 ? "capable young adventurer, determined expression" :
-                        "fresh-faced but resolute novice adventurer";
+      const levelDesc = char.level >= 8 ? "legendary experienced" :
+                        char.level >= 5 ? "seasoned" :
+                        char.level >= 3 ? "capable young" :
+                        "resolute novice";
 
       const appearanceParts = [
         char.appearance,
@@ -184,32 +184,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       ].filter(Boolean).join(", ");
 
       const outfitHint = classOutfitMap[char.class as string] ?? "detailed fantasy adventurer outfit";
-      const bgAtmosphere = backgroundAtmosphereMap[char.background as string] ?? "dramatic dark fantasy environment with atmospheric depth";
-
-      const backstoryHint = char.backstory
-        ? `Their story: ${char.backstory.slice(0, 200).replace(/\n/g, " ")}.`
-        : "";
+      const bgAtmosphere = backgroundAtmosphereMap[char.background as string] ?? "dramatic fantasy environment with atmospheric depth";
 
       const prompt = [
         `Cinematic fantasy portrait painting of a ${levelDesc} ${char.race} ${char.class} named ${char.name},`,
         appearanceParts ? `${appearanceParts},` : "",
         `wearing ${outfitHint},`,
         `set against ${bgAtmosphere},`,
-        backstoryHint,
-        `Art style: WLOP and Guweiz inspired — ultra-detailed digital painting, photorealistic face with expressive eyes,`,
-        `dramatic volumetric rim lighting, deep cinematic colour palette with rich shadows and glowing highlights,`,
-        `intricate costume and fabric detail, painterly brushwork with cinematic depth of field,`,
-        `moody atmospheric bokeh background, portrait to waist framing, masterpiece illustration quality, 4K`,
+        `ultra-detailed luminous digital painting, photorealistic expressive face, dramatic volumetric rim lighting,`,
+        `deep cinematic colour palette with rich shadows and glowing highlights, intricate fabric and armour detail,`,
+        `painterly fine brushwork, cinematic depth of field, atmospheric bokeh background, portrait to waist framing,`,
+        `fantasy concept art, high quality illustration`,
       ].filter(Boolean).join(" ");
 
       const response = await openai.images.generate({
-        model: "dall-e-3",
+        model: "gpt-image-1",
         prompt,
         n: 1,
         size: "1024x1024",
-        response_format: "b64_json",
-        quality: "hd",
-      });
+        quality: "high",
+      } as any);
 
       const b64 = response.data[0]?.b64_json;
       if (!b64) return res.status(500).json({ error: "No image returned" });

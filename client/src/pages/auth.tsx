@@ -98,6 +98,19 @@ export default function AuthPage() {
 
   const watchPassword = registerForm.watch("password");
 
+  async function verifySession(userFromResponse: any): Promise<boolean> {
+    try {
+      const check = await fetch("/api/auth/user", { credentials: "include" });
+      if (check.ok) {
+        const verified = await check.json();
+        queryClient.setQueryData(["/api/auth/user"], verified);
+        return true;
+      }
+    } catch {}
+    queryClient.setQueryData(["/api/auth/user"], userFromResponse);
+    return false;
+  }
+
   async function onRegister(data: RegisterForm) {
     try {
       const res = await fetch("/api/auth/register", {
@@ -124,7 +137,7 @@ export default function AuthPage() {
         return;
       }
 
-      queryClient.setQueryData(["/api/auth/user"], body.user);
+      await verifySession(body.user);
       toast({ title: "Welcome to Mythweave!", description: `Your account has been created, ${data.displayName}.` });
       navigate("/dashboard");
     } catch {
@@ -148,7 +161,7 @@ export default function AuthPage() {
         return;
       }
 
-      queryClient.setQueryData(["/api/auth/user"], body.user);
+      await verifySession(body.user);
       toast({ title: "Welcome back!", description: `Signed in as ${body.user.firstName || body.user.username}.` });
       navigate("/dashboard");
     } catch {

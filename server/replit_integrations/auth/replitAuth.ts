@@ -29,6 +29,7 @@ export function getSession() {
   });
   const isReplit = !!process.env.REPL_ID;
   return session({
+    name: "mythweave.sid",
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,

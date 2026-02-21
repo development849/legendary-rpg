@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Sword, Eye, EyeOff, Shield, Scroll, Users, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
+import { Sword, Eye, EyeOff, Scroll, Users, Sparkles, CheckCircle2 } from "lucide-react";
 
 const registerSchema = z.object({
   username: z
@@ -304,22 +304,6 @@ export default function AuthPage() {
                   </form>
                 </Form>
 
-                <div className="mt-6 space-y-3">
-                  <div className="relative flex items-center">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="px-3 text-xs text-muted-foreground font-sans">or</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <a
-                    href="/api/login"
-                    data-testid="button-replit-login"
-                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-md border border-border bg-secondary/50 hover:bg-secondary text-sm font-sans tracking-wide transition-colors"
-                  >
-                    <Shield className="w-4 h-4 text-primary" />
-                    Continue with Replit
-                  </a>
-                </div>
-
                 <p className="text-center text-xs text-muted-foreground mt-4 font-serif">
                   No account?{" "}
                   <button
@@ -489,22 +473,6 @@ export default function AuthPage() {
                     </Button>
                   </form>
                 </Form>
-
-                <div className="mt-6 space-y-3">
-                  <div className="relative flex items-center">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="px-3 text-xs text-muted-foreground font-sans">or</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <a
-                    href="/api/login"
-                    data-testid="button-replit-register"
-                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-md border border-border bg-secondary/50 hover:bg-secondary text-sm font-sans tracking-wide transition-colors"
-                  >
-                    <Shield className="w-4 h-4 text-primary" />
-                    Continue with Replit
-                  </a>
-                </div>
 
                 <p className="text-center text-xs text-muted-foreground mt-4 font-serif">
                   Already have an account?{" "}

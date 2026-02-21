@@ -48,7 +48,7 @@ export default function LandingPage() {
           </div>
 
           {/* CTA */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex justify-center">
             <Link href="/auth">
               <Button
                 size="lg"
@@ -58,9 +58,6 @@ export default function LandingPage() {
                 Begin Your Journey
               </Button>
             </Link>
-            <a href="/api/login" className="text-muted-foreground/60 text-sm font-sans hover:text-muted-foreground transition-colors">
-              Sign in with Replit →
-            </a>
           </div>
 
           <p className="text-muted-foreground/50 text-sm font-sans">

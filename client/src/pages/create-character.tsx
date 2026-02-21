@@ -326,9 +326,20 @@ export default function CreateCharacterPage() {
         }),
       });
       const data = await res.json();
+      if (res.status === 401) {
+        queryClient.setQueryData(["/api/auth/user"], null);
+        toast({ title: "Session expired", description: "Please sign in again to continue.", variant: "destructive" });
+        navigate("/auth");
+        return;
+      }
       if (!res.ok) throw new Error(data.error);
       setBackstory(data.backstory);
     } catch (e: any) {
+      if (e.message?.startsWith("401")) {
+        queryClient.setQueryData(["/api/auth/user"], null);
+        navigate("/auth");
+        return;
+      }
       toast({ title: "Generation failed", description: e.message, variant: "destructive" });
     } finally {
       setGenerating(false);
@@ -355,6 +366,12 @@ export default function CreateCharacterPage() {
       toast({ title: "Hero created!", description: `${name} stands ready for adventure.` });
       navigate("/dashboard");
     } catch (e: any) {
+      if (e.message?.startsWith("401")) {
+        queryClient.setQueryData(["/api/auth/user"], null);
+        toast({ title: "Session expired", description: "Please sign in again to continue.", variant: "destructive" });
+        navigate("/auth");
+        return;
+      }
       toast({ title: "Failed", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);

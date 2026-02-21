@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sword, Shield, Scroll, Users, Sparkles, Dices } from "lucide-react";
 
@@ -48,18 +49,22 @@ export default function LandingPage() {
 
           {/* CTA */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button
-              size="lg"
-              className="px-10 py-6 text-lg font-sans tracking-widest uppercase glow-primary"
-              data-testid="button-login"
-              onClick={() => window.location.href = "/api/login"}
-            >
-              Begin Your Journey
-            </Button>
+            <Link href="/auth">
+              <Button
+                size="lg"
+                className="px-10 py-6 text-lg font-sans tracking-widest uppercase glow-primary"
+                data-testid="button-login"
+              >
+                Begin Your Journey
+              </Button>
+            </Link>
+            <a href="/api/login" className="text-muted-foreground/60 text-sm font-sans hover:text-muted-foreground transition-colors">
+              Sign in with Replit →
+            </a>
           </div>
 
           <p className="text-muted-foreground/50 text-sm font-sans">
-            Sign in with Replit to continue
+            Free to play. No credit card required.
           </p>
         </div>
 
@@ -133,14 +138,15 @@ export default function LandingPage() {
         <div className="space-y-6 max-w-xl mx-auto">
           <p className="text-3xl font-sans font-bold tracking-widest">READY, ADVENTURER?</p>
           <p className="text-muted-foreground font-serif italic">The world of Mythweave awaits. Your story is about to begin.</p>
-          <Button
-            size="lg"
-            className="px-10 py-6 text-base font-sans tracking-widest uppercase"
-            data-testid="button-login-bottom"
-            onClick={() => window.location.href = "/api/login"}
-          >
-            Enter the Chronicle
-          </Button>
+          <Link href="/auth">
+            <Button
+              size="lg"
+              className="px-10 py-6 text-base font-sans tracking-widest uppercase"
+              data-testid="button-login-bottom"
+            >
+              Enter the Chronicle
+            </Button>
+          </Link>
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       </div>

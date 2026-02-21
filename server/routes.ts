@@ -1,7 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { setupLocalAuth, registerLocalAuthRoutes } from "./localAuth";
+import { requireAuth, getUserId, getCurrentUser } from "./authMiddleware";
 import {
   createCharacter, getUserCharacters, getCharacter, updateCharacter,
   createCampaign, getCampaign, getUserCampaigns,
@@ -27,23 +29,37 @@ function broadcastToParty(partyId: string, data: any) {
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
-  // Auth
+  // Auth — Replit OIDC
   await setupAuth(app);
-  registerAuthRoutes(app);
+  // Note: registerAuthRoutes is intentionally skipped; /api/auth/user is handled below
+  // Auth — Local email/password
+  setupLocalAuth(app);
+  registerLocalAuthRoutes(app);
+
+  // Unified /api/auth/user — works for both local and Replit auth
+  app.get("/api/auth/user", requireAuth, async (req: any, res) => {
+    try {
+      const user = await getCurrentUser(req);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      res.json(user);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
 
   // ── Characters ──────────────────────────────────────────────────────────────
 
-  app.get("/api/characters", isAuthenticated, async (req: any, res) => {
+  app.get("/api/characters", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       const chars = await getUserCharacters(userId);
       res.json(chars);
     } catch (e) { res.status(500).json({ error: "Failed to get characters" }); }
   });
 
-  app.post("/api/characters", isAuthenticated, async (req: any, res) => {
+  app.post("/api/characters", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       const { name, class: cls, race, background, appearance } = req.body;
       if (!name || !cls || !race || !background) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -53,7 +69,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) { res.status(500).json({ error: "Failed to create character" }); }
   });
 
-  app.get("/api/characters/:id", isAuthenticated, async (req: any, res) => {
+  app.get("/api/characters/:id", requireAuth, async (req: any, res) => {
     try {
       const char = await getCharacter(req.params.id);
       if (!char) return res.status(404).json({ error: "Not found" });
@@ -63,27 +79,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // ── Campaigns ───────────────────────────────────────────────────────────────
 
-  app.get("/api/campaigns", isAuthenticated, async (req: any, res) => {
+  app.get("/api/campaigns", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       const camps = await getUserCampaigns(userId);
       res.json(camps);
     } catch (e) { res.status(500).json({ error: "Failed to get campaigns" }); }
   });
 
-  app.post("/api/campaigns", isAuthenticated, async (req: any, res) => {
+  app.post("/api/campaigns", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       const { name, description, setting, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack } = req.body;
       if (!name) return res.status(400).json({ error: "Name required" });
       const campaign = await createCampaign(userId, { name, description, setting, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack });
-      // Auto-create a party for solo play
       const party = await createParty(campaign.id, "The Company");
       res.status(201).json({ campaign, party });
     } catch (e) { res.status(500).json({ error: "Failed to create campaign" }); }
   });
 
-  app.get("/api/campaigns/:id", isAuthenticated, async (req: any, res) => {
+  app.get("/api/campaigns/:id", requireAuth, async (req: any, res) => {
     try {
       const campaign = await getCampaign(req.params.id);
       if (!campaign) return res.status(404).json({ error: "Not found" });
@@ -94,15 +109,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // ── Parties ─────────────────────────────────────────────────────────────────
 
-  app.get("/api/parties", isAuthenticated, async (req: any, res) => {
+  app.get("/api/parties", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       const parties = await getUserParties(userId);
       res.json(parties);
     } catch (e) { res.status(500).json({ error: "Failed to get parties" }); }
   });
 
-  app.get("/api/parties/:id", isAuthenticated, async (req: any, res) => {
+  app.get("/api/parties/:id", requireAuth, async (req: any, res) => {
     try {
       const party = await getParty(req.params.id);
       if (!party) return res.status(404).json({ error: "Not found" });
@@ -113,9 +128,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) { res.status(500).json({ error: "Failed to get party" }); }
   });
 
-  app.post("/api/parties/join", isAuthenticated, async (req: any, res) => {
+  app.post("/api/parties/join", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       const { inviteCode, characterId } = req.body;
       if (!inviteCode || !characterId) return res.status(400).json({ error: "Missing fields" });
 
@@ -127,9 +142,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) { res.status(500).json({ error: "Failed to join party" }); }
   });
 
-  app.post("/api/parties/:id/join", isAuthenticated, async (req: any, res) => {
+  app.post("/api/parties/:id/join", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       const { characterId } = req.body;
       if (!characterId) return res.status(400).json({ error: "characterId required" });
 
@@ -141,13 +156,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) { res.status(500).json({ error: "Failed to join party" }); }
   });
 
-  app.post("/api/parties/:id/ready", isAuthenticated, async (req: any, res) => {
+  app.post("/api/parties/:id/ready", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       const { isReady } = req.body;
       await setMemberReady(req.params.id, userId, isReady);
 
-      // Broadcast ready state to party
       const members = await getPartyMembers(req.params.id);
       broadcastToParty(req.params.id, { type: "MEMBER_UPDATE", members });
       res.json({ success: true });
@@ -156,7 +170,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // ── Messages ────────────────────────────────────────────────────────────────
 
-  app.get("/api/parties/:id/messages", isAuthenticated, async (req, res) => {
+  app.get("/api/parties/:id/messages", requireAuth, async (req, res) => {
     try {
       const msgs = await getPartyMessages(req.params.id as string, 100);
       res.json(msgs);
@@ -164,9 +178,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Player action → GM response (streaming)
-  app.post("/api/parties/:id/action", isAuthenticated, async (req: any, res) => {
+  app.post("/api/parties/:id/action", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       const partyId = req.params.id;
       const { content, playerName } = req.body;
       if (!content) return res.status(400).json({ error: "content required" });
@@ -237,7 +251,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Dice roll endpoint
-  app.post("/api/dice/roll", isAuthenticated, async (req: any, res) => {
+  app.post("/api/dice/roll", requireAuth, async (req: any, res) => {
     try {
       const { die, count = 1, modifier = 0, advantageState = "normal", label } = req.body;
       if (!die) return res.status(400).json({ error: "die required" });

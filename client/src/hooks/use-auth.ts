@@ -17,7 +17,23 @@ async function fetchUser(): Promise<User | null> {
   return response.json();
 }
 
-async function logout(): Promise<void> {
+async function performLogout(): Promise<void> {
+  const user = await fetchUser();
+  if (!user) {
+    window.location.href = "/";
+    return;
+  }
+
+  const localRes = await fetch("/api/auth/logout-local", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (localRes.ok) {
+    window.location.href = "/auth";
+    return;
+  }
+
   window.location.href = "/api/logout";
 }
 
@@ -27,11 +43,11 @@ export function useAuth() {
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   const logoutMutation = useMutation({
-    mutationFn: logout,
+    mutationFn: performLogout,
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/user"], null);
     },

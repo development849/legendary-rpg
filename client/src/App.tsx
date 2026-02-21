@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import LandingPage from "@/pages/landing";
+import AuthPage from "@/pages/auth";
 import DashboardPage from "@/pages/dashboard";
 import CreateCharacterPage from "@/pages/create-character";
 import CreateCampaignPage from "@/pages/create-campaign";
@@ -12,20 +13,21 @@ import GameSessionPage from "@/pages/game-session";
 import CharacterSheetPage from "@/pages/character-sheet";
 import LobbyPage from "@/pages/lobby";
 
-function ProtectedRoute({ component: Component, ...rest }: any) {
-  const { isAuthenticated, isLoading } = useAuth();
-  if (isLoading) return (
+function LoadingScreen() {
+  return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center space-y-4">
-        <div className="text-4xl font-sans text-primary glow-gold">Mythweave</div>
-        <div className="text-muted-foreground text-sm animate-pulse">Summoning your adventure...</div>
+        <div className="text-4xl font-sans text-primary glow-gold tracking-widest">MYTHWEAVE</div>
+        <div className="text-muted-foreground text-sm font-serif italic animate-pulse">Summoning your adventure...</div>
       </div>
     </div>
   );
-  if (!isAuthenticated) {
-    window.location.href = "/api/login";
-    return null;
-  }
+}
+
+function ProtectedRoute({ component: Component, ...rest }: any) {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Redirect to="/auth" />;
   return <Component {...rest} />;
 }
 
@@ -34,9 +36,14 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={() => {
-        if (isLoading) return null;
+        if (isLoading) return <LoadingScreen />;
         if (isAuthenticated) return <Redirect to="/dashboard" />;
         return <LandingPage />;
+      }} />
+      <Route path="/auth" component={() => {
+        if (isLoading) return <LoadingScreen />;
+        if (isAuthenticated) return <Redirect to="/dashboard" />;
+        return <AuthPage />;
       }} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/characters/new" component={() => <ProtectedRoute component={CreateCharacterPage} />} />

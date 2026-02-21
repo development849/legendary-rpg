@@ -13,7 +13,8 @@ Mythweave is an online fantasy RPG where an AI Game Master (powered by GPT-4o) r
 ## Key Files
 
 ### Frontend Pages
-- `client/src/pages/landing.tsx` — Marketing/landing with login CTA
+- `client/src/pages/landing.tsx` — Marketing/landing with CTAs to auth page
+- `client/src/pages/auth.tsx` — Registration/Login: tabbed form with email/password + Replit OAuth option
 - `client/src/pages/dashboard.tsx` — Main hub: character list, active parties, join party
 - `client/src/pages/create-character.tsx` — 4-step character creation (class → race → details → confirm)
 - `client/src/pages/create-campaign.tsx` — Campaign creation with GM pacing settings

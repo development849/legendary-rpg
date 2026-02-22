@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Scroll, Sparkles, Shield, Swords } from "lucide-react";
+import { ArrowLeft, Scroll, Sparkles, Shield, Swords, Palette } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,19 @@ const GM_MODES = [
   { id: "cinematic", label: "Cinematic", desc: "Rich detail. Deep narrative. Immersive." },
 ];
 
+const THEME_OPTIONS = [
+  { id: "mystery",    label: "Mystery",         desc: "Secrets, clues, and hidden truths to uncover",           icon: "🔍" },
+  { id: "horror",     label: "Horror & Dread",  desc: "Dark atmosphere, tension, and unsettling encounters",     icon: "💀" },
+  { id: "romance",    label: "Romance",          desc: "Romantic tension and alliances forged through attraction", icon: "🌹" },
+  { id: "comedy",     label: "Comedy & Wit",     desc: "Humor, banter, and moments of levity",                   icon: "🎭" },
+  { id: "political",  label: "Political Intrigue", desc: "Power struggles, court schemes, and factional conflict", icon: "👑" },
+  { id: "survival",   label: "Survival",         desc: "Scarce resources, harsh wilds, and desperate choices",   icon: "🔥" },
+  { id: "tragedy",    label: "Tragedy",          desc: "Loss, sacrifice, and the weight of fate",                icon: "⚔️" },
+  { id: "heist",      label: "Heist & Deception", desc: "Elaborate schemes, disguises, and cunning plans",       icon: "🗝️" },
+  { id: "exploration", label: "Exploration",     desc: "Uncharted lands, ancient ruins, and wonder",             icon: "🗺️" },
+  { id: "war",        label: "War & Siege",      desc: "Battlefield tactics, armies, and the cost of conflict",  icon: "🏹" },
+];
+
 export default function CreateCampaignPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -23,12 +36,19 @@ export default function CreateCampaignPage() {
   const [description, setDescription] = useState("");
   const [setting, setSetting] = useState("");
   const [gmMode, setGmMode] = useState("balanced");
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [noRomance, setNoRomance] = useState(false);
   const [noHorror, setNoHorror] = useState(false);
   const [selectedCharId, setSelectedCharId] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { data: characters = [] } = useQuery<Character[]>({ queryKey: ["/api/characters"] });
+
+  function toggleTheme(id: string) {
+    setSelectedThemes(prev =>
+      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
+    );
+  }
 
   async function handleCreate() {
     if (!name.trim()) {
@@ -44,12 +64,11 @@ export default function CreateCampaignPage() {
       const res = await fetch("/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description, setting, gmMode, noRomance, noHorror, fadeToBlack: true }),
+        body: JSON.stringify({ name: name.trim(), description, setting, themes: selectedThemes, gmMode, noRomance, noHorror, fadeToBlack: true }),
       });
       if (!res.ok) throw new Error(await res.text());
       const { campaign, party } = await res.json();
 
-      // Join the party with selected character
       await fetch(`/api/parties/${party.id}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -149,10 +168,39 @@ export default function CreateCampaignPage() {
             </div>
           </div>
 
-          {/* Content Toggles */}
+          {/* Genre Themes */}
           <div className="space-y-3">
             <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-2">
-              <Shield className="w-3.5 h-3.5 text-primary" /> Content Settings
+              <Palette className="w-3.5 h-3.5 text-primary" /> Genre Themes <span className="normal-case text-muted-foreground/50">(pick any)</span>
+            </label>
+            <p className="text-xs text-muted-foreground font-serif -mt-1">Select the tones and genres the GM should weave into your story.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {THEME_OPTIONS.map(theme => {
+                const active = selectedThemes.includes(theme.id);
+                return (
+                  <button
+                    key={theme.id}
+                    onClick={() => toggleTheme(theme.id)}
+                    data-testid={`button-theme-${theme.id}`}
+                    className={`p-3 rounded-md border text-left transition-all hover-elevate ${
+                      active
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card"
+                    }`}
+                  >
+                    <p className="text-base leading-none mb-1">{theme.icon}</p>
+                    <p className={`font-sans font-semibold text-xs tracking-wide ${active ? "text-primary" : ""}`}>{theme.label}</p>
+                    <p className="text-muted-foreground text-xs font-serif mt-0.5 leading-snug">{theme.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Content Exclusions */}
+          <div className="space-y-3">
+            <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-primary" /> Content Exclusions
             </label>
             <Card>
               <CardContent className="p-4 space-y-3">

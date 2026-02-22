@@ -43,6 +43,7 @@ CONTENT SETTINGS:
 - No Horror: ${campaign.noHorror}
 - Fade to Black: ${campaign.fadeToBlack}
 - GM Mode: ${campaign.gmMode}
+${(campaign.themes as string[] ?? []).length > 0 ? `- Active Themes: ${(campaign.themes as string[]).join(", ")} — weave these genre elements actively into the story, encounters, and NPC behavior.` : ""}
 
 PARTY: "${party.name}"
 

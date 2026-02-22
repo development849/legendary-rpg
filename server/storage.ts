@@ -72,12 +72,22 @@ export async function updateCharacter(id: string, data: Partial<Character>): Pro
 
 export async function createCampaign(ownerId: string, data: {
   name: string; description?: string; setting?: string;
+  themes?: string[];
   contentRating?: string; noRomance?: boolean; noHorror?: boolean;
   fadeToBlack?: boolean; gmMode?: string; stylePack?: string;
 }): Promise<Campaign> {
   const [campaign] = await db.insert(campaigns).values({
     ownerId,
-    ...data,
+    name: data.name,
+    description: data.description,
+    setting: data.setting,
+    themes: data.themes ?? [],
+    contentRating: data.contentRating,
+    noRomance: data.noRomance,
+    noHorror: data.noHorror,
+    fadeToBlack: data.fadeToBlack,
+    gmMode: data.gmMode,
+    stylePack: data.stylePack,
   }).returning();
   return campaign;
 }

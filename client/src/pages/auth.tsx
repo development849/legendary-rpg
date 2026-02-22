@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, Scroll, Users, Sparkles, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Scroll, Users, Sparkles, CheckCircle2, Sword } from "lucide-react";
 import logoPath from "@assets/legendary-logo.png";
 
 const registerSchema = z.object({

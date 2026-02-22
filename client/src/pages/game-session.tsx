@@ -353,11 +353,24 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
       );
     }
 
-    // Player message
+    // Player message — look up the speaker's portrait from the party members list
+    const speakerMember = members.find((m: any) => m.character?.name === playerName);
+    const speakerPortrait = speakerMember?.character?.profilePicture ?? null;
+
     return (
       <div key={msg.id} className="flex gap-2.5" data-testid={`message-player-${msg.id}`}>
-        <div className="w-7 h-7 rounded-md bg-secondary flex-shrink-0 flex items-center justify-center mt-0.5">
-          <Sword className="w-3.5 h-3.5 text-muted-foreground" />
+        <div className="w-7 h-7 rounded-md flex-shrink-0 mt-0.5 overflow-hidden bg-secondary">
+          {speakerPortrait ? (
+            <img
+              src={speakerPortrait}
+              alt={playerName}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Sword className="w-3.5 h-3.5 text-muted-foreground" />
+            </div>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs text-muted-foreground font-sans tracking-wide mb-1">{playerName}</p>

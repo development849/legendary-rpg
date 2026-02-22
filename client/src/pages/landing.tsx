@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sword, Shield, Scroll, Users, Sparkles, Dices } from "lucide-react";
+import logoPath from "@assets/legendary-logo.png";
 
 export default function LandingPage() {
   return (
@@ -18,17 +19,15 @@ export default function LandingPage() {
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
         <div className="relative z-10 max-w-4xl mx-auto space-y-8">
-          {/* Logo mark */}
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <div className="w-8 h-px bg-primary/60" />
-            <Sword className="w-5 h-5 text-primary/60" />
-            <div className="w-8 h-px bg-primary/60" />
+          {/* Logo */}
+          <div className="flex items-center justify-center mb-2">
+            <img src={logoPath} alt="Legendary RPG" className="w-32 h-32 md:w-40 md:h-40 drop-shadow-2xl" />
           </div>
 
           {/* Title */}
           <div className="space-y-3">
-            <h1 className="text-6xl md:text-8xl font-sans font-bold tracking-widest text-foreground glow-gold">
-              MYTHWEAVE
+            <h1 className="text-5xl md:text-7xl font-sans font-bold tracking-widest text-foreground glow-gold">
+              LEGENDARY RPG<sup className="text-2xl md:text-3xl align-super ml-1">℠</sup>
             </h1>
             <p className="text-lg md:text-xl text-primary font-sans tracking-widest uppercase font-light">
               The Living Chronicle
@@ -92,7 +91,7 @@ export default function LandingPage() {
             },
             {
               icon: Dices,
-              title: "Mythweave Lite Rules",
+              title: "Legendary RPG Lite Rules",
               description: "A streamlined d20 system with meaningful choices. Ability checks, combat, conditions, and a Focus resource for spells and special abilities.",
             },
             {
@@ -134,7 +133,7 @@ export default function LandingPage() {
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         <div className="space-y-6 max-w-xl mx-auto">
           <p className="text-3xl font-sans font-bold tracking-widest">READY, ADVENTURER?</p>
-          <p className="text-muted-foreground font-serif italic">The world of Mythweave awaits. Your story is about to begin.</p>
+          <p className="text-muted-foreground font-serif italic">The world of Legendary RPG℠ awaits. Your story is about to begin.</p>
           <Link href="/auth">
             <Button
               size="lg"
@@ -150,7 +149,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <div className="text-center py-6 text-muted-foreground/30 text-xs font-sans tracking-widest">
-        MYTHWEAVE · THE LIVING CHRONICLE · POWERED BY AI
+        LEGENDARY RPG℠ · THE LIVING CHRONICLE · POWERED BY AI
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Scroll, Target, Star, Flame, Music } from "lucide-react";
 import type { Character } from "@shared/schema";
+import logoPath from "@assets/legendary-logo.png";
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
@@ -49,9 +50,9 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Sword className="w-5 h-5 text-primary" />
-            <span className="font-sans font-bold tracking-widest text-lg">MYTHWEAVE</span>
+          <div className="flex items-center gap-2">
+            <img src={logoPath} alt="Legendary RPG" className="w-7 h-7 rounded-sm" />
+            <span className="font-sans font-bold tracking-widest text-lg">LEGENDARY RPG<sup className="text-xs align-super ml-px">℠</sup></span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-muted-foreground text-sm font-serif">Welcome, {displayName}</span>

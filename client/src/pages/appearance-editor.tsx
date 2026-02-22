@@ -9,10 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Wand2, Save, RefreshCw, ImageOff, Sparkles,
-  User, BookOpen, Sword, Star, Camera,
+  User, BookOpen, Sword, Camera,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import styleRef from "@assets/Snip20260221_1_1771705188223.png";
 
 interface AppearanceEditorProps {
   characterId: string;
@@ -45,7 +44,6 @@ export default function AppearanceEditorPage({ characterId }: AppearanceEditorPr
   const [extraDetails, setExtraDetails] = useState("");
   const [generatedPortrait, setGeneratedPortrait] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [showStyleRef, setShowStyleRef] = useState(false);
 
   const saveMutation = useMutation({
     mutationFn: async (portrait: string) => {
@@ -248,34 +246,12 @@ export default function AppearanceEditorPage({ characterId }: AppearanceEditorPr
                   </p>
                 </div>
 
-                {/* Style note with reference toggle */}
-                <div className="rounded border border-border/50 bg-secondary/20 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-sans uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1">
-                      <Star className="w-3 h-3 text-primary/60" /> Art Style
-                    </p>
-                    <button
-                      onClick={() => setShowStyleRef(v => !v)}
-                      className="text-[10px] font-sans text-primary/60 hover:text-primary transition-colors"
-                      data-testid="button-toggle-style-ref"
-                    >
-                      {showStyleRef ? "hide reference" : "view reference"}
-                    </button>
-                  </div>
+                {/* Style note */}
+                <div className="rounded border border-border/50 bg-secondary/20 p-3">
+                  <p className="text-[10px] font-sans uppercase tracking-widest text-muted-foreground/60 mb-1.5">Art Style</p>
                   <p className="font-serif text-xs text-muted-foreground/70 italic">
                     Cinematic digital fantasy portraiture — dramatic rim lighting, ultra-detailed costuming, deep atmospheric backgrounds, and luminous painterly finishes.
                   </p>
-                  {showStyleRef && (
-                    <div className="mt-2 rounded overflow-hidden border border-border/40">
-                      <img
-                        src={styleRef}
-                        alt="Portrait style reference"
-                        className="w-full object-cover"
-                        data-testid="img-style-reference"
-                      />
-                      <p className="text-[10px] text-muted-foreground/40 font-sans text-center p-1.5">Style reference — cinematic fantasy portraiture</p>
-                    </div>
-                  )}
                 </div>
 
                 <Button

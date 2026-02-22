@@ -200,9 +200,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         `fantasy concept art, high quality illustration`,
       ].filter(Boolean).join(" ");
 
+      const fs = await import("fs");
+      const path = await import("path");
+      const styleRefPath = path.join(process.cwd(), "attached_assets", "Snip20260221_1_1771705188223.png");
+      const styleRefBase64 = fs.existsSync(styleRefPath)
+        ? fs.readFileSync(styleRefPath).toString("base64")
+        : null;
+
+      const parts: any[] = [];
+      if (styleRefBase64) {
+        parts.push({ text: "Use this image as the visual style reference for the portrait you generate:" });
+        parts.push({ inlineData: { mimeType: "image/png", data: styleRefBase64 } });
+      }
+      parts.push({ text: prompt });
+
       const response = await ai.models.generateContent({
         model: "gemini-3-pro-image-preview",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts }],
         config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
       });
 

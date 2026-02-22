@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Scroll, Sparkles, Shield, Swords, Palette } from "lucide-react";
+import { ArrowLeft, Scroll, Sparkles, Shield, Swords, Palette, ImageOff, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,6 +44,9 @@ export default function CreateCampaignPage() {
 
   const { data: characters = [] } = useQuery<Character[]>({ queryKey: ["/api/characters"] });
 
+  const selectedChar = characters.find(c => c.id === selectedCharId);
+  const selectedHasPortrait = !!(selectedChar?.profilePicture);
+
   function toggleTheme(id: string) {
     setSelectedThemes(prev =>
       prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
@@ -57,6 +60,14 @@ export default function CreateCampaignPage() {
     }
     if (!selectedCharId) {
       toast({ title: "Select a character", description: "Choose a hero to lead this campaign", variant: "destructive" });
+      return;
+    }
+    if (!selectedHasPortrait) {
+      toast({
+        title: "Hero needs a portrait",
+        description: `${selectedChar?.name} has no portrait yet. Visit the Portrait Studio to generate one — your GM uses it to visualize your hero.`,
+        variant: "destructive",
+      });
       return;
     }
     setLoading(true);
@@ -251,17 +262,57 @@ export default function CreateCampaignPage() {
                     key={char.id}
                     onClick={() => setSelectedCharId(char.id)}
                     data-testid={`button-select-char-${char.id}`}
-                    className={`p-4 rounded-md border text-left transition-all hover-elevate ${
+                    className={`p-4 rounded-md border text-left transition-all hover-elevate flex gap-3 items-start ${
                       selectedCharId === char.id
                         ? "border-primary bg-primary/10"
                         : "border-border bg-card"
                     }`}
                   >
-                    <p className="font-sans font-semibold tracking-wide">{char.name}</p>
-                    <p className="text-muted-foreground text-sm font-serif capitalize">Lv.{char.level} {char.race} {char.class}</p>
-                    <p className="text-muted-foreground/50 text-xs mt-1">{char.currentHp}/{char.maxHp} HP</p>
+                    {char.profilePicture ? (
+                      <img
+                        src={char.profilePicture}
+                        alt={char.name}
+                        className="w-12 h-12 rounded object-cover flex-shrink-0 border border-border"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded flex-shrink-0 border border-dashed border-muted-foreground/40 bg-muted/30 flex items-center justify-center">
+                        <ImageOff className="w-5 h-5 text-muted-foreground/40" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-sans font-semibold tracking-wide">{char.name}</p>
+                      <p className="text-muted-foreground text-sm font-serif capitalize">Lv.{char.level} {char.race} {char.class}</p>
+                      <p className="text-muted-foreground/50 text-xs mt-1">{char.currentHp}/{char.maxHp} HP</p>
+                      {!char.profilePicture && (
+                        <p className="text-xs text-amber-500/80 mt-1 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" /> No portrait
+                        </p>
+                      )}
+                    </div>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* Portrait warning banner */}
+            {selectedCharId && !selectedHasPortrait && (
+              <div className="flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 mt-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-sans font-medium text-amber-500">Portrait required</p>
+                  <p className="text-xs text-muted-foreground font-serif mt-0.5">
+                    Your GM uses your portrait to visualize {selectedChar?.name} during the adventure. Generate one before starting.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-shrink-0 border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                  onClick={() => navigate(`/characters/${selectedCharId}/appearance`)}
+                  data-testid="button-go-generate-portrait"
+                >
+                  <Palette className="w-3.5 h-3.5 mr-1.5" /> Portrait Studio
+                </Button>
               </div>
             )}
           </div>

@@ -550,7 +550,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     onClick={() => sendAction(action)}
                     disabled={sending}
                     data-testid={`button-quick-action`}
-                    className="flex-shrink-0 text-xs font-serif italic text-muted-foreground/70 px-3 py-1.5 rounded-full border border-border/50 hover:border-primary/50 hover:text-foreground transition-all whitespace-nowrap"
+                    className="flex-shrink-0 text-xs font-serif italic text-foreground/75 px-3 py-1.5 rounded-full border border-border hover:border-primary/60 hover:text-foreground transition-all whitespace-nowrap"
                   >
                     {action}
                   </button>

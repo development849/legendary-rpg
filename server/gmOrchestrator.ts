@@ -20,6 +20,7 @@ export interface GMContext {
 function buildSystemPrompt(campaign: any, party: any, chars: any[], worldSnap: any, summaries: any[], arcData: any[]): string {
   const charSheets = chars.map(c => `
 Character: ${c.name} (${c.race} ${c.class}, Level ${c.level})
+CHARACTER_ID: ${c.id}
 HP: ${c.currentHp}/${c.maxHp} | XP: ${c.xp}
 Stats: ${JSON.stringify(c.stats)}
 Inventory: ${(c.inventory as any[]).map((i: any) => `${i.name} x${i.qty}`).join(", ")}
@@ -104,9 +105,9 @@ Always respond with valid JSON in this structure:
     {"character": "name", "die": "d20", "modifier": 2, "advantage": "normal", "purpose": "Stealth check DC 12"}
   ],
   "proposed_updates": [
-    {"type": "HP_CHANGED", "character_id": "id", "delta": -5, "reason": "Arrow wound"},
-    {"type": "XP_GRANTED", "character_id": "id", "amount": 100, "reason": "Defeated the bandits"},
-    {"type": "ITEM_GRANTED", "character_id": "id", "item": {"name": "...", "type": "...", "qty": 1}}
+    {"type": "HP_CHANGED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "delta": -5, "reason": "Arrow wound"},
+    {"type": "XP_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "amount": 100, "reason": "Defeated the bandits"},
+    {"type": "ITEM_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item": {"name": "...", "type": "weapon|armor|consumable|tool|treasure", "qty": 1}}
   ],
   "quick_actions": ["Search the room", "Talk to the innkeeper", "Head to the market"],
   "scene": {"title": "...", "location": "...", "threat": null}
@@ -243,12 +244,26 @@ export async function runGM(
   onDone(fullText, updates);
 }
 
+/** Resolve a character by its UUID, falling back to matching by name within the party */
+async function resolveCharacter(characterIdOrName: string, partyId: string) {
+  // First try direct UUID lookup
+  const [byId] = await db.select().from(characters).where(eq(characters.id, characterIdOrName));
+  if (byId) return byId;
+  // Fallback: find party members and match by character name (case-insensitive)
+  const members = await db.select({ characterId: partyMembers.characterId })
+    .from(partyMembers).where(eq(partyMembers.partyId, partyId));
+  const charIds = members.map(m => m.characterId).filter(Boolean) as string[];
+  if (charIds.length === 0) return null;
+  const partyChars = await db.select().from(characters).where(inArray(characters.id, charIds));
+  return partyChars.find(c => c.name.toLowerCase() === characterIdOrName.toLowerCase()) ?? null;
+}
+
 async function processUpdates(updates: any[], partyId: string, campaignId: string): Promise<void> {
   for (const update of updates) {
     try {
       switch (update.type) {
         case "HP_CHANGED": {
-          const [char] = await db.select().from(characters).where(eq(characters.id, update.character_id));
+          const char = await resolveCharacter(update.character_id, partyId);
           if (char) {
             const newHp = Math.max(0, Math.min(char.maxHp, char.currentHp + (update.delta ?? 0)));
             await db.update(characters).set({ currentHp: newHp }).where(eq(characters.id, char.id));
@@ -260,31 +275,33 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
           break;
         }
         case "XP_GRANTED": {
-          const [char] = await db.select().from(characters).where(eq(characters.id, update.character_id));
+          const char = await resolveCharacter(update.character_id, partyId);
           if (char) {
             const newXp = char.xp + (update.amount ?? 0);
             await db.update(characters).set({ xp: newXp }).where(eq(characters.id, char.id));
             await db.insert(gameEvents).values({
               partyId, campaignId, eventType: "XP_GRANTED", actorId: "gm",
-              payload: { character_id: update.character_id, amount: update.amount, reason: update.reason },
+              payload: { character_id: char.id, amount: update.amount, reason: update.reason },
             });
           }
           break;
         }
         case "ITEM_GRANTED": {
-          const [char] = await db.select().from(characters).where(eq(characters.id, update.character_id));
+          const char = await resolveCharacter(update.character_id, partyId);
           if (char) {
-            const inv = [...(char.inventory as any[]), update.item];
+            const existing = char.inventory as any[];
+            // Avoid duplicate entries for the same item in the same update batch
+            const inv = [...existing, { ...update.item, qty: update.item.qty ?? 1 }];
             await db.update(characters).set({ inventory: inv }).where(eq(characters.id, char.id));
             await db.insert(gameEvents).values({
               partyId, campaignId, eventType: "ITEM_GRANTED", actorId: "gm",
-              payload: { character_id: update.character_id, item: update.item },
+              payload: { character_id: char.id, item: update.item },
             });
           }
           break;
         }
         case "ITEM_REMOVED": {
-          const [char] = await db.select().from(characters).where(eq(characters.id, update.character_id));
+          const char = await resolveCharacter(update.character_id, partyId);
           if (char) {
             const inv = (char.inventory as any[]).filter((i: any) => i.name !== update.item_name);
             await db.update(characters).set({ inventory: inv }).where(eq(characters.id, char.id));

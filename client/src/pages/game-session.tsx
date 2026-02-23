@@ -191,7 +191,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           if (prev.find(m => m.id === msg.message.id)) return prev;
           return [...prev, msg.message];
         });
-        if (msg.message.role === "gm") setIsFirstTurn(false);
+        if (msg.message.role === "gm") {
+          setIsFirstTurn(false);
+          // Refresh party data so inventory/HP/XP reflect any GM-applied updates
+          queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+        }
       }
     };
     return () => socket.close();

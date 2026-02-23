@@ -542,7 +542,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
           {/* Quick Actions */}
           {quickActions.length > 0 && !isStreaming && (
-            <div className="flex-shrink-0 px-4 py-2 border-t border-border/50 relative z-10">
+            <div className="flex-shrink-0 px-4 py-2 border-t border-border bg-card/90 backdrop-blur-sm relative z-10">
               <div className="flex gap-2 overflow-x-auto pb-1 max-w-3xl mx-auto">
                 {quickActions.map(action => (
                   <button
@@ -550,7 +550,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     onClick={() => sendAction(action)}
                     disabled={sending}
                     data-testid={`button-quick-action`}
-                    className="flex-shrink-0 text-xs font-serif italic text-foreground/75 px-3 py-1.5 rounded-full border border-border hover:border-primary/60 hover:text-foreground transition-all whitespace-nowrap"
+                    className="flex-shrink-0 text-xs font-serif italic text-foreground px-3 py-1.5 rounded-full border border-border/80 bg-background/60 hover:border-primary hover:bg-primary/10 hover:text-primary transition-all whitespace-nowrap"
                   >
                     {action}
                   </button>

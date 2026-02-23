@@ -149,6 +149,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [showCharacters, setShowCharacters] = useState(false);
   const [isFirstTurn, setIsFirstTurn] = useState(true);
+  const [messagesLoaded, setMessagesLoaded] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -158,7 +159,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     queryKey: [`/api/parties/${partyId}`],
   });
 
-  // Load messages
+  // Load messages — must complete before the auto-start effect can fire
   useEffect(() => {
     fetch(`/api/parties/${partyId}/messages`)
       .then(r => r.json())
@@ -167,8 +168,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           setMessages(data);
           if (data.length > 0) setIsFirstTurn(false);
         }
+        setMessagesLoaded(true);
       })
-      .catch(console.error);
+      .catch(() => setMessagesLoaded(true));
   }, [partyId]);
 
   // Auto-scroll
@@ -194,12 +196,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     return () => socket.close();
   }, [partyId]);
 
-  // Start adventure on first load
+  // Start adventure only after messages have loaded and none exist yet
   useEffect(() => {
-    if (isFirstTurn && partyData && !sending) {
+    if (messagesLoaded && isFirstTurn && partyData && !sending) {
       startAdventure();
     }
-  }, [isFirstTurn, partyData]);
+  }, [messagesLoaded, isFirstTurn, partyData]);
 
   const startAdventure = useCallback(async () => {
     await sendAction("*The adventure begins. Set the scene and introduce the party to their surroundings.*", "Game Master");

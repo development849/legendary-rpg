@@ -9,7 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown,
-  Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull
+  Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
+  Mic, MicOff, MessageCircle, Radio
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -154,6 +155,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [sceneBackground, setSceneBackground] = useState<string | null>(null);
   const [backgroundPending, setBackgroundPending] = useState(false);
   const backgroundPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [inputMode, setInputMode] = useState<"action" | "dialogue" | "ooc">("action");
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -253,36 +257,84 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     await sendAction("*Campaign start. Drop the player straight into the middle of something happening right now — no preamble, no scenic vista. Something is already in motion: a confrontation, a job going sideways, waking up somewhere unexpected, an NPC doing something weird. The player is reacting, not arriving.*", "Game Master");
   }, [partyId]);
 
+  function toggleVoice() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      toast({ title: "Voice input not supported", description: "Try Chrome or Edge for voice input.", variant: "destructive" });
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    const recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognition.onresult = (e: any) => {
+      const transcript = Array.from(e.results as SpeechRecognitionResultList)
+        .map((r: SpeechRecognitionResult) => r[0].transcript)
+        .join("");
+      setInput(transcript);
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  }
+
   async function sendAction(content: string, playerName?: string) {
     if (!content.trim() || sending) return;
 
     setSending(true);
     setStreamingContent("");
-    setIsStreaming(true);
 
     const name = playerName ?? partyData?.members?.find((m: any) => m.userId === user?.id)?.character?.name ?? "Adventurer";
+    // System calls (startAdventure) always use "action" mode
+    const mode = playerName ? "action" : inputMode;
 
-    // Add optimistic player message (not for gm calls)
+    // Add optimistic player message (not for system gm calls)
     if (!playerName) {
       const optimistic: ChatMsg = {
         id: `opt-${Date.now()}`,
         role: "player",
         content,
         userId: user?.id,
-        metadata: { playerName: name },
+        metadata: { playerName: name, msgType: mode },
         createdAt: new Date().toISOString(),
       };
       setMessages(prev => [...prev, optimistic]);
       setInput("");
     }
 
+    // OOC: simple POST, no streaming, no GM response
+    if (mode === "ooc") {
+      try {
+        await fetch(`/api/parties/${partyId}/action`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content, playerName: name, mode: "ooc" }),
+        });
+        // Real message comes in via WebSocket; strip the optimistic one
+        setMessages(prev => prev.filter(m => !m.id.startsWith("opt-")));
+      } catch {
+        toast({ title: "Failed to send", variant: "destructive" });
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    setIsStreaming(true);
     abortRef.current = new AbortController();
 
     try {
       const res = await fetch(`/api/parties/${partyId}/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, playerName: name }),
+        body: JSON.stringify({ content, playerName: name, mode }),
         signal: abortRef.current.signal,
       });
 
@@ -401,9 +453,47 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
       );
     }
 
+    const msgType = msg.metadata?.msgType ?? "action";
+
+    // OOC message — grey, clearly marked out-of-character
+    if (msgType === "ooc") {
+      return (
+        <div key={msg.id} className="text-center py-1" data-testid={`message-ooc-${msg.id}`}>
+          <span className="text-xs font-sans text-muted-foreground/60 italic bg-muted/30 rounded px-3 py-1">
+            (( <span className="text-muted-foreground/80 not-italic font-medium">{playerName}:</span> {msg.content} ))
+          </span>
+        </div>
+      );
+    }
+
     // Player message — look up the speaker's portrait from the party members list
     const speakerMember = members.find((m: any) => m.character?.name === playerName);
     const speakerPortrait = speakerMember?.character?.profilePicture ?? null;
+
+    // Dialogue message — speech bubble style with quote marks
+    if (msgType === "dialogue") {
+      return (
+        <div key={msg.id} className="flex gap-2.5" data-testid={`message-dialogue-${msg.id}`}>
+          <div className="w-7 h-7 rounded-md flex-shrink-0 mt-0.5 overflow-hidden bg-secondary">
+            {speakerPortrait ? (
+              <img src={speakerPortrait} alt={playerName} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <MessageCircle className="w-3.5 h-3.5 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground font-sans tracking-wide mb-1 flex items-center gap-1">
+              <MessageCircle className="w-3 h-3 text-primary/60" /> {playerName}
+            </p>
+            <p className="font-serif text-foreground/90 text-sm leading-relaxed italic border-l-2 border-primary/40 pl-3">
+              "{msg.content}"
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div key={msg.id} className="flex gap-2.5" data-testid={`message-player-${msg.id}`}>
@@ -560,35 +650,98 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           )}
 
           {/* Input */}
-          <div className="flex-shrink-0 border-t border-border bg-card/50 p-3 relative z-10">
-            <div className="flex gap-2 max-w-3xl mx-auto">
-              <div className="flex-1 relative">
-                <textarea
-                  ref={inputRef}
-                  className="w-full bg-input border border-border rounded-md px-4 py-3 text-sm font-serif text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-                  placeholder="What do you do? (Shift+Enter for new line)"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  rows={1}
-                  style={{ minHeight: "44px", maxHeight: "120px" }}
-                  disabled={isStreaming}
-                  data-testid="input-action"
-                />
+          <div className="flex-shrink-0 border-t border-border bg-card/90 backdrop-blur-sm p-3 relative z-10">
+            <div className="max-w-3xl mx-auto space-y-2">
+              {/* Mode selector */}
+              <div className="flex gap-1.5 items-center">
+                {([
+                  { id: "action", label: "Act", icon: Sword, tip: "Perform an action — the GM narrates what happens" },
+                  { id: "dialogue", label: "Say", icon: MessageCircle, tip: "Speak in character — NPCs will respond" },
+                  { id: "ooc", label: "OOC", icon: Radio, tip: "Out of character — visible to party only, GM ignores" },
+                ] as const).map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => setInputMode(m.id)}
+                    data-testid={`button-mode-${m.id}`}
+                    title={m.tip}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-sans transition-all border ${
+                      inputMode === m.id
+                        ? m.id === "ooc"
+                          ? "bg-muted border-muted-foreground/40 text-muted-foreground"
+                          : m.id === "dialogue"
+                          ? "bg-primary/15 border-primary/50 text-primary"
+                          : "bg-secondary border-border text-foreground"
+                        : "border-transparent text-muted-foreground/60 hover:text-muted-foreground"
+                    }`}
+                  >
+                    <m.icon className="w-3 h-3" />
+                    {m.label}
+                  </button>
+                ))}
+                <span className="text-xs text-muted-foreground/40 font-sans ml-1 hidden sm:inline">
+                  {inputMode === "action" && "What do you do?"}
+                  {inputMode === "dialogue" && "Speaking in character"}
+                  {inputMode === "ooc" && "Out of character — party only"}
+                </span>
               </div>
-              <Button
-                onClick={() => sendAction(input)}
-                disabled={!input.trim() || sending}
-                size="icon"
-                className="h-11 w-11 flex-shrink-0"
-                data-testid="button-send-action"
-              >
-                {sending ? (
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </Button>
+
+              {/* Textarea + buttons row */}
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <textarea
+                    ref={inputRef}
+                    className={`w-full bg-input border rounded-md px-4 py-3 text-sm font-serif text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 resize-none transition-colors ${
+                      inputMode === "dialogue"
+                        ? "border-primary/40 focus:ring-primary/50 italic"
+                        : inputMode === "ooc"
+                        ? "border-muted-foreground/30 focus:ring-muted-foreground/30"
+                        : "border-border focus:ring-ring"
+                    }`}
+                    placeholder={
+                      inputMode === "dialogue"
+                        ? `"What do you say aloud?" — your character speaks...`
+                        : inputMode === "ooc"
+                        ? "(( Out of character — visible to party, not the GM ))"
+                        : "What do you do? (Shift+Enter for new line)"
+                    }
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    rows={1}
+                    style={{ minHeight: "44px", maxHeight: "120px" }}
+                    disabled={isStreaming}
+                    data-testid="input-action"
+                  />
+                </div>
+
+                {/* Voice button */}
+                <Button
+                  variant={isListening ? "destructive" : "outline"}
+                  size="icon"
+                  onClick={toggleVoice}
+                  disabled={isStreaming}
+                  className={`h-11 w-11 flex-shrink-0 ${isListening ? "animate-pulse" : ""}`}
+                  data-testid="button-voice"
+                  title="Voice input"
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+
+                {/* Send button */}
+                <Button
+                  onClick={() => sendAction(input)}
+                  disabled={!input.trim() || sending}
+                  size="icon"
+                  className="h-11 w-11 flex-shrink-0"
+                  data-testid="button-send-action"
+                >
+                  {sending ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

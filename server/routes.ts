@@ -398,29 +398,39 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userId = getUserId(req)!;
       const partyId = req.params.id;
-      const { content, playerName } = req.body;
+      const { content, playerName, mode = "action" } = req.body;
       if (!content) return res.status(400).json({ error: "content required" });
 
       // Get party to find campaign
       const party = await getParty(partyId);
       if (!party) return res.status(404).json({ error: "Party not found" });
 
-      // Save player message
+      // Save player message with mode in metadata
       const playerMsg = await saveChatMessage({
         partyId,
         userId,
         role: "player",
         content,
-        metadata: { playerName: playerName || "Adventurer" },
+        metadata: { playerName: playerName || "Adventurer", msgType: mode },
       });
 
       // Broadcast player message
       broadcastToParty(partyId, { type: "MESSAGE", message: playerMsg });
 
+      // OOC: no GM response, just acknowledge
+      if (mode === "ooc") {
+        return res.json({ ok: true, message: playerMsg });
+      }
+
       // Set up SSE for streaming GM response
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
+
+      // Frame intent for dialogue mode
+      const playerIntent = mode === "dialogue"
+        ? `[DIALOGUE] ${playerName || "The player"} says aloud: "${content}"`
+        : content;
 
       let gmFullText = "";
 
@@ -430,7 +440,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           campaignId: party.campaignId,
           userId,
           userName: playerName || "Adventurer",
-          playerIntent: content,
+          playerIntent,
+          mode: mode === "dialogue" ? "dialogue" : "action",
         },
         (chunk) => {
           gmFullText += chunk;

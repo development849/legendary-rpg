@@ -86,6 +86,7 @@ export interface GMContext {
   userId: string;
   userName: string;
   playerIntent: string;
+  mode?: "action" | "dialogue";
 }
 
 function buildSystemPrompt(campaign: any, party: any, chars: any[], worldSnap: any, summaries: any[], arcData: any[]): string {
@@ -167,6 +168,9 @@ YOUR ROLE:
 5. Keep track of continuity - never contradict established facts
 6. Use humor, callbacks, and personality to make the world feel alive
 7. Reward creativity and chaotic good roleplay
+
+HANDLING PLAYER DIALOGUE (messages starting with [DIALOGUE]):
+When a player speaks aloud to an NPC or the room, respond IN CHARACTER as the NPC being addressed. Keep NPC dialogue short and punchy — 1–3 sentences. Show the NPC's personality, agenda, and reaction. Then briefly narrate what happens next. Format: put NPC spoken words in "quotes".
 
 RESPONSE FORMAT:
 Always respond with valid JSON in this structure:

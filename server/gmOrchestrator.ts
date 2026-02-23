@@ -9,7 +9,7 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-async function generateLocationBackground(
+export async function generateLocationBackground(
   partyId: string,
   locationName: string,
   sceneTitle: string,

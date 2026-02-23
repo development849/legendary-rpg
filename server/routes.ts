@@ -12,7 +12,7 @@ import {
   saveChatMessage, getPartyMessages, getWorldState,
 } from "./storage";
 import { rollDice } from "./gameEngine";
-import { runGM } from "./gmOrchestrator";
+import { runGM, generateLocationBackground } from "./gmOrchestrator";
 import { db } from "./db";
 import { locationScenes } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -310,6 +310,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/parties/:id/scene-background", requireAuth, async (req: any, res) => {
     try {
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.set("Pragma", "no-cache");
+
       const worldSnap = await getWorldState(req.params.id);
       const currentLocation: string = (worldSnap?.state as any)?.currentLocation ?? "";
       if (!currentLocation) return res.json({ pending: false, imageData: null });
@@ -321,6 +324,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (row) {
         res.json({ pending: false, imageData: row.imageData, locationName: currentLocation });
       } else {
+        // Trigger generation if not started yet — handles existing campaigns
+        // Find scene title and campaign setting from worldState / campaign
+        const state = (worldSnap?.state as any) ?? {};
+        const locationMeta = (state.locations ?? []).find((l: any) => l.name === currentLocation);
+        const party = await getParty(req.params.id);
+        const campaign = party ? await getCampaign(party.campaignId) : null;
+        const settingCtx = [(campaign as any)?.setting ?? "", (campaign as any)?.description ?? ""].join(" ");
+        generateLocationBackground(
+          req.params.id,
+          currentLocation,
+          locationMeta?.title ?? currentLocation,
+          settingCtx,
+        ).catch(console.error);
         res.json({ pending: true, imageData: null, locationName: currentLocation });
       }
     } catch (e) {

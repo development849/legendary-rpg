@@ -167,6 +167,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     queryKey: [`/api/parties/${partyId}`],
   });
 
+  const { data: situations = [] } = useQuery<any[]>({
+    queryKey: [`/api/parties/${partyId}/situations`],
+    refetchInterval: 8000,
+  });
+
   // Load messages — must complete before the auto-start effect can fire
   useEffect(() => {
     fetch(`/api/parties/${partyId}/messages`)
@@ -240,6 +245,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           setIsFirstTurn(false);
           // Refresh party data so inventory/HP/XP reflect any GM-applied updates
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+          // Refresh character situations for split-party tracking
+          queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/situations`] });
         }
       }
     };
@@ -950,9 +957,61 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   const ws = partyData?.worldState?.state ?? {};
                   const locations: any[] = ws.locations ?? [];
                   const currentLocation: string = ws.currentLocation ?? "";
+                  const members: any[] = partyData?.members ?? [];
+                  const sitMap = new Map(situations.map((s: any) => [s.characterId, s]));
                   return (
-                    <div className="space-y-2">
-                      <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5 pb-1">
+                    <div className="space-y-3">
+
+                      {/* Party Status — who's where */}
+                      {members.length > 0 && (
+                        <div>
+                          <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5 pb-2">
+                            <Users className="w-3 h-3 text-primary" /> Party Status
+                          </p>
+                          <div className="space-y-2">
+                            {members.map((m: any) => {
+                              const char = m.character;
+                              if (!char) return null;
+                              const sit = sitMap.get(char.id);
+                              const companions: string[] = (sit?.companions ?? []).filter((n: string) => n !== char.name);
+                              return (
+                                <div key={char.id} className="rounded-md border border-border bg-card/60 px-2.5 py-2" data-testid={`status-character-${char.id}`}>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    {char.profilePicture ? (
+                                      <img src={char.profilePicture} alt={char.name} className="w-5 h-5 rounded-sm object-cover flex-shrink-0" />
+                                    ) : (
+                                      <div className="w-5 h-5 rounded-sm bg-secondary flex items-center justify-center flex-shrink-0">
+                                        <Sword className="w-2.5 h-2.5 text-muted-foreground" />
+                                      </div>
+                                    )}
+                                    <span className="text-xs font-sans font-semibold text-foreground truncate">{char.name}</span>
+                                  </div>
+                                  {sit ? (
+                                    <>
+                                      <p className="text-xs font-sans text-primary/80 flex items-center gap-1 mb-0.5">
+                                        <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
+                                        <span className="truncate">{sit.location}</span>
+                                      </p>
+                                      {sit.situation && (
+                                        <p className="text-xs font-serif text-muted-foreground leading-snug italic">{sit.situation}</p>
+                                      )}
+                                      {companions.length > 0 && (
+                                        <p className="text-xs font-sans text-muted-foreground/60 mt-0.5">
+                                          With: {companions.join(", ")}
+                                        </p>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <p className="text-xs font-serif text-muted-foreground/50 italic">Situation unknown</p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5 pb-1 pt-1 border-t border-border">
                         <MapPin className="w-3 h-3 text-primary" /> Journey Map
                       </p>
 

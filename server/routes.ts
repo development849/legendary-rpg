@@ -14,7 +14,7 @@ import {
 import { rollDice } from "./gameEngine";
 import { runGM, generateLocationBackground } from "./gmOrchestrator";
 import { db } from "./db";
-import { locationScenes } from "@shared/schema";
+import { locationScenes, partyMembers } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 
 // WebSocket connections per party
@@ -393,6 +393,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) { res.status(500).json({ error: "Failed to get messages" }); }
   });
 
+  // Party member situations for split-party tracking
+  app.get("/api/parties/:id/situations", requireAuth, async (req: any, res) => {
+    try {
+      const partyId = req.params.id;
+      const members = await db.select().from(partyMembers).where(eq(partyMembers.partyId, partyId));
+      const charIds = members.map(m => m.characterId).filter(Boolean);
+      if (!charIds.length) return res.json([]);
+      const { characterSituations } = await import("@shared/schema");
+      const { inArray: inArr } = await import("drizzle-orm");
+      const sits = await db.select().from(characterSituations).where(inArr(characterSituations.characterId, charIds));
+      res.json(sits);
+    } catch (e) { res.status(500).json({ error: "Failed to get situations" }); }
+  });
+
   // Player action → GM response (streaming)
   app.post("/api/parties/:id/action", requireAuth, async (req: any, res) => {
     try {
@@ -432,6 +446,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         ? `[DIALOGUE] ${playerName || "The player"} says aloud: "${content}"`
         : content;
 
+      // Look up the acting character for split-party tracking
+      const [actingMember] = await db.select()
+        .from(partyMembers)
+        .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, userId)));
+      const actingCharacterId = actingMember?.characterId ?? undefined;
+
       let gmFullText = "";
 
       await runGM(
@@ -442,6 +462,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           userName: playerName || "Adventurer",
           playerIntent,
           mode: mode === "dialogue" ? "dialogue" : "action",
+          actingCharacterId,
         },
         (chunk) => {
           gmFullText += chunk;

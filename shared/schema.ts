@@ -160,6 +160,20 @@ export const insertLocationSceneSchema = createInsertSchema(locationScenes).omit
 export type InsertLocationScene = z.infer<typeof insertLocationSceneSchema>;
 export type LocationScene = typeof locationScenes.$inferSelect;
 
+// ─── Character Situations (per-character narrative state for split-party tracking) ─────────
+
+export const characterSituations = pgTable("character_situations", {
+  partyId: varchar("party_id").notNull(),
+  characterId: varchar("character_id").notNull().primaryKey(),
+  location: text("location").notNull().default("Unknown"),
+  situation: text("situation").notNull().default(""),
+  activeNpcs: jsonb("active_npcs").notNull().default(sql`'[]'::jsonb`),
+  companions: jsonb("companions").notNull().default(sql`'[]'::jsonb`),
+  updatedAt: timestamp("updated_at").default(sql`NOW()`).notNull(),
+});
+
+export type CharacterSituation = typeof characterSituations.$inferSelect;
+
 // ─── Arcs ─────────────────────────────────────────────────────────────────────
 
 export const arcs = pgTable("arcs", {

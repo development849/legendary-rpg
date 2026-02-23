@@ -205,7 +205,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   }, [messagesLoaded, isFirstTurn, partyData]);
 
   const startAdventure = useCallback(async () => {
-    await sendAction("*The adventure begins. Set the scene and introduce the party to their surroundings.*", "Game Master");
+    await sendAction("*Campaign start. Drop the player straight into the middle of something happening right now — no preamble, no scenic vista. Something is already in motion: a confrontation, a job going sideways, waking up somewhere unexpected, an NPC doing something weird. The player is reacting, not arriving.*", "Game Master");
   }, [partyId]);
 
   async function sendAction(content: string, playerName?: string) {

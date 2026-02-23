@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown,
-  Scroll
+  Scroll, Package, Shield, Zap, Gem, Coffee, Wrench
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -148,6 +148,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [quickActions, setQuickActions] = useState<string[]>(QUICK_ACTIONS_DEFAULT);
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [showCharacters, setShowCharacters] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<"party" | "inventory" | "dice">("party");
   const [isFirstTurn, setIsFirstTurn] = useState(true);
   const [messagesLoaded, setMessagesLoaded] = useState(false);
 
@@ -530,15 +531,41 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         {/* Character Panel (collapsible) */}
         {showCharacters && (
           <div className="w-72 flex-shrink-0 border-l border-border bg-card/50 flex flex-col overflow-hidden">
-            <div className="p-3 border-b border-border flex items-center justify-between">
-              <span className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Party</span>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowCharacters(false)}>
-                <ChevronDown className="w-4 h-4 rotate-90" />
-              </Button>
+            {/* Panel header with tabs */}
+            <div className="flex-shrink-0 border-b border-border">
+              <div className="flex items-center justify-between px-3 pt-2.5 pb-0">
+                <div className="flex gap-1">
+                  {([
+                    { id: "party", icon: Users, label: "Party" },
+                    { id: "inventory", icon: Package, label: "Bag" },
+                    { id: "dice", icon: Dices, label: "Dice" },
+                  ] as const).map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setSidebarTab(tab.id)}
+                      data-testid={`button-sidebar-tab-${tab.id}`}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-sans tracking-wide rounded-t transition-colors ${
+                        sidebarTab === tab.id
+                          ? "text-primary border-b-2 border-primary -mb-px"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <tab.icon className="w-3.5 h-3.5" />
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 mb-1" onClick={() => setShowCharacters(false)}>
+                  <ChevronDown className="w-4 h-4 rotate-90" />
+                </Button>
+              </div>
             </div>
+
             <ScrollArea className="flex-1">
               <div className="p-3 space-y-3">
-                {members.map((m: any) => {
+
+                {/* PARTY TAB */}
+                {sidebarTab === "party" && members.map((m: any) => {
                   const char = m.character;
                   if (!char) return null;
                   const hpPct = Math.round((char.currentHp / char.maxHp) * 100);
@@ -546,15 +573,17 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   return (
                     <div key={m.id} className="rounded-md border border-border bg-card p-3 space-y-2">
                       <div className="flex items-center gap-2">
-                        <Sword className={`w-4 h-4 ${classColors[char.class] ?? "text-muted-foreground"}`} />
+                        {char.profilePicture ? (
+                          <img src={char.profilePicture} alt={char.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                        ) : (
+                          <Sword className={`w-4 h-4 flex-shrink-0 ${classColors[char.class] ?? "text-muted-foreground"}`} />
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="font-sans font-bold text-sm tracking-wide truncate">{char.name}</p>
                           <p className="text-xs text-muted-foreground capitalize">{char.race} {char.class}</p>
                         </div>
                         <Badge variant="secondary" className="text-xs flex-shrink-0">Lv.{char.level}</Badge>
                       </div>
-
-                      {/* HP */}
                       <div className="space-y-1">
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -571,8 +600,6 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           />
                         </div>
                       </div>
-
-                      {/* Quick stats */}
                       <div className="grid grid-cols-3 gap-1">
                         {[["MGT", "might"], ["AGI", "agility"], ["INT", "intellect"]].map(([label, key]) => {
                           const val = stats[key] ?? 10;
@@ -585,8 +612,6 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           );
                         })}
                       </div>
-
-                      {/* Conditions */}
                       {((char.conditions as string[]) || []).length > 0 && (
                         <div className="flex gap-1 flex-wrap">
                           {(char.conditions as string[]).map((c: string) => (
@@ -598,13 +623,116 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   );
                 })}
 
-                {/* Dice Roller */}
-                <div className="rounded-md border border-border bg-card p-3">
-                  <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase mb-3 flex items-center gap-1.5">
-                    <Dices className="w-3.5 h-3.5 text-primary" /> Dice
-                  </p>
-                  <DiceRoller />
-                </div>
+                {/* INVENTORY TAB */}
+                {sidebarTab === "inventory" && (() => {
+                  const char = myMember?.character;
+                  if (!char) return (
+                    <p className="text-xs text-muted-foreground text-center py-8 font-serif italic">No character found.</p>
+                  );
+                  const items = (char.inventory as any[]) ?? [];
+                  const typeOrder = ["weapon", "armor", "consumable", "tool", "treasure", "other"];
+                  const typeIcons: Record<string, any> = {
+                    weapon: Sword, armor: Shield, consumable: Coffee,
+                    tool: Wrench, treasure: Gem, other: Package,
+                  };
+                  const typeLabels: Record<string, string> = {
+                    weapon: "Weapons", armor: "Armor", consumable: "Consumables",
+                    tool: "Tools", treasure: "Valuables", other: "Misc",
+                  };
+                  const grouped: Record<string, any[]> = {};
+                  items.forEach(item => {
+                    const t = item.type ?? "other";
+                    if (!grouped[t]) grouped[t] = [];
+                    grouped[t].push(item);
+                  });
+                  return (
+                    <div className="space-y-3">
+                      {/* Character header */}
+                      <div className="flex items-center gap-2 pb-1 border-b border-border">
+                        {char.profilePicture ? (
+                          <img src={char.profilePicture} alt={char.name} className="w-8 h-8 rounded object-cover" />
+                        ) : (
+                          <Package className="w-4 h-4 text-primary" />
+                        )}
+                        <div>
+                          <p className="text-sm font-sans font-bold">{char.name}</p>
+                          <p className="text-xs text-muted-foreground">{items.length} item{items.length !== 1 ? "s" : ""}</p>
+                        </div>
+                      </div>
+
+                      {items.length === 0 && (
+                        <p className="text-xs text-muted-foreground text-center py-6 font-serif italic">Your bag is empty.</p>
+                      )}
+
+                      {typeOrder.filter(t => grouped[t]?.length).map(type => {
+                        const Icon = typeIcons[type] ?? Package;
+                        return (
+                          <div key={type} className="space-y-1.5">
+                            <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                              <Icon className="w-3 h-3 text-primary" /> {typeLabels[type]}
+                            </p>
+                            {grouped[type].map((item: any, i: number) => (
+                              <div
+                                key={i}
+                                data-testid={`item-inventory-${i}`}
+                                className="flex items-start justify-between gap-2 rounded bg-secondary/30 px-2.5 py-2"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-sans font-medium leading-tight">{item.name}</p>
+                                  {item.properties && Object.keys(item.properties).length > 0 && (
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      {Object.entries(item.properties)
+                                        .filter(([k]) => k !== "value" || true)
+                                        .map(([k, v]) => `${k}: ${v}`)
+                                        .join(" · ")}
+                                    </p>
+                                  )}
+                                </div>
+                                {item.qty > 1 && (
+                                  <span className="text-xs font-sans font-bold text-primary flex-shrink-0 mt-0.5">×{item.qty}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+
+                      {/* Abilities */}
+                      {((char.abilities as any[]) ?? []).length > 0 && (
+                        <div className="space-y-1.5 pt-1 border-t border-border">
+                          <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                            <Zap className="w-3 h-3 text-primary" /> Abilities
+                          </p>
+                          {(char.abilities as any[]).map((ab: any, i: number) => (
+                            <div key={i} className="rounded bg-secondary/30 px-2.5 py-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-sm font-sans font-medium">{ab.name}</p>
+                                {ab.usesMax > 0 && (
+                                  <div className="flex gap-0.5">
+                                    {Array.from({ length: ab.usesMax }).map((_, j) => (
+                                      <div key={j} className={`w-2 h-2 rounded-full ${j < ab.usesLeft ? "bg-primary" : "bg-secondary"}`} />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              {ab.description && (
+                                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{ab.description}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* DICE TAB */}
+                {sidebarTab === "dice" && (
+                  <div className="rounded-md border border-border bg-card p-3">
+                    <DiceRoller />
+                  </div>
+                )}
+
               </div>
             </ScrollArea>
           </div>

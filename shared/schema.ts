@@ -146,6 +146,20 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ i
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 
+// ─── Location Scene Backgrounds ───────────────────────────────────────────────
+
+export const locationScenes = pgTable("location_scenes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partyId: varchar("party_id").notNull(),
+  locationName: text("location_name").notNull(),
+  imageData: text("image_data").notNull(),
+  createdAt: timestamp("created_at").default(sql`NOW()`).notNull(),
+});
+
+export const insertLocationSceneSchema = createInsertSchema(locationScenes).omit({ id: true, createdAt: true });
+export type InsertLocationScene = z.infer<typeof insertLocationSceneSchema>;
+export type LocationScene = typeof locationScenes.$inferSelect;
+
 // ─── Arcs ─────────────────────────────────────────────────────────────────────
 
 export const arcs = pgTable("arcs", {

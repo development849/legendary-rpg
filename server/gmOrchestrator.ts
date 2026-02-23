@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { db } from "./db";
-import { chatMessages, gameEvents, worldState, sceneSummaries, characters, parties, campaigns, partyMembers, arcs } from "@shared/schema";
+import { chatMessages, gameEvents, worldState, sceneSummaries, characters, parties, campaigns, partyMembers, arcs, locationScenes } from "@shared/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { rollDice } from "./gameEngine";
 
@@ -8,6 +8,77 @@ const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
+
+async function generateLocationBackground(
+  partyId: string,
+  locationName: string,
+  sceneTitle: string,
+  campaignSetting: string,
+): Promise<void> {
+  try {
+    // Skip if already generated for this party+location
+    const [existing] = await db.select({ id: locationScenes.id })
+      .from(locationScenes)
+      .where(and(eq(locationScenes.partyId, partyId), eq(locationScenes.locationName, locationName)));
+    if (existing) return;
+
+    const { GoogleGenAI, Modality } = await import("@google/genai");
+    const ai = new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+      httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+    });
+
+    const settingContext = campaignSetting
+      ? `within the setting: ${campaignSetting.slice(0, 120)}`
+      : "in a rich fantasy world";
+
+    const prompt = [
+      `Wide cinematic fantasy environment painting of "${locationName}" — ${sceneTitle} — ${settingContext}.`,
+      `Atmospheric, painterly digital art. Dramatic volumetric lighting and deep shadows. Rich colour palette.`,
+      `Misty atmospheric depth, detailed environment, no people or characters in frame.`,
+      `Landscape orientation, immersive wide shot, fantasy concept art quality.`,
+      `Ultra-detailed, moody, cinematic, luminous painterly style.`,
+    ].join(" ");
+
+    const fs = await import("fs");
+    const path = await import("path");
+    const styleRefPath = path.join(process.cwd(), "attached_assets", "Snip20260221_1_1771705188223.png");
+    const styleRefBase64 = fs.existsSync(styleRefPath)
+      ? fs.readFileSync(styleRefPath).toString("base64")
+      : null;
+
+    const parts: any[] = [];
+    if (styleRefBase64) {
+      parts.push({ text: "Use this image as the visual style reference:" });
+      parts.push({ inlineData: { mimeType: "image/png", data: styleRefBase64 } });
+    }
+    parts.push({ text: prompt });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-image-preview",
+      contents: [{ role: "user", parts }],
+      config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+    });
+
+    const imagePart = response.candidates?.[0]?.content?.parts?.find(
+      (p: any) => p.inlineData?.data
+    );
+    if (!imagePart?.inlineData?.data) return;
+
+    const mimeType = imagePart.inlineData.mimeType || "image/png";
+    const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+
+    await db.insert(locationScenes).values({
+      partyId,
+      locationName,
+      imageData: dataUrl,
+    }).onConflictDoNothing();
+
+    console.log(`[GM] Background generated for "${locationName}" (party ${partyId})`);
+  } catch (e) {
+    console.error(`[GM] Background generation failed for "${locationName}":`, e);
+  }
+}
 
 export interface GMContext {
   partyId: string;
@@ -237,6 +308,13 @@ export async function runGM(
         threat: scene.threat ?? null,
         firstVisitedTurn: turnNum,
       });
+      // Fire-and-forget background image generation for new locations
+      generateLocationBackground(
+        ctx.partyId,
+        scene.location,
+        scene.title ?? scene.location,
+        (campaign?.setting ?? "") + " " + (campaign?.description ?? ""),
+      ).catch(console.error);
     } else {
       existing.title = scene.title ?? existing.title;
       existing.threat = scene.threat ?? null;

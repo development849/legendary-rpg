@@ -13,6 +13,9 @@ import {
 } from "./storage";
 import { rollDice } from "./gameEngine";
 import { runGM } from "./gmOrchestrator";
+import { db } from "./db";
+import { locationScenes } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 // WebSocket connections per party
 const partyConnections = new Map<string, Set<WebSocket>>();
@@ -303,6 +306,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const worldSnap = await getWorldState(party.id);
       res.json({ party, members, campaign, worldState: worldSnap });
     } catch (e) { res.status(500).json({ error: "Failed to get party" }); }
+  });
+
+  app.get("/api/parties/:id/scene-background", requireAuth, async (req: any, res) => {
+    try {
+      const worldSnap = await getWorldState(req.params.id);
+      const currentLocation: string = (worldSnap?.state as any)?.currentLocation ?? "";
+      if (!currentLocation) return res.json({ pending: false, imageData: null });
+
+      const [row] = await db.select()
+        .from(locationScenes)
+        .where(and(eq(locationScenes.partyId, req.params.id), eq(locationScenes.locationName, currentLocation)));
+
+      if (row) {
+        res.json({ pending: false, imageData: row.imageData, locationName: currentLocation });
+      } else {
+        res.json({ pending: true, imageData: null, locationName: currentLocation });
+      }
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch scene background" });
+    }
   });
 
   app.post("/api/parties/join", requireAuth, async (req: any, res) => {

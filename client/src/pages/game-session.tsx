@@ -151,6 +151,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [sidebarTab, setSidebarTab] = useState<"party" | "inventory" | "map" | "dice">("party");
   const [isFirstTurn, setIsFirstTurn] = useState(true);
   const [messagesLoaded, setMessagesLoaded] = useState(false);
+  const [sceneBackground, setSceneBackground] = useState<string | null>(null);
+  const [backgroundPending, setBackgroundPending] = useState(false);
+  const backgroundPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -173,6 +176,44 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
       })
       .catch(() => setMessagesLoaded(true));
   }, [partyId]);
+
+  // Fetch scene background when location changes
+  const currentLocation = partyData?.worldState?.state?.currentLocation ?? "";
+  useEffect(() => {
+    if (!currentLocation || !partyId) return;
+
+    if (backgroundPollRef.current) {
+      clearInterval(backgroundPollRef.current);
+      backgroundPollRef.current = null;
+    }
+
+    const fetchBg = async () => {
+      const res = await fetch(`/api/parties/${partyId}/scene-background`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.imageData) {
+        setSceneBackground(data.imageData);
+        setBackgroundPending(false);
+        if (backgroundPollRef.current) {
+          clearInterval(backgroundPollRef.current);
+          backgroundPollRef.current = null;
+        }
+      } else if (data.pending) {
+        setBackgroundPending(true);
+      }
+    };
+
+    fetchBg();
+
+    // Poll every 6s while background is still generating
+    backgroundPollRef.current = setInterval(fetchBg, 6000);
+    return () => {
+      if (backgroundPollRef.current) {
+        clearInterval(backgroundPollRef.current);
+        backgroundPollRef.current = null;
+      }
+    };
+  }, [currentLocation, partyId]);
 
   // Auto-scroll
   useEffect(() => {
@@ -421,9 +462,29 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Scene background */}
+          {sceneBackground && (
+            <div
+              className="absolute inset-0 z-0 pointer-events-none"
+              style={{
+                backgroundImage: `url(${sceneBackground})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center top",
+                backgroundRepeat: "no-repeat",
+                transition: "background-image 1.2s ease-in-out",
+              }}
+            >
+              <div className="absolute inset-0 bg-background/82" />
+            </div>
+          )}
+          {/* Subtle shimmer while background is generating */}
+          {backgroundPending && !sceneBackground && (
+            <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-primary/5 via-transparent to-primary/5 animate-pulse" />
+          )}
+
           {/* Messages */}
-          <ScrollArea className="flex-1 px-4 py-4">
+          <ScrollArea className="flex-1 px-4 py-4 relative z-10">
             {messages.length === 0 && !isStreaming ? (
               <div className="flex flex-col items-center justify-center h-full py-16 text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -481,7 +542,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
           {/* Quick Actions */}
           {quickActions.length > 0 && !isStreaming && (
-            <div className="flex-shrink-0 px-4 py-2 border-t border-border/50">
+            <div className="flex-shrink-0 px-4 py-2 border-t border-border/50 relative z-10">
               <div className="flex gap-2 overflow-x-auto pb-1 max-w-3xl mx-auto">
                 {quickActions.map(action => (
                   <button
@@ -499,7 +560,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           )}
 
           {/* Input */}
-          <div className="flex-shrink-0 border-t border-border bg-card/50 p-3">
+          <div className="flex-shrink-0 border-t border-border bg-card/50 p-3 relative z-10">
             <div className="flex gap-2 max-w-3xl mx-auto">
               <div className="flex-1 relative">
                 <textarea

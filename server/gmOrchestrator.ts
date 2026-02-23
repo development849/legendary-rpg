@@ -222,18 +222,37 @@ export async function runGM(
   // Process updates
   await processUpdates(updates, ctx.partyId, ctx.campaignId);
 
-  // Update world state turn counter
+  // Update world state turn counter + location tracking
   const turnNum = (worldSnap?.turnNumber ?? 0) + 1;
+  const prevState: any = worldSnap?.state ?? {};
+  const scene = parsed?.scene;
+  let nextState = { ...prevState };
+  if (scene?.location) {
+    const locations: any[] = prevState.locations ?? [];
+    const existing = locations.find((l: any) => l.name === scene.location);
+    if (!existing) {
+      locations.push({
+        name: scene.location,
+        title: scene.title ?? scene.location,
+        threat: scene.threat ?? null,
+        firstVisitedTurn: turnNum,
+      });
+    } else {
+      existing.title = scene.title ?? existing.title;
+      existing.threat = scene.threat ?? null;
+    }
+    nextState = { ...prevState, locations, currentLocation: scene.location };
+  }
   await db.insert(worldState)
     .values({
       partyId: ctx.partyId,
-      state: worldSnap?.state ?? {},
+      state: nextState,
       turnNumber: turnNum,
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
       target: worldState.partyId,
-      set: { turnNumber: turnNum, updatedAt: new Date() },
+      set: { state: nextState, turnNumber: turnNum, updatedAt: new Date() },
     });
 
   // Auto-summarize every 10 turns

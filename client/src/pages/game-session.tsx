@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown,
-  Scroll, Package, Shield, Zap, Gem, Coffee, Wrench
+  Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -148,7 +148,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [quickActions, setQuickActions] = useState<string[]>(QUICK_ACTIONS_DEFAULT);
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [showCharacters, setShowCharacters] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"party" | "inventory" | "dice">("party");
+  const [sidebarTab, setSidebarTab] = useState<"party" | "inventory" | "map" | "dice">("party");
   const [isFirstTurn, setIsFirstTurn] = useState(true);
   const [messagesLoaded, setMessagesLoaded] = useState(false);
 
@@ -542,6 +542,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   {([
                     { id: "party", icon: Users, label: "Party" },
                     { id: "inventory", icon: Package, label: "Bag" },
+                    { id: "map", icon: MapPin, label: "Map" },
                     { id: "dice", icon: Dices, label: "Dice" },
                   ] as const).map(tab => (
                     <button
@@ -724,6 +725,88 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                               )}
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* MAP TAB */}
+                {sidebarTab === "map" && (() => {
+                  const ws = partyData?.worldState?.state ?? {};
+                  const locations: any[] = ws.locations ?? [];
+                  const currentLocation: string = ws.currentLocation ?? "";
+                  return (
+                    <div className="space-y-2">
+                      <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5 pb-1">
+                        <MapPin className="w-3 h-3 text-primary" /> Journey Map
+                      </p>
+
+                      {locations.length === 0 ? (
+                        <div className="text-center py-8">
+                          <MapPin className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
+                          <p className="text-xs text-muted-foreground font-serif italic">
+                            No locations discovered yet.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          {/* Vertical connector line */}
+                          {locations.length > 1 && (
+                            <div className="absolute left-[11px] top-6 bottom-6 w-px bg-border/60" />
+                          )}
+                          <div className="space-y-2">
+                            {locations.map((loc: any, i: number) => {
+                              const isCurrent = loc.name === currentLocation;
+                              return (
+                                <div
+                                  key={i}
+                                  data-testid={`map-location-${i}`}
+                                  className={`flex gap-3 items-start relative`}
+                                >
+                                  {/* Node dot */}
+                                  <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 mt-0.5 ${
+                                    isCurrent
+                                      ? "border-primary bg-primary/20"
+                                      : loc.threat
+                                      ? "border-red-500/60 bg-red-500/10"
+                                      : "border-border bg-card"
+                                  }`}>
+                                    {loc.threat ? (
+                                      <Skull className="w-3 h-3 text-red-400" />
+                                    ) : (
+                                      <MapPin className={`w-3 h-3 ${isCurrent ? "text-primary" : "text-muted-foreground/40"}`} />
+                                    )}
+                                  </div>
+
+                                  {/* Location card */}
+                                  <div className={`flex-1 min-w-0 rounded-md border px-2.5 py-2 mb-1 ${
+                                    isCurrent
+                                      ? "border-primary/50 bg-primary/5"
+                                      : "border-border bg-card/60"
+                                  }`}>
+                                    <div className="flex items-start justify-between gap-1">
+                                      <p className={`text-xs font-sans font-semibold leading-tight ${isCurrent ? "text-primary" : "text-foreground"}`}>
+                                        {loc.name}
+                                      </p>
+                                      {isCurrent && (
+                                        <span className="text-xs font-sans text-primary/70 flex-shrink-0">here</span>
+                                      )}
+                                    </div>
+                                    {loc.title && loc.title !== loc.name && (
+                                      <p className="text-xs text-muted-foreground font-serif italic mt-0.5 leading-tight">{loc.title}</p>
+                                    )}
+                                    {loc.threat && (
+                                      <p className="text-xs text-red-400 mt-0.5 flex items-center gap-1">
+                                        <Skull className="w-2.5 h-2.5" /> {loc.threat}
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-muted-foreground/40 mt-1">Turn {loc.firstVisitedTurn}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>

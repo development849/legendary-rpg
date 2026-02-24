@@ -252,6 +252,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
           // Refresh character situations for split-party tracking
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/situations`] });
+          // Refresh NPC log so companion status (joined/left) is immediately visible
+          queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/npcs`] });
         }
       }
     };
@@ -802,63 +804,103 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               <div className="p-3 space-y-3">
 
                 {/* PARTY TAB */}
-                {sidebarTab === "party" && members.map((m: any) => {
-                  const char = m.character;
-                  if (!char) return null;
-                  const hpPct = Math.round((char.currentHp / char.maxHp) * 100);
-                  const stats = (char.stats as Record<string, number>) || {};
+                {sidebarTab === "party" && (() => {
+                  const companions = npcs.filter((n: any) => n.isPartyMember);
                   return (
-                    <div key={m.id} className="rounded-md border border-border bg-card p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        {char.profilePicture ? (
-                          <img src={char.profilePicture} alt={char.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
-                        ) : (
-                          <Sword className={`w-4 h-4 flex-shrink-0 ${classColors[char.class] ?? "text-muted-foreground"}`} />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-sans font-bold text-sm tracking-wide truncate">{char.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{char.race} {char.class}</p>
-                        </div>
-                        <Badge variant="secondary" className="text-xs flex-shrink-0">Lv.{char.level}</Badge>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Heart className="w-3 h-3 text-red-400" /> HP
-                          </span>
-                          <span className="text-xs font-sans font-bold">{char.currentHp}/{char.maxHp}</span>
-                        </div>
-                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              hpPct > 50 ? "bg-emerald-500" : hpPct > 25 ? "bg-amber-500" : "bg-red-500"
-                            }`}
-                            style={{ width: `${hpPct}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-1">
-                        {[["MGT", "might"], ["AGI", "agility"], ["INT", "intellect"]].map(([label, key]) => {
-                          const val = stats[key] ?? 10;
-                          const mod = Math.floor((val - 10) / 2);
-                          return (
-                            <div key={key} className="text-center">
-                              <p className="text-muted-foreground/60 text-xs">{label}</p>
-                              <p className="text-xs font-sans font-bold">{mod >= 0 ? `+${mod}` : mod}</p>
+                    <div className="space-y-2">
+                      {/* Player characters */}
+                      {members.map((m: any) => {
+                        const char = m.character;
+                        if (!char) return null;
+                        const hpPct = Math.round((char.currentHp / char.maxHp) * 100);
+                        const stats = (char.stats as Record<string, number>) || {};
+                        return (
+                          <div key={m.id} className="rounded-md border border-border bg-card p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              {char.profilePicture ? (
+                                <img src={char.profilePicture} alt={char.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                              ) : (
+                                <Sword className={`w-4 h-4 flex-shrink-0 ${classColors[char.class] ?? "text-muted-foreground"}`} />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-sans font-bold text-sm tracking-wide truncate">{char.name}</p>
+                                <p className="text-xs text-muted-foreground capitalize">{char.race} {char.class}</p>
+                              </div>
+                              <Badge variant="secondary" className="text-xs flex-shrink-0">Lv.{char.level}</Badge>
                             </div>
-                          );
-                        })}
-                      </div>
-                      {((char.conditions as string[]) || []).length > 0 && (
-                        <div className="flex gap-1 flex-wrap">
-                          {(char.conditions as string[]).map((c: string) => (
-                            <Badge key={c} variant="destructive" className="text-xs">{c}</Badge>
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Heart className="w-3 h-3 text-red-400" /> HP
+                                </span>
+                                <span className="text-xs font-sans font-bold">{char.currentHp}/{char.maxHp}</span>
+                              </div>
+                              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    hpPct > 50 ? "bg-emerald-500" : hpPct > 25 ? "bg-amber-500" : "bg-red-500"
+                                  }`}
+                                  style={{ width: `${hpPct}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1">
+                              {[["MGT", "might"], ["AGI", "agility"], ["INT", "intellect"]].map(([label, key]) => {
+                                const val = stats[key] ?? 10;
+                                const mod = Math.floor((val - 10) / 2);
+                                return (
+                                  <div key={key} className="text-center">
+                                    <p className="text-muted-foreground/60 text-xs">{label}</p>
+                                    <p className="text-xs font-sans font-bold">{mod >= 0 ? `+${mod}` : mod}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {((char.conditions as string[]) || []).length > 0 && (
+                              <div className="flex gap-1 flex-wrap">
+                                {(char.conditions as string[]).map((c: string) => (
+                                  <Badge key={c} variant="destructive" className="text-xs">{c}</Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {/* NPC Companions */}
+                      {companions.length > 0 && (
+                        <>
+                          <p className="text-[10px] font-sans tracking-widest text-muted-foreground/50 uppercase pt-1 pb-0.5 border-t border-border flex items-center gap-1.5">
+                            <Users className="w-3 h-3" /> NPC Companions
+                          </p>
+                          {companions.map((npc: any) => (
+                            <div key={npc.id} data-testid={`card-companion-${npc.id}`} className="rounded-md border border-amber-700/40 bg-amber-950/20 p-3 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                {npc.portrait ? (
+                                  <img src={npc.portrait} alt={npc.name} className="w-8 h-8 rounded object-cover object-top flex-shrink-0 border border-amber-700/30" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded bg-amber-950/40 border border-amber-700/30 flex items-center justify-center flex-shrink-0">
+                                    <Users className="w-3.5 h-3.5 text-amber-500/60" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-sans font-bold text-sm tracking-wide truncate text-amber-200">{npc.name}</p>
+                                  <p className="text-xs text-amber-400/70 italic truncate">{npc.role}</p>
+                                </div>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded border border-amber-600/50 bg-amber-900/40 text-amber-400 font-sans tracking-wide uppercase flex-shrink-0">
+                                  Companion
+                                </span>
+                              </div>
+                              {npc.description && (
+                                <p className="text-[11px] text-muted-foreground/80 leading-snug">{npc.description}</p>
+                              )}
+                            </div>
                           ))}
-                        </div>
+                        </>
                       )}
                     </div>
                   );
-                })}
+                })()}
 
                 {/* INVENTORY TAB */}
                 {sidebarTab === "inventory" && (() => {
@@ -1302,57 +1344,82 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                       </div>
                     );
                   }
-                  return (
-                    <div className="space-y-2">
-                      {npcs.map((npc: any) => {
-                        const rel = npc.relationship ?? "neutral";
-                        const colorCls = relColor[rel] ?? relColor.neutral;
-                        return (
-                          <div key={npc.id} data-testid={`card-npc-${npc.id}`} className={`rounded-md border p-3 space-y-1.5 ${colorCls}`}>
-                            {/* Portrait + name row */}
-                            <div className="flex items-start gap-2.5">
-                              <div className="flex-shrink-0">
-                                {npc.portrait ? (
-                                  <img
-                                    src={npc.portrait}
-                                    alt={npc.name}
-                                    className="w-14 h-14 rounded object-cover object-top border border-current/20"
-                                    data-testid={`img-npc-portrait-${npc.id}`}
-                                  />
-                                ) : (
-                                  <div className="w-14 h-14 rounded bg-muted/50 border border-current/20 animate-pulse flex items-center justify-center">
-                                    <ScrollText className="w-5 h-5 text-muted-foreground/30" />
-                                  </div>
-                                )}
+                  const companions = npcs.filter((n: any) => n.isPartyMember);
+                  const others = npcs.filter((n: any) => !n.isPartyMember);
+                  const renderNpc = (npc: any) => {
+                    const rel = npc.relationship ?? "neutral";
+                    const colorCls = npc.isPartyMember
+                      ? "text-amber-300 border-amber-700/60 bg-amber-950/30"
+                      : (relColor[rel] ?? relColor.neutral);
+                    return (
+                      <div key={npc.id} data-testid={`card-npc-${npc.id}`} className={`rounded-md border p-3 space-y-1.5 ${colorCls}`}>
+                        {/* Portrait + name row */}
+                        <div className="flex items-start gap-2.5">
+                          <div className="flex-shrink-0">
+                            {npc.portrait ? (
+                              <img
+                                src={npc.portrait}
+                                alt={npc.name}
+                                className="w-14 h-14 rounded object-cover object-top border border-current/20"
+                                data-testid={`img-npc-portrait-${npc.id}`}
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded bg-muted/50 border border-current/20 animate-pulse flex items-center justify-center">
+                                <ScrollText className="w-5 h-5 text-muted-foreground/30" />
                               </div>
-                              <div className="flex-1 min-w-0 space-y-0.5">
-                                <div className="flex items-start justify-between gap-1">
-                                  <span className="font-semibold text-sm leading-tight">{npc.name}</span>
-                                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide whitespace-nowrap border flex-shrink-0 ${colorCls}`}>
-                                    {rel}
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-0.5">
+                            <div className="flex items-start justify-between gap-1 flex-wrap">
+                              <span className="font-semibold text-sm leading-tight">{npc.name}</span>
+                              <div className="flex gap-1 flex-wrap">
+                                {npc.isPartyMember && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded border border-amber-600/60 bg-amber-900/40 text-amber-400 font-sans tracking-wide uppercase flex-shrink-0">
+                                    ★ Companion
                                   </span>
-                                </div>
-                                {npc.role && (
-                                  <p className="text-xs text-muted-foreground italic leading-tight">{npc.role}</p>
                                 )}
-                                {npc.lastSeen && (
-                                  <p className="text-[10px] text-muted-foreground/70">
-                                    <span className="font-medium">Last seen:</span> {npc.lastSeen}
-                                  </p>
-                                )}
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide whitespace-nowrap border flex-shrink-0 ${relColor[rel] ?? relColor.neutral}`}>
+                                  {rel}
+                                </span>
                               </div>
                             </div>
-                            {npc.description && (
-                              <p className="text-xs leading-snug">{npc.description}</p>
+                            {npc.role && (
+                              <p className="text-xs text-muted-foreground italic leading-tight">{npc.role}</p>
                             )}
-                            {npc.notes && (
-                              <p className="text-[10px] text-muted-foreground/80 border-t border-current/20 pt-1.5">
-                                {npc.notes}
+                            {npc.lastSeen && (
+                              <p className="text-[10px] text-muted-foreground/70">
+                                <span className="font-medium">Last seen:</span> {npc.lastSeen}
                               </p>
                             )}
                           </div>
-                        );
-                      })}
+                        </div>
+                        {npc.description && (
+                          <p className="text-xs leading-snug">{npc.description}</p>
+                        )}
+                        {npc.notes && (
+                          <p className="text-[10px] text-muted-foreground/80 border-t border-current/20 pt-1.5">
+                            {npc.notes}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  };
+                  return (
+                    <div className="space-y-2">
+                      {companions.length > 0 && (
+                        <>
+                          <p className="text-[10px] font-sans tracking-widest text-amber-500/70 uppercase flex items-center gap-1.5">
+                            <Users className="w-3 h-3" /> Active Companions
+                          </p>
+                          {companions.map(renderNpc)}
+                          {others.length > 0 && (
+                            <p className="text-[10px] font-sans tracking-widest text-muted-foreground/40 uppercase pt-1 border-t border-border flex items-center gap-1.5">
+                              <ScrollText className="w-3 h-3" /> Known Characters
+                            </p>
+                          )}
+                        </>
+                      )}
+                      {others.map(renderNpc)}
                     </div>
                   );
                 })()}

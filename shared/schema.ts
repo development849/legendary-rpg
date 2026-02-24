@@ -186,6 +186,8 @@ export const npcLog = pgTable("npc_log", {
   relationship: text("relationship").notNull().default("neutral"), // friendly, neutral, hostile, unknown, deceased
   notes: text("notes").notNull().default(""),
   portrait: text("portrait"),
+  isPartyMember: boolean("is_party_member").notNull().default(false),
+  partyJoinedAt: timestamp("party_joined_at"),
   firstMet: timestamp("first_met").default(sql`NOW()`).notNull(),
   updatedAt: timestamp("updated_at").default(sql`NOW()`).notNull(),
 }, (t) => [uniqueIndex("npc_log_party_name_idx").on(t.partyId, t.name)]);

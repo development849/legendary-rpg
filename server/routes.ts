@@ -414,6 +414,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         .where(eq(npcLog.partyId, req.params.id))
         .orderBy(desc(npcLog.updatedAt));
       res.json(npcs);
+      // Fire-and-forget portrait generation for any NPCs that don't have one yet
+      const missing = npcs.filter((n: any) => !n.portrait);
+      if (missing.length > 0) {
+        const { generateNpcPortrait } = await import("./gmOrchestrator");
+        for (const npc of missing) {
+          generateNpcPortrait(npc.id, {
+            name: npc.name,
+            role: npc.role,
+            description: npc.description,
+            relationship: npc.relationship,
+            lastSeen: npc.lastSeen,
+          }).catch(console.error);
+        }
+      }
     } catch (e) { res.status(500).json({ error: "Failed to get NPC log" }); }
   });
 

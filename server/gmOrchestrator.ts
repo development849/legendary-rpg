@@ -80,6 +80,92 @@ export async function generateLocationBackground(
   }
 }
 
+export async function generateNpcPortrait(npcId: string, npc: { name: string; role: string; description: string; relationship: string; lastSeen: string }): Promise<void> {
+  try {
+    const { GoogleGenAI, Modality } = await import("@google/genai");
+    const ai = new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+      httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+    });
+
+    // Build atmospheric background from role/location context
+    const bgHints: Record<string, string> = {
+      merchant: "warm lantern-lit market stall, rich fabrics and goods, twilight bazaar",
+      guard: "stone castle gateway at dusk, torchlight and armoured banners",
+      innkeeper: "cosy tavern interior, firelight, timber beams and pewter mugs",
+      bandit: "rain-slicked forest hideout, moonlit shadows, campfire embers",
+      noble: "opulent palace hall, arched stone columns, candlelit chandeliers",
+      wizard: "candlelit arcane study, floating glyphs, ancient tomes",
+      priest: "sacred temple interior, coloured light through stained glass",
+      thief: "rain-slicked cobblestone alley, dim lantern glow, urban shadows",
+      informant: "shadowy backstreet, dim lantern glow, rain-slicked cobblestones",
+      contact: "shadowy backstreet, dim lantern glow, rain-slicked cobblestones",
+      mercenary: "tavern common room at night, rough-hewn tables, flickering firelight",
+      assassin: "moonlit rooftop, city lights below, cold midnight sky",
+      elder: "ancient oak-panelled council chamber, warm candlelight, maps and scrolls",
+    };
+
+    const roleKey = Object.keys(bgHints).find(k => npc.role.toLowerCase().includes(k));
+    const bgAtmosphere = roleKey ? bgHints[roleKey] : "atmospheric fantasy environment, dramatic lighting, cinematic depth";
+
+    const relTone: Record<string, string> = {
+      friendly: "warm approachable expression, slight confident smile",
+      neutral: "composed guarded expression, watchful eyes",
+      hostile: "sharp cold glare, tense jaw, dangerous energy",
+      unknown: "enigmatic mysterious expression, inscrutable gaze",
+      deceased: "pale gaunt features, hollow eyes, ghostly pallor",
+    };
+    const expressionHint = relTone[npc.relationship] ?? relTone.neutral;
+
+    const descriptionHint = npc.description
+      ? `${npc.description},`
+      : "";
+
+    const prompt = [
+      `Cinematic fantasy portrait painting of a character named ${npc.name},`,
+      descriptionHint,
+      `${npc.role},`,
+      `${expressionHint},`,
+      `set against ${bgAtmosphere},`,
+      `ultra-detailed luminous digital painting, photorealistic expressive face, dramatic volumetric rim lighting,`,
+      `deep cinematic colour palette with rich shadows and glowing highlights,`,
+      `painterly fine brushwork, cinematic depth of field, atmospheric bokeh background, portrait to waist framing,`,
+      `fantasy concept art, high quality illustration`,
+    ].filter(Boolean).join(" ");
+
+    const fs = await import("fs");
+    const path = await import("path");
+    const styleRefPath = path.join(process.cwd(), "attached_assets", "Snip20260221_1_1771705188223.png");
+    const styleRefBase64 = fs.existsSync(styleRefPath)
+      ? fs.readFileSync(styleRefPath).toString("base64")
+      : null;
+
+    const parts: any[] = [];
+    if (styleRefBase64) {
+      parts.push({ text: "Use this image as the visual style reference for the portrait you generate:" });
+      parts.push({ inlineData: { mimeType: "image/png", data: styleRefBase64 } });
+    }
+    parts.push({ text: prompt });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-image-preview",
+      contents: [{ role: "user", parts }],
+      config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+    });
+
+    const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+    if (!imagePart?.inlineData?.data) return;
+
+    const mimeType = imagePart.inlineData.mimeType || "image/png";
+    const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+
+    await db.update(npcLog).set({ portrait: dataUrl, updatedAt: new Date() }).where(eq(npcLog.id, npcId));
+    console.log(`[GM] Portrait generated for NPC "${npc.name}"`);
+  } catch (e) {
+    console.error(`[GM] NPC portrait generation failed for "${npc.name}":`, e);
+  }
+}
+
 export interface GMContext {
   partyId: string;
   campaignId: string;
@@ -544,27 +630,40 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
         case "NPC_MET": {
           const name = (update.name ?? "").trim();
           if (!name) break;
-          await db.insert(npcLog).values({
-            partyId,
-            name,
+          // Check if NPC already exists (to know if portrait generation is needed)
+          const [existingNpc] = await db.select({ id: npcLog.id, portrait: npcLog.portrait })
+            .from(npcLog)
+            .where(and(eq(npcLog.partyId, partyId), eq(npcLog.name, name)));
+          const isNew = !existingNpc;
+          const needsPortrait = isNew || !existingNpc?.portrait;
+
+          const npcData = {
             role: update.role ?? "",
             description: update.description ?? "",
             lastSeen: update.location ?? "",
             relationship: update.relationship ?? "neutral",
             notes: update.notes ?? "",
-            firstMet: new Date(),
-            updatedAt: new Date(),
-          }).onConflictDoUpdate({
-            target: [npcLog.partyId, npcLog.name],
-            set: {
-              role: update.role ?? "",
-              description: update.description ?? "",
-              lastSeen: update.location ?? "",
-              relationship: update.relationship ?? "neutral",
-              notes: update.notes ?? "",
+          };
+
+          let npcId: string;
+          if (isNew) {
+            const [inserted] = await db.insert(npcLog).values({
+              partyId,
+              name,
+              ...npcData,
+              firstMet: new Date(),
               updatedAt: new Date(),
-            },
-          });
+            }).returning({ id: npcLog.id });
+            npcId = inserted.id;
+          } else {
+            await db.update(npcLog).set({ ...npcData, updatedAt: new Date() })
+              .where(and(eq(npcLog.partyId, partyId), eq(npcLog.name, name)));
+            npcId = existingNpc.id;
+          }
+
+          if (needsPortrait) {
+            generateNpcPortrait(npcId, { name, ...npcData }).catch(console.error);
+          }
           break;
         }
         case "SITUATION_UPDATED": {

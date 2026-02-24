@@ -1308,26 +1308,45 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         const rel = npc.relationship ?? "neutral";
                         const colorCls = relColor[rel] ?? relColor.neutral;
                         return (
-                          <div key={npc.id} data-testid={`card-npc-${npc.id}`} className={`rounded-md border p-3 space-y-1 ${colorCls}`}>
-                            <div className="flex items-start justify-between gap-1">
-                              <span className="font-semibold text-sm leading-tight">{npc.name}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide whitespace-nowrap border ${colorCls}`}>
-                                {rel}
-                              </span>
+                          <div key={npc.id} data-testid={`card-npc-${npc.id}`} className={`rounded-md border p-3 space-y-1.5 ${colorCls}`}>
+                            {/* Portrait + name row */}
+                            <div className="flex items-start gap-2.5">
+                              <div className="flex-shrink-0">
+                                {npc.portrait ? (
+                                  <img
+                                    src={npc.portrait}
+                                    alt={npc.name}
+                                    className="w-14 h-14 rounded object-cover object-top border border-current/20"
+                                    data-testid={`img-npc-portrait-${npc.id}`}
+                                  />
+                                ) : (
+                                  <div className="w-14 h-14 rounded bg-muted/50 border border-current/20 animate-pulse flex items-center justify-center">
+                                    <ScrollText className="w-5 h-5 text-muted-foreground/30" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0 space-y-0.5">
+                                <div className="flex items-start justify-between gap-1">
+                                  <span className="font-semibold text-sm leading-tight">{npc.name}</span>
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide whitespace-nowrap border flex-shrink-0 ${colorCls}`}>
+                                    {rel}
+                                  </span>
+                                </div>
+                                {npc.role && (
+                                  <p className="text-xs text-muted-foreground italic leading-tight">{npc.role}</p>
+                                )}
+                                {npc.lastSeen && (
+                                  <p className="text-[10px] text-muted-foreground/70">
+                                    <span className="font-medium">Last seen:</span> {npc.lastSeen}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            {npc.role && (
-                              <p className="text-xs text-muted-foreground italic">{npc.role}</p>
-                            )}
                             {npc.description && (
                               <p className="text-xs leading-snug">{npc.description}</p>
                             )}
-                            {npc.lastSeen && (
-                              <p className="text-[10px] text-muted-foreground/70">
-                                <span className="font-medium">Last seen:</span> {npc.lastSeen}
-                              </p>
-                            )}
                             {npc.notes && (
-                              <p className="text-[10px] text-muted-foreground/80 border-t border-current/20 pt-1 mt-1">
+                              <p className="text-[10px] text-muted-foreground/80 border-t border-current/20 pt-1.5">
                                 {npc.notes}
                               </p>
                             )}

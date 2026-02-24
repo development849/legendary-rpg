@@ -10,8 +10,21 @@ import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Sc
 import type { Character } from "@shared/schema";
 import logoPath from "@assets/legendary-logo.png";
 
+function useHallBackground() {
+  const { data, isLoading } = useQuery<{ imageData: string | null; pending: boolean }>({
+    queryKey: ["/api/system/hall-background"],
+    refetchInterval: (q) => {
+      const d = q.state.data as { imageData: string | null; pending: boolean } | undefined;
+      return d?.pending && !d?.imageData ? 6000 : false;
+    },
+    staleTime: Infinity,
+  });
+  return { imageData: data?.imageData ?? null, pending: data?.pending ?? false, isLoading };
+}
+
 export default function DashboardPage() {
   const { user, logout } = useAuth();
+  const { imageData: hallBg } = useHallBackground();
 
   const { data: characters = [], isLoading: charsLoading } = useQuery<Character[]>({
     queryKey: ["/api/characters"],
@@ -72,11 +85,29 @@ export default function DashboardPage() {
 
       <div className="max-w-6xl mx-auto px-4 py-10 space-y-10">
         {/* Welcome Banner */}
-        <div className="relative rounded-md border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent p-8 overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative space-y-2">
+        <div
+          className="relative rounded-md border border-primary/20 overflow-hidden"
+          style={{ minHeight: "180px" }}
+          data-testid="banner-hall"
+        >
+          {/* Background image layer */}
+          {hallBg && (
+            <div
+              className="absolute inset-0 z-0"
+              style={{
+                backgroundImage: `url(${hallBg})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center 30%",
+                transition: "opacity 1s ease-in-out",
+              }}
+            />
+          )}
+          {/* Gradient overlay — darkens bottom for text legibility */}
+          <div className="absolute inset-0 z-10 bg-gradient-to-t from-background via-background/80 to-background/20" />
+          {/* Content */}
+          <div className="relative z-20 p-8 space-y-2">
             <p className="text-primary font-sans tracking-widest text-xs uppercase">Chronicle · Session Dashboard</p>
-            <h1 className="text-3xl font-sans font-bold tracking-wider">
+            <h1 className="text-3xl font-sans font-bold tracking-wider drop-shadow-sm">
               The Adventurer's Hall
             </h1>
             <p className="text-muted-foreground font-serif italic">

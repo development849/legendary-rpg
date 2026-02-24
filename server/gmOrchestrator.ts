@@ -80,6 +80,77 @@ export async function generateLocationBackground(
   }
 }
 
+// In-memory lock: prevents re-generating the global hall background concurrently
+let _hallBgInFlight = false;
+
+export async function generateHallBackground(): Promise<void> {
+  if (_hallBgInFlight) return;
+  const [existing] = await db.select({ id: locationScenes.id })
+    .from(locationScenes)
+    .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "adventurers_hall")));
+  if (existing) return;
+
+  _hallBgInFlight = true;
+  try {
+    const { GoogleGenAI, Modality } = await import("@google/genai");
+    const ai = new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+      httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+    });
+
+    const prompt = [
+      "Wide cinematic fantasy painting of a grand Adventurers Guild Hall interior.",
+      "Soaring stone vaulted ceilings with massive carved arches and hanging iron chandeliers ablaze with candlelight.",
+      "Long oak tables where cloaked adventurers gather over maps and steaming tankards.",
+      "Notice boards on rough stone walls covered in rolled parchment scrolls, wanted posters, and expedition notices.",
+      "Trophy weapons, shields, and guild banners mounted between tall narrow windows.",
+      "Multiple roaring fireplaces casting rich amber and gold light across the hall.",
+      "Atmospheric haze of wood smoke and lantern glow. Late afternoon golden light streaming through windows.",
+      "Epic wide establishing shot. Atmospheric painterly digital art. Dramatic volumetric lighting.",
+      "Deep colour palette — amber, ochre, deep crimson, stone grey. Rich fantasy concept art quality.",
+      "Ultra-detailed, cinematic depth, luminous painterly style. No HUD, no text, no UI elements.",
+    ].join(" ");
+
+    const fs = await import("fs");
+    const path = await import("path");
+    const styleRefPath = path.join(process.cwd(), "attached_assets", "Snip20260221_1_1771705188223.png");
+    const styleRefBase64 = fs.existsSync(styleRefPath)
+      ? fs.readFileSync(styleRefPath).toString("base64")
+      : null;
+
+    const parts: any[] = [];
+    if (styleRefBase64) {
+      parts.push({ text: "Use this image as the visual style reference:" });
+      parts.push({ inlineData: { mimeType: "image/png", data: styleRefBase64 } });
+    }
+    parts.push({ text: prompt });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-image-preview",
+      contents: [{ role: "user", parts }],
+      config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+    });
+
+    const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+    if (!imagePart?.inlineData?.data) return;
+
+    const mimeType = imagePart.inlineData.mimeType || "image/png";
+    const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+
+    await db.insert(locationScenes).values({
+      partyId: "system",
+      locationName: "adventurers_hall",
+      imageData: dataUrl,
+    }).onConflictDoNothing();
+
+    console.log("[GM] Adventurers Hall background generated and saved.");
+  } catch (e) {
+    console.error("[GM] Hall background generation failed:", e);
+  } finally {
+    _hallBgInFlight = false;
+  }
+}
+
 // In-memory lock: prevents concurrent or repeated portrait generation for the same NPC
 const _portraitInFlight = new Set<string>();
 

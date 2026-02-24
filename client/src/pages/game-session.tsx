@@ -759,7 +759,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             {/* Panel header with tabs */}
             <div className="flex-shrink-0 border-b border-border">
               <div className="flex items-center justify-between px-3 pt-2.5 pb-0">
-                <div className="flex gap-1">
+                <div className="flex">
                   {([
                     { id: "party", icon: Users, label: "Party" },
                     { id: "sheet", icon: BookOpen, label: "Sheet" },
@@ -767,19 +767,23 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     { id: "map", icon: MapPin, label: "Map" },
                     { id: "dice", icon: Dices, label: "Dice" },
                   ] as const).map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setSidebarTab(tab.id)}
-                      data-testid={`button-sidebar-tab-${tab.id}`}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-sans tracking-wide rounded-t transition-colors ${
-                        sidebarTab === tab.id
-                          ? "text-primary border-b-2 border-primary -mb-px"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <tab.icon className="w-3.5 h-3.5" />
-                      {tab.label}
-                    </button>
+                    <Tooltip key={tab.id}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setSidebarTab(tab.id)}
+                          data-testid={`button-sidebar-tab-${tab.id}`}
+                          className={`flex flex-col items-center gap-0.5 px-2 py-2 text-[10px] font-sans tracking-wide transition-colors border-b-2 ${
+                            sidebarTab === tab.id
+                              ? "text-primary border-primary"
+                              : "text-muted-foreground border-transparent hover:text-foreground"
+                          }`}
+                        >
+                          <tab.icon className="w-4 h-4" />
+                          <span>{tab.label}</span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">{tab.label}</TooltipContent>
+                    </Tooltip>
                   ))}
                 </div>
                 <Button variant="ghost" size="icon" className="h-7 w-7 mb-1" onClick={() => setShowCharacters(false)}>

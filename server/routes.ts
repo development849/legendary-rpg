@@ -15,7 +15,7 @@ import { rollDice } from "./gameEngine";
 import { runGM, generateLocationBackground } from "./gmOrchestrator";
 import { db } from "./db";
 import { locationScenes, partyMembers } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 // WebSocket connections per party
 const partyConnections = new Map<string, Set<WebSocket>>();
@@ -405,6 +405,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const sits = await db.select().from(characterSituations).where(inArr(characterSituations.characterId, charIds));
       res.json(sits);
     } catch (e) { res.status(500).json({ error: "Failed to get situations" }); }
+  });
+
+  app.get("/api/parties/:id/npcs", requireAuth, async (req: any, res) => {
+    try {
+      const { npcLog } = await import("@shared/schema");
+      const npcs = await db.select().from(npcLog)
+        .where(eq(npcLog.partyId, req.params.id))
+        .orderBy(desc(npcLog.updatedAt));
+      res.json(npcs);
+    } catch (e) { res.status(500).json({ error: "Failed to get NPC log" }); }
   });
 
   // Player action → GM response (streaming)

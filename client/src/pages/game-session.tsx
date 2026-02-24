@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown,
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
-  Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain
+  Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -149,7 +149,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [quickActions, setQuickActions] = useState<string[]>(QUICK_ACTIONS_DEFAULT);
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [showCharacters, setShowCharacters] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"party" | "inventory" | "map" | "dice" | "sheet">("party");
+  const [sidebarTab, setSidebarTab] = useState<"party" | "inventory" | "map" | "dice" | "sheet" | "log">("party");
   const [isFirstTurn, setIsFirstTurn] = useState(true);
   const [messagesLoaded, setMessagesLoaded] = useState(false);
   const [sceneBackground, setSceneBackground] = useState<string | null>(null);
@@ -170,6 +170,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const { data: situations = [] } = useQuery<any[]>({
     queryKey: [`/api/parties/${partyId}/situations`],
     refetchInterval: 8000,
+  });
+
+  const { data: npcs = [] } = useQuery<any[]>({
+    queryKey: [`/api/parties/${partyId}/npcs`],
+    refetchInterval: 10000,
   });
 
   // Load messages — must complete before the auto-start effect can fire
@@ -766,6 +771,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     { id: "inventory", icon: Package, label: "Bag" },
                     { id: "map", icon: MapPin, label: "Map" },
                     { id: "dice", icon: Dices, label: "Dice" },
+                    { id: "log", icon: ScrollText, label: "Cast" },
                   ] as const).map(tab => (
                     <Tooltip key={tab.id}>
                       <TooltipTrigger asChild>
@@ -1274,6 +1280,60 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           </p>
                         </div>
                       )}
+                    </div>
+                  );
+                })()}
+
+                {/* CAST LOG TAB */}
+                {sidebarTab === "log" && (() => {
+                  const relColor: Record<string, string> = {
+                    friendly: "text-green-400 border-green-700 bg-green-950/40",
+                    neutral: "text-muted-foreground border-border bg-muted/30",
+                    hostile: "text-red-400 border-red-800 bg-red-950/40",
+                    unknown: "text-yellow-400 border-yellow-700 bg-yellow-950/40",
+                    deceased: "text-zinc-500 border-zinc-700 bg-zinc-900/40",
+                  };
+                  if (npcs.length === 0) {
+                    return (
+                      <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
+                        <ScrollText className="w-8 h-8 text-muted-foreground/40" />
+                        <p className="text-sm text-muted-foreground">No named characters yet.</p>
+                        <p className="text-xs text-muted-foreground/60">NPCs you meet will appear here.</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {npcs.map((npc: any) => {
+                        const rel = npc.relationship ?? "neutral";
+                        const colorCls = relColor[rel] ?? relColor.neutral;
+                        return (
+                          <div key={npc.id} data-testid={`card-npc-${npc.id}`} className={`rounded-md border p-3 space-y-1 ${colorCls}`}>
+                            <div className="flex items-start justify-between gap-1">
+                              <span className="font-semibold text-sm leading-tight">{npc.name}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide whitespace-nowrap border ${colorCls}`}>
+                                {rel}
+                              </span>
+                            </div>
+                            {npc.role && (
+                              <p className="text-xs text-muted-foreground italic">{npc.role}</p>
+                            )}
+                            {npc.description && (
+                              <p className="text-xs leading-snug">{npc.description}</p>
+                            )}
+                            {npc.lastSeen && (
+                              <p className="text-[10px] text-muted-foreground/70">
+                                <span className="font-medium">Last seen:</span> {npc.lastSeen}
+                              </p>
+                            )}
+                            {npc.notes && (
+                              <p className="text-[10px] text-muted-foreground/80 border-t border-current/20 pt-1 mt-1">
+                                {npc.notes}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })()}

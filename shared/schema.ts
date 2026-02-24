@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, jsonb, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, jsonb, timestamp, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -173,6 +173,23 @@ export const characterSituations = pgTable("character_situations", {
 });
 
 export type CharacterSituation = typeof characterSituations.$inferSelect;
+
+// ─── NPC Log (named characters encountered) ───────────────────────────────────
+
+export const npcLog = pgTable("npc_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partyId: varchar("party_id").notNull(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default(""),
+  description: text("description").notNull().default(""),
+  lastSeen: text("last_seen").notNull().default(""),
+  relationship: text("relationship").notNull().default("neutral"), // friendly, neutral, hostile, unknown, deceased
+  notes: text("notes").notNull().default(""),
+  firstMet: timestamp("first_met").default(sql`NOW()`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`NOW()`).notNull(),
+}, (t) => [uniqueIndex("npc_log_party_name_idx").on(t.partyId, t.name)]);
+
+export type NpcEntry = typeof npcLog.$inferSelect;
 
 // ─── Arcs ─────────────────────────────────────────────────────────────────────
 

@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown,
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
-  Mic, MicOff, MessageCircle, Radio
+  Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -149,7 +149,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [quickActions, setQuickActions] = useState<string[]>(QUICK_ACTIONS_DEFAULT);
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [showCharacters, setShowCharacters] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"party" | "inventory" | "map" | "dice">("party");
+  const [sidebarTab, setSidebarTab] = useState<"party" | "inventory" | "map" | "dice" | "sheet">("party");
   const [isFirstTurn, setIsFirstTurn] = useState(true);
   const [messagesLoaded, setMessagesLoaded] = useState(false);
   const [sceneBackground, setSceneBackground] = useState<string | null>(null);
@@ -762,6 +762,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 <div className="flex gap-1">
                   {([
                     { id: "party", icon: Users, label: "Party" },
+                    { id: "sheet", icon: BookOpen, label: "Sheet" },
                     { id: "inventory", icon: Package, label: "Bag" },
                     { id: "map", icon: MapPin, label: "Map" },
                     { id: "dice", icon: Dices, label: "Dice" },
@@ -1092,6 +1093,186 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     <DiceRoller />
                   </div>
                 )}
+
+                {/* SHEET TAB */}
+                {sidebarTab === "sheet" && (() => {
+                  const char = myMember?.character;
+                  if (!char) return (
+                    <p className="text-xs text-muted-foreground text-center py-8 font-serif italic">No character found.</p>
+                  );
+                  const stats = (char.stats as Record<string, number>) || {};
+                  const abilities = (char.abilities as any[]) ?? [];
+                  const conditions = (char.conditions as string[]) ?? [];
+                  const hpPct = Math.max(0, Math.min(100, Math.round((char.currentHp / char.maxHp) * 100)));
+                  const xpThresholds = [300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000];
+                  const xpNeeded = xpThresholds[char.level - 1] ?? xpThresholds[xpThresholds.length - 1];
+                  const xpPct = Math.min(100, Math.round((char.xp / xpNeeded) * 100));
+
+                  const statDefs = [
+                    { key: "might", label: "MGT", fullLabel: "Might", icon: Sword, color: "text-red-400" },
+                    { key: "agility", label: "AGI", fullLabel: "Agility", icon: Activity, color: "text-emerald-400" },
+                    { key: "endurance", label: "END", fullLabel: "Endurance", icon: Heart, color: "text-orange-400" },
+                    { key: "intellect", label: "INT", fullLabel: "Intellect", icon: Brain, color: "text-violet-400" },
+                    { key: "will", label: "WIL", fullLabel: "Will", icon: Shield, color: "text-amber-400" },
+                    { key: "presence", label: "PRE", fullLabel: "Presence", icon: Star, color: "text-rose-400" },
+                  ];
+
+                  return (
+                    <div className="space-y-4" data-testid="character-sheet">
+                      {/* Portrait + Identity */}
+                      <div className="rounded-md border border-border bg-card p-3 space-y-3">
+                        <div className="flex items-center gap-3">
+                          {char.profilePicture ? (
+                            <img
+                              src={char.profilePicture}
+                              alt={char.name}
+                              className="w-14 h-14 rounded-md object-cover flex-shrink-0 border border-border"
+                              data-testid="sheet-portrait"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-md bg-secondary flex items-center justify-center flex-shrink-0 border border-border">
+                              <BookOpen className="w-6 h-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-sans font-bold text-base tracking-wide leading-tight" data-testid="sheet-name">{char.name}</p>
+                            <p className="text-xs text-muted-foreground capitalize mt-0.5">{char.race} · {char.class}</p>
+                            <p className="text-xs text-muted-foreground/70 capitalize">{char.background}</p>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <Badge variant="secondary" className="text-xs px-1.5 py-0" data-testid="sheet-level">Level {char.level}</Badge>
+                              {conditions.map(c => (
+                                <Badge key={c} variant="destructive" className="text-xs px-1.5 py-0">{c}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* HP Bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 font-sans">
+                              <Heart className="w-3 h-3 text-red-400" /> Hit Points
+                            </span>
+                            <span className="text-xs font-sans font-bold" data-testid="sheet-hp">{char.currentHp} / {char.maxHp}</span>
+                          </div>
+                          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                hpPct > 60 ? "bg-emerald-500" : hpPct > 30 ? "bg-amber-500" : "bg-red-500"
+                              }`}
+                              style={{ width: `${hpPct}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* XP Bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 font-sans">
+                              <Star className="w-3 h-3 text-amber-400" /> Experience
+                            </span>
+                            <span className="text-xs font-sans" data-testid="sheet-xp">{char.xp} / {xpNeeded} XP</span>
+                          </div>
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-amber-500/70 transition-all duration-500"
+                              style={{ width: `${xpPct}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Ability Scores */}
+                      <div className="rounded-md border border-border bg-card p-3 space-y-2">
+                        <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                          <Zap className="w-3 h-3 text-primary" /> Ability Scores
+                        </p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {statDefs.map(({ key, label, fullLabel, icon: Icon, color }) => {
+                            const val = stats[key] ?? 10;
+                            const mod = Math.floor((val - 10) / 2);
+                            return (
+                              <div
+                                key={key}
+                                className="flex flex-col items-center rounded-md bg-secondary/40 px-2 py-2.5 gap-0.5"
+                                data-testid={`sheet-stat-${key}`}
+                              >
+                                <Icon className={`w-3 h-3 ${color}`} />
+                                <span className="text-xs font-sans font-bold text-foreground">{val}</span>
+                                <span className={`text-sm font-sans font-bold ${mod >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                  {mod >= 0 ? `+${mod}` : mod}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/60 font-sans">{label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Abilities */}
+                      {abilities.length > 0 && (
+                        <div className="rounded-md border border-border bg-card p-3 space-y-2">
+                          <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                            <Zap className="w-3 h-3 text-primary" /> Abilities & Powers
+                          </p>
+                          <div className="space-y-2">
+                            {abilities.map((ab: any, i: number) => (
+                              <div key={i} className="rounded-md bg-secondary/30 px-2.5 py-2.5 space-y-1" data-testid={`sheet-ability-${i}`}>
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-sm font-sans font-semibold leading-tight">{ab.name}</p>
+                                  {ab.usesMax > 0 && (
+                                    <div className="flex gap-0.5 flex-shrink-0">
+                                      {Array.from({ length: ab.usesMax }).map((_, j) => (
+                                        <div
+                                          key={j}
+                                          className={`w-2.5 h-2.5 rounded-full border ${
+                                            j < ab.usesLeft
+                                              ? "bg-primary border-primary"
+                                              : "bg-transparent border-muted-foreground/30"
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                {ab.description && (
+                                  <p className="text-xs text-muted-foreground leading-snug font-serif">{ab.description}</p>
+                                )}
+                                {ab.usesMax > 0 && (
+                                  <p className="text-[10px] text-muted-foreground/50 font-sans">{ab.usesLeft}/{ab.usesMax} uses remaining</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Backstory */}
+                      {char.backstory && (
+                        <div className="rounded-md border border-border bg-card p-3 space-y-2">
+                          <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                            <Scroll className="w-3 h-3 text-primary" /> Backstory
+                          </p>
+                          <p className="text-xs font-serif text-muted-foreground leading-relaxed italic" data-testid="sheet-backstory">
+                            {char.backstory}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Appearance */}
+                      {char.appearance && (
+                        <div className="rounded-md border border-border bg-card p-3 space-y-2">
+                          <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                            <BookOpen className="w-3 h-3 text-primary" /> Appearance
+                          </p>
+                          <p className="text-xs font-serif text-muted-foreground leading-relaxed" data-testid="sheet-appearance">
+                            {char.appearance}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
               </div>
             </ScrollArea>

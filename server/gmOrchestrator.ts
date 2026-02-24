@@ -80,7 +80,17 @@ export async function generateLocationBackground(
   }
 }
 
+// In-memory lock: prevents concurrent or repeated portrait generation for the same NPC
+const _portraitInFlight = new Set<string>();
+
 export async function generateNpcPortrait(npcId: string, npc: { name: string; role: string; description: string; relationship: string; lastSeen: string }): Promise<void> {
+  // Skip if already generating or already persisted in DB
+  if (_portraitInFlight.has(npcId)) return;
+  // Double-check DB — portrait may have been saved since the caller last fetched
+  const [row] = await db.select({ portrait: npcLog.portrait }).from(npcLog).where(eq(npcLog.id, npcId));
+  if (row?.portrait) return;
+
+  _portraitInFlight.add(npcId);
   try {
     const { GoogleGenAI, Modality } = await import("@google/genai");
     const ai = new GoogleGenAI({
@@ -163,6 +173,8 @@ export async function generateNpcPortrait(npcId: string, npc: { name: string; ro
     console.log(`[GM] Portrait generated for NPC "${npc.name}"`);
   } catch (e) {
     console.error(`[GM] NPC portrait generation failed for "${npc.name}":`, e);
+  } finally {
+    _portraitInFlight.delete(npcId);
   }
 }
 

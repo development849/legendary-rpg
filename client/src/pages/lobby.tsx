@@ -25,7 +25,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
     let cancelled = false;
     const poll = async () => {
       try {
-        const r = await fetch("/api/system/lobby-background");
+        const r = await fetch(`/api/system/lobby-background?_t=${Date.now()}`);
         const d = await r.json();
         if (!cancelled && d.imageData) setLobbyBg(d.imageData);
         else if (!cancelled && d.pending) setTimeout(poll, 8000);
@@ -188,7 +188,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
         </div>
 
         {/* Actions */}
-        <div className={`flex items-center justify-between pt-4 ${lobbyBg ? "border-t border-white/10" : "border-t border-border"}`}>
+        <div className={`rounded-lg p-4 flex items-center justify-between ${lobbyBg ? "backdrop-blur-md bg-black/50 border border-white/10" : "border-t border-border pt-4"}`}>
           <Button
             variant="outline"
             onClick={() => readyMutation.mutate(!isReady)}

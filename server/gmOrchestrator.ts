@@ -168,16 +168,18 @@ export async function generateLobbyBackground(): Promise<void> {
     });
 
     const prompt = [
-      "Wide cinematic fantasy painting of a raucous tavern celebration scene.",
-      "A diverse band of fantasy adventurers — warriors, rogues, mages, elves, dwarves, half-orcs — gathered around heavy oak tables.",
-      "Tankards raised high in a toast, ale sloshing, hearty laughter. A bard playing a lute on a barrel in the corner.",
-      "Roaring stone fireplace casting warm amber light. Iron chandeliers with dripping candles overhead.",
-      "Plates of roasted meat, bread, and cheese scattered across the table. Dice and cards mid-game.",
-      "Rough stone walls with mounted shields and crossed swords. Barrels stacked behind a wooden bar.",
-      "Warm tavern atmosphere — wood smoke, golden candlelight, deep shadows in the corners.",
-      "Epic wide establishing shot. Atmospheric painterly digital art. Dramatic volumetric lighting.",
-      "Deep colour palette — warm amber, rich ochre, firelight orange, deep shadow. Fantasy concept art quality.",
-      "Ultra-detailed, cinematic depth, luminous painterly style. No HUD, no text, no UI elements.",
+      "Oil painting, classical realism style, dark fantasy art.",
+      "Interior of a medieval stone tavern filled with rowdy adventurers celebrating after a quest.",
+      "Armoured warriors clinking tankards, a hooded rogue laughing, a robed wizard with a glowing staff leaning on the bar.",
+      "Warm orange-gold light from a massive stone fireplace and iron candle chandeliers hanging from heavy timber beams.",
+      "Heavy oak tables strewn with maps, coins, and platters of roasted game. A bard strumming a lute in the corner.",
+      "Rough-hewn stone walls hung with old shields, antlers, and faded banners. Barrels and bottles behind a carved wooden bar.",
+      "Thick atmosphere of wood smoke, candle haze, and deep chiaroscuro shadows.",
+      "Painted in the style of the provided reference image — rich impasto brushwork, luminous glazes, realistic proportions.",
+      "Classical oil painting technique with visible brushstrokes. Rembrandt-like dramatic lighting.",
+      "Cinematic wide composition. Muted earth tones — burnt umber, raw sienna, ochre gold, deep crimson.",
+      "Hyper-detailed fine art. Museum quality. Absolutely NO cartoon, NO cel-shading, NO flat colours, NO digital illustration look.",
+      "No text, no HUD, no UI overlays.",
     ].join(" ");
 
     const fs = await import("fs");
@@ -189,7 +191,7 @@ export async function generateLobbyBackground(): Promise<void> {
 
     const parts: any[] = [];
     if (styleRefBase64) {
-      parts.push({ text: "Use this image as the visual style reference:" });
+      parts.push({ text: "CRITICAL: Match this reference image's EXACT painting style — the same brushwork, colour palette, lighting, and realistic rendering. Do NOT make it cartoony or digitally flat. Copy this style precisely:" });
       parts.push({ inlineData: { mimeType: "image/png", data: styleRefBase64 } });
     }
     parts.push({ text: prompt });

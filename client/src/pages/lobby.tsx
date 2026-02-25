@@ -99,10 +99,10 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
       {lobbyBg && (
         <div className="absolute inset-0 z-0">
           <img src={lobbyBg} alt="" className="w-full h-full object-cover object-center" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background/90" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-background/80" />
         </div>
       )}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      <header className={`sticky top-0 z-50 backdrop-blur-sm ${lobbyBg ? "bg-black/40 border-b border-white/10" : "border-b border-border bg-card/50"}`}>
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} data-testid="button-back">
             <ArrowLeft className="w-4 h-4" />
@@ -115,7 +115,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 py-10 space-y-6">
         {/* Campaign Info */}
-        <div className="relative rounded-md border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent backdrop-blur-sm p-6 overflow-hidden">
+        <div className={`relative rounded-md p-6 overflow-hidden backdrop-blur-sm ${lobbyBg ? "border border-white/10 bg-black/30" : "border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent"}`}>
           <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
           <div className="relative space-y-1">
             <p className="text-primary text-xs font-sans tracking-widest uppercase">Campaign</p>
@@ -128,12 +128,12 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Invite Code */}
-          <Card className="backdrop-blur-sm bg-card/80">
+          <Card className={`backdrop-blur-sm ${lobbyBg ? "bg-black/30 border-white/10" : "bg-card/80"}`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-sans tracking-widest uppercase text-muted-foreground">Invite Friends</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-md border border-border">
+              <div className={`flex items-center gap-3 p-4 rounded-md ${lobbyBg ? "bg-black/20 border border-white/10" : "bg-secondary/50 border border-border"}`}>
                 <span className="font-sans font-bold tracking-widest text-2xl text-primary flex-1 text-center">
                   {party.inviteCode}
                 </span>
@@ -148,7 +148,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
           </Card>
 
           {/* Party Members */}
-          <Card className="backdrop-blur-sm bg-card/80">
+          <Card className={`backdrop-blur-sm ${lobbyBg ? "bg-black/30 border-white/10" : "bg-card/80"}`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-sans tracking-widest uppercase text-muted-foreground">The Company</CardTitle>
             </CardHeader>
@@ -188,7 +188,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-border">
+        <div className={`flex items-center justify-between pt-4 ${lobbyBg ? "border-t border-white/10" : "border-t border-border"}`}>
           <Button
             variant="outline"
             onClick={() => readyMutation.mutate(!isReady)}

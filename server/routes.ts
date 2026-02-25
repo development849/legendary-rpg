@@ -360,7 +360,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         .from(locationScenes)
         .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "party_lobby")));
       if (row) {
-        res.set("Cache-Control", "public, max-age=604800, immutable");
+        res.set("Cache-Control", "no-store, no-cache, must-revalidate");
         return res.json({ imageData: row.imageData, pending: false });
       }
       generateLobbyBackground().catch(console.error);

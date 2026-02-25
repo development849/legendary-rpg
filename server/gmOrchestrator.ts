@@ -686,8 +686,29 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
           const char = await resolveCharacter(update.character_id, partyId);
           if (char) {
             const existing = char.inventory as any[];
-            // Avoid duplicate entries for the same item in the same update batch
-            const inv = [...existing, { ...update.item, qty: update.item.qty ?? 1 }];
+            const item = { ...update.item, qty: update.item.qty ?? 1 };
+            if (!item.rarity) item.rarity = "common";
+            if (!item.properties) item.properties = {};
+            if (item.type === "weapon" && !item.properties.damage) {
+              const nameLower = (item.name || "").toLowerCase();
+              if (nameLower.includes("dagger") || nameLower.includes("knife") || nameLower.includes("shiv")) item.properties.damage = "1d4";
+              else if (nameLower.includes("short") || nameLower.includes("scimitar") || nameLower.includes("rapier") || nameLower.includes("whip")) item.properties.damage = "1d6";
+              else if (nameLower.includes("great") || nameLower.includes("maul") || nameLower.includes("pike") || nameLower.includes("halberd")) { item.properties.damage = "1d12"; item.properties.two_handed = true; }
+              else if (nameLower.includes("long") || nameLower.includes("battle") || nameLower.includes("war") || nameLower.includes("morningstar") || nameLower.includes("flail")) item.properties.damage = "1d8";
+              else if (nameLower.includes("bow") || nameLower.includes("crossbow")) { item.properties.damage = "1d8"; item.properties.range = 150; }
+              else if (nameLower.includes("staff") || nameLower.includes("club") || nameLower.includes("mace")) item.properties.damage = "1d6";
+              else item.properties.damage = "1d6";
+            }
+            if (item.type === "armor" && !item.properties.ac && !item.properties.ac_bonus) {
+              const nameLower = (item.name || "").toLowerCase();
+              if (nameLower.includes("shield")) item.properties.ac_bonus = 2;
+              else if (nameLower.includes("plate") || nameLower.includes("splint")) item.properties.ac = 16;
+              else if (nameLower.includes("chain") || nameLower.includes("scale") || nameLower.includes("half")) item.properties.ac = 14;
+              else if (nameLower.includes("leather") || nameLower.includes("hide") || nameLower.includes("studded")) item.properties.ac = 12;
+              else if (nameLower.includes("robe") || nameLower.includes("cloth")) item.properties.ac = 10;
+              else item.properties.ac = 12;
+            }
+            const inv = [...existing, item];
             await db.update(characters).set({ inventory: inv }).where(eq(characters.id, char.id));
             await db.insert(gameEvents).values({
               partyId, campaignId, eventType: "ITEM_GRANTED", actorId: "gm",

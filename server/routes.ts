@@ -257,6 +257,36 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.patch("/api/characters/:id/equip", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const char = await getCharacter(req.params.id);
+      if (!char) return res.status(404).json({ error: "Not found" });
+      if (char.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+
+      const { itemIndex, equipped } = req.body;
+      if (typeof itemIndex !== "number" || typeof equipped !== "boolean") {
+        return res.status(400).json({ error: "itemIndex (number) and equipped (boolean) required" });
+      }
+
+      const inv = [...(char.inventory as any[])];
+      if (itemIndex < 0 || itemIndex >= inv.length) {
+        return res.status(400).json({ error: "Invalid item index" });
+      }
+
+      const item = inv[itemIndex];
+      if (item.type !== "weapon" && item.type !== "armor") {
+        return res.status(400).json({ error: "Only weapons and armor can be equipped" });
+      }
+
+      inv[itemIndex] = { ...item, equipped };
+      const updated = await updateCharacter(req.params.id, { inventory: inv } as any);
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to equip item" });
+    }
+  });
+
   // ── Campaigns ───────────────────────────────────────────────────────────────
 
   app.get("/api/campaigns", requireAuth, async (req: any, res) => {

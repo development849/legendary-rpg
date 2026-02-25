@@ -265,7 +265,14 @@ Character: ${c.name} (${c.race} ${c.class}, Level ${c.level})
 CHARACTER_ID: ${c.id}
 HP: ${c.currentHp}/${c.maxHp} | XP: ${c.xp}
 Stats: ${JSON.stringify(c.stats)}
-Inventory: ${(c.inventory as any[]).map((i: any) => `${i.name} x${i.qty}`).join(", ")}
+Inventory: ${(c.inventory as any[]).map((i: any) => {
+  const parts = [`${i.name} x${i.qty}`];
+  if (i.equipped) parts.push("[EQUIPPED]");
+  if (i.properties?.damage) parts.push(`(${i.properties.damage}${i.properties.bonus ? ` +${i.properties.bonus}` : ""} dmg)`);
+  if (i.properties?.ac) parts.push(`(AC ${i.properties.ac})`);
+  if (i.properties?.ac_bonus) parts.push(`(+${i.properties.ac_bonus} AC)`);
+  return parts.join(" ");
+}).join(", ")}
 Conditions: ${((c.conditions as any[]) || []).join(", ") || "none"}
 Abilities: ${(c.abilities as any[]).map((a: any) => a.name).join(", ")}${c.backstory ? `\nBackstory: ${c.backstory}` : ""}
 `.trim()).join("\n\n");
@@ -412,7 +419,8 @@ Always respond with valid JSON in this structure:
   "proposed_updates": [
     {"type": "HP_CHANGED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "delta": -5, "reason": "Arrow wound"},
     {"type": "XP_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "amount": 100, "reason": "Defeated the bandits"},
-    {"type": "ITEM_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item": {"name": "...", "type": "weapon|armor|consumable|tool|treasure", "qty": 1}},
+    {"type": "ITEM_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item": {"name": "Iron Battleaxe", "type": "weapon", "qty": 1, "properties": {"damage": "1d10", "bonus": 1, "two_handed": true}}},
+    {"type": "ITEM_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item": {"name": "Studded Leather", "type": "armor", "qty": 1, "properties": {"ac": 12}}},
     {"type": "GOLD_CHANGED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "delta": -3, "reason": "Bought a roasted chicken for 3gp"},
     {"type": "NPC_MET", "name": "Marta", "role": "black market fence", "description": "nervous middle-aged woman, quick darting eyes, smells of tallow", "location": "Dockside Tavern back room", "relationship": "neutral", "notes": "Runs stolen goods. Owes money to the Crimson Hand."},
     {"type": "PLOT_FACT_SET", "key": "bandit_hideout", "value": "the old mill on the eastern road, three miles from Thornwick"},
@@ -431,7 +439,8 @@ CRITICAL RULES:
 3. When granting a purchased item, pair ITEM_GRANTED with GOLD_CHANGED in the same response.
 4. NAMED NPC TRACKING — MANDATORY: Before finalizing your response, list every named NPC that appears in your narrative this turn. Check each one against the KNOWN NPCS list above. If they are NOT in KNOWN NPCS, you MUST emit NPC_MET for them — no exceptions. This includes NPCs who are speaking, being referenced, or acting in the scene. Use relationship: "friendly", "neutral", "hostile", "unknown", or "deceased". Put their most important detail in "notes" (their secret, agenda, or connection to the party). A response where a named NPC appears in the narrative but is absent from KNOWN NPCS, without a corresponding NPC_MET update, is always a mistake.
 5. Whenever you establish a KEY STORY FACT in your narrative — a specific location for enemies or loot ("bandits are at the old mill"), a named place ("the Thornwick bridge"), a promise or reward ("100gp bounty from the Sheriff"), a plot reveal ("the cult leader is Brother Aldric") — you MUST immediately emit a PLOT_FACT_SET update to lock it into story canon. Use a short snake_case key (e.g. "bandit_hideout", "cult_leader", "active_quest_reward") and a clear descriptive value. Once a fact is set, it appears in ESTABLISHED STORY FACTS and you MUST NEVER contradict it. Check ESTABLISHED STORY FACTS before every narrative you write.
-6. XP AWARDS — MANDATORY: You MUST award XP whenever characters accomplish something meaningful. XP is the ONLY way characters advance — if you forget it, they never level up. Award XP using XP_GRANTED for each participating character. Guidelines:
+6. ITEM PROPERTIES — MANDATORY: When granting weapons, ALWAYS include "properties" with at least "damage" (e.g. "1d8", "2d6"). Include "bonus" for magic weapons, "two_handed" or "thrown" or "finesse" or "range" if applicable. When granting armor, ALWAYS include "properties" with "ac" (base AC number, e.g. 12). When granting shields, include "ac_bonus" (e.g. 2). Items without properties are useless to the player — never emit a weapon without damage or armor without AC.
+7. XP AWARDS — MANDATORY: You MUST award XP whenever characters accomplish something meaningful. XP is the ONLY way characters advance — if you forget it, they never level up. Award XP using XP_GRANTED for each participating character. Guidelines:
    - Defeated a minor enemy or obstacle: 50–100 XP each
    - Defeated a significant enemy or group: 150–300 XP each
    - Defeated a boss or major threat: 400–600 XP each

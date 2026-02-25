@@ -984,12 +984,50 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     weapon: "Weapons", armor: "Armor", consumable: "Consumables",
                     tool: "Tools", treasure: "Valuables", other: "Misc",
                   };
-                  const grouped: Record<string, any[]> = {};
-                  items.forEach(item => {
+                  const grouped: Record<string, { item: any; originalIndex: number }[]> = {};
+                  items.forEach((item, idx) => {
                     const t = item.type ?? "other";
                     if (!grouped[t]) grouped[t] = [];
-                    grouped[t].push(item);
+                    grouped[t].push({ item, originalIndex: idx });
                   });
+
+                  const toggleEquip = async (itemIndex: number, equipped: boolean) => {
+                    try {
+                      await fetch(`/api/characters/${char.id}/equip`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ itemIndex, equipped }),
+                      });
+                      queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+                    } catch {
+                      toast({ title: "Failed to update equipment", variant: "destructive" });
+                    }
+                  };
+
+                  const formatProps = (item: any) => {
+                    const p = item.properties;
+                    if (!p || Object.keys(p).length === 0) return null;
+                    const parts: string[] = [];
+                    if (p.damage) parts.push(`${p.damage} dmg`);
+                    if (p.bonus) parts.push(`+${p.bonus}`);
+                    if (p.ac) parts.push(`AC ${p.ac}`);
+                    if (p.ac_bonus) parts.push(`+${p.ac_bonus} AC`);
+                    if (p.range) parts.push(`${p.range}ft`);
+                    if (p.two_handed) parts.push("2H");
+                    if (p.thrown) parts.push("thrown");
+                    if (p.finesse) parts.push("finesse");
+                    if (p.heal) parts.push(`heal ${p.heal}`);
+                    if (p.focus) parts.push(`focus +${p.focus}`);
+                    if (p.value) parts.push(`${p.value}gp`);
+                    const extra = Object.entries(p)
+                      .filter(([k]) => !["damage","bonus","ac","ac_bonus","range","two_handed","thrown","finesse","heal","focus","value"].includes(k))
+                      .map(([k, v]) => `${k}: ${v}`);
+                    parts.push(...extra);
+                    return parts.length > 0 ? parts.join(" · ") : null;
+                  };
+
+                  const canEquip = (item: any) => item.type === "weapon" || item.type === "armor";
+
                   return (
                     <div className="space-y-3">
                       {/* Character header */}
@@ -1016,28 +1054,50 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
                               <Icon className="w-3 h-3 text-primary" /> {typeLabels[type]}
                             </p>
-                            {grouped[type].map((item: any, i: number) => (
-                              <div
-                                key={i}
-                                data-testid={`item-inventory-${i}`}
-                                className="flex items-start justify-between gap-2 rounded bg-secondary/30 px-2.5 py-2"
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-sans font-medium leading-tight">{item.name}</p>
-                                  {item.properties && Object.keys(item.properties).length > 0 && (
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                      {Object.entries(item.properties)
-                                        .filter(([k]) => k !== "value" || true)
-                                        .map(([k, v]) => `${k}: ${v}`)
-                                        .join(" · ")}
-                                    </p>
-                                  )}
+                            {grouped[type].map(({ item, originalIndex }) => {
+                              const props = formatProps(item);
+                              const isEquipped = !!item.equipped;
+                              const equipable = canEquip(item);
+                              return (
+                                <div
+                                  key={originalIndex}
+                                  data-testid={`item-inventory-${originalIndex}`}
+                                  className={`rounded px-2.5 py-2 ${isEquipped ? "bg-primary/10 border border-primary/30" : "bg-secondary/30"}`}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5">
+                                        <p className="text-sm font-sans font-medium leading-tight">{item.name}</p>
+                                        {isEquipped && (
+                                          <Badge variant="default" className="text-[10px] px-1 py-0 h-4 bg-primary/80" data-testid={`badge-equipped-${originalIndex}`}>E</Badge>
+                                        )}
+                                      </div>
+                                      {props && (
+                                        <p className="text-xs text-muted-foreground mt-0.5">{props}</p>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                                      {item.qty > 1 && (
+                                        <span className="text-xs font-sans font-bold text-primary">x{item.qty}</span>
+                                      )}
+                                      {equipable && (
+                                        <button
+                                          data-testid={`btn-equip-${originalIndex}`}
+                                          onClick={() => toggleEquip(originalIndex, !isEquipped)}
+                                          className={`text-[10px] font-sans font-medium px-1.5 py-0.5 rounded transition-colors ${
+                                            isEquipped
+                                              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                                              : "bg-primary/20 text-primary hover:bg-primary/30"
+                                          }`}
+                                        >
+                                          {isEquipped ? "Unequip" : "Equip"}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                                {item.qty > 1 && (
-                                  <span className="text-xs font-sans font-bold text-primary flex-shrink-0 mt-0.5">×{item.qty}</span>
-                                )}
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         );
                       })}
@@ -1299,6 +1359,29 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           </div>
                         </div>
                       </div>
+
+                      {/* Equipped Gear */}
+                      {(() => {
+                        const equipped = ((char.inventory as any[]) ?? []).filter((i: any) => i.equipped);
+                        if (equipped.length === 0) return null;
+                        return (
+                          <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1.5" data-testid="equipped-gear">
+                            <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                              <Sword className="w-3 h-3 text-primary" /> Equipped Gear
+                            </p>
+                            {equipped.map((item: any, i: number) => (
+                              <div key={i} className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-sans font-medium">{item.name}</span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {item.type === "weapon" && item.properties?.damage ? `${item.properties.damage}${item.properties.bonus ? ` +${item.properties.bonus}` : ""}` : ""}
+                                  {item.type === "armor" && item.properties?.ac ? `AC ${item.properties.ac}` : ""}
+                                  {item.type === "armor" && item.properties?.ac_bonus ? `+${item.properties.ac_bonus} AC` : ""}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
 
                       {/* Ability Scores */}
                       <div className="rounded-md border border-border bg-card p-3 space-y-2">

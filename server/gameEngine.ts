@@ -130,59 +130,59 @@ export function getStartingInventory(cls: string): any[] {
   switch (cls) {
     case "fighter":
       return [...common,
-        { name: "Longsword", type: "weapon", qty: 1, properties: { damage: "1d8", bonus: 2 } },
-        { name: "Chain Mail", type: "armor", qty: 1, properties: { ac: 14 } },
-        { name: "Shield", type: "armor", qty: 1, properties: { ac_bonus: 2 } },
+        { name: "Longsword", type: "weapon", qty: 1, equipped: true, properties: { damage: "1d8", bonus: 2 } },
+        { name: "Chain Mail", type: "armor", qty: 1, equipped: true, properties: { ac: 14 } },
+        { name: "Shield", type: "armor", qty: 1, equipped: true, properties: { ac_bonus: 2 } },
       ];
     case "rogue":
       return [...common,
-        { name: "Short Sword", type: "weapon", qty: 1, properties: { damage: "1d6", bonus: 2 } },
+        { name: "Short Sword", type: "weapon", qty: 1, equipped: true, properties: { damage: "1d6", bonus: 2 } },
         { name: "Daggers", type: "weapon", qty: 3, properties: { damage: "1d4", thrown: true } },
-        { name: "Leather Armor", type: "armor", qty: 1, properties: { ac: 11 } },
+        { name: "Leather Armor", type: "armor", qty: 1, equipped: true, properties: { ac: 11 } },
         { name: "Thieves' Tools", type: "tool", qty: 1, properties: {} },
       ];
     case "wizard":
       return [...common,
-        { name: "Arcane Staff", type: "weapon", qty: 1, properties: { damage: "1d6" } },
+        { name: "Arcane Staff", type: "weapon", qty: 1, equipped: true, properties: { damage: "1d6" } },
         { name: "Spellbook", type: "tool", qty: 1, properties: {} },
-        { name: "Robes", type: "armor", qty: 1, properties: { ac: 10 } },
+        { name: "Robes", type: "armor", qty: 1, equipped: true, properties: { ac: 10 } },
         { name: "Focus Crystal", type: "misc", qty: 1, properties: { focus: 3 } },
       ];
     case "cleric":
       return [...common,
-        { name: "Mace", type: "weapon", qty: 1, properties: { damage: "1d6", bonus: 1 } },
-        { name: "Scale Mail", type: "armor", qty: 1, properties: { ac: 13 } },
+        { name: "Mace", type: "weapon", qty: 1, equipped: true, properties: { damage: "1d6", bonus: 1 } },
+        { name: "Scale Mail", type: "armor", qty: 1, equipped: true, properties: { ac: 13 } },
         { name: "Holy Symbol", type: "misc", qty: 1, properties: {} },
         { name: "Prayer Beads", type: "misc", qty: 1, properties: { focus: 2 } },
       ];
     case "ranger":
       return [...common,
-        { name: "Longbow", type: "weapon", qty: 1, properties: { damage: "1d8", range: 150 } },
+        { name: "Longbow", type: "weapon", qty: 1, equipped: true, properties: { damage: "1d8", range: 150 } },
         { name: "Arrows", type: "consumable", qty: 20, properties: {} },
         { name: "Short Sword", type: "weapon", qty: 1, properties: { damage: "1d6", bonus: 1 } },
-        { name: "Studded Leather Armor", type: "armor", qty: 1, properties: { ac: 12 } },
+        { name: "Studded Leather Armor", type: "armor", qty: 1, equipped: true, properties: { ac: 12 } },
         { name: "Herbalism Kit", type: "tool", qty: 1, properties: {} },
       ];
     case "paladin":
       return [...common,
-        { name: "Longsword", type: "weapon", qty: 1, properties: { damage: "1d8", bonus: 2 } },
-        { name: "Shield", type: "armor", qty: 1, properties: { ac_bonus: 2 } },
-        { name: "Half-Plate", type: "armor", qty: 1, properties: { ac: 15 } },
+        { name: "Longsword", type: "weapon", qty: 1, equipped: true, properties: { damage: "1d8", bonus: 2 } },
+        { name: "Shield", type: "armor", qty: 1, equipped: true, properties: { ac_bonus: 2 } },
+        { name: "Half-Plate", type: "armor", qty: 1, equipped: true, properties: { ac: 15 } },
         { name: "Holy Symbol", type: "misc", qty: 1, properties: { focus: 3 } },
         { name: "Healing Potion", type: "consumable", qty: 1, properties: { heal: "2d4+2" } },
       ];
     case "barbarian":
       return [...common,
-        { name: "Greataxe", type: "weapon", qty: 1, properties: { damage: "1d12", bonus: 2, two_handed: true } },
+        { name: "Greataxe", type: "weapon", qty: 1, equipped: true, properties: { damage: "1d12", bonus: 2, two_handed: true } },
         { name: "Handaxe", type: "weapon", qty: 2, properties: { damage: "1d6", thrown: true } },
-        { name: "Hide Armor", type: "armor", qty: 1, properties: { ac: 12 } },
+        { name: "Hide Armor", type: "armor", qty: 1, equipped: true, properties: { ac: 12 } },
         { name: "Hunting Trap", type: "tool", qty: 1, properties: {} },
       ];
     case "bard":
       return [...common,
-        { name: "Rapier", type: "weapon", qty: 1, properties: { damage: "1d8", bonus: 1, finesse: true } },
+        { name: "Rapier", type: "weapon", qty: 1, equipped: true, properties: { damage: "1d8", bonus: 1, finesse: true } },
         { name: "Lute", type: "misc", qty: 1, properties: { focus: 3 } },
-        { name: "Leather Armor", type: "armor", qty: 1, properties: { ac: 11 } },
+        { name: "Leather Armor", type: "armor", qty: 1, equipped: true, properties: { ac: 11 } },
         { name: "Component Pouch", type: "misc", qty: 1, properties: {} },
         { name: "Disguise Kit", type: "tool", qty: 1, properties: {} },
       ];

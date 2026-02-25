@@ -53,7 +53,8 @@ Event-sourced: HP, XP, inventory, conditions, abilities all updatable by GM
 - Streams GPT-4o responses as SSE to frontend
 - Builds rich system prompt with character sheets, world state, recent summaries
 - Parses JSON response: `{narrative, dice_requests, proposed_updates, quick_actions, scene}`
-- Applies state changes: HP, XP, items, conditions
+- Applies state changes: HP, XP, items (with equipped status), conditions
+- Item properties: weapons require `damage` (e.g. "1d8"), armor requires `ac`; GM prompt enforces this via Critical Rule #6
 - Auto-summarizes every 10 turns for memory management
 
 ## API Routes
@@ -74,6 +75,7 @@ POST /api/parties/:id/ready    — Toggle ready state
 GET  /api/parties/:id/messages — Get chat history
 POST /api/parties/:id/action   — Player action → streaming GM response
 
+PATCH /api/characters/:id/equip — Equip/unequip weapon or armor
 POST /api/dice/roll            — Standalone dice roller
 WS   /ws                       — Party WebSocket room
 ```

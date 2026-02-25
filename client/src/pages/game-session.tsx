@@ -942,8 +942,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           {companions.map((npc: any) => (
                             <div key={npc.id} data-testid={`card-companion-${npc.id}`} className="rounded-md border border-amber-700/40 bg-amber-950/20 p-3 space-y-1.5">
                               <div className="flex items-center gap-2">
-                                {npc.portrait ? (
-                                  <img src={npc.portrait} alt={npc.name} className="w-8 h-8 rounded object-cover object-top flex-shrink-0 border border-amber-700/30" />
+                                {npc.hasPortrait ? (
+                                  <img src={`/api/npcs/${npc.id}/portrait`} alt={npc.name} className="w-8 h-8 rounded object-cover object-top flex-shrink-0 border border-amber-700/30" />
                                 ) : (
                                   <div className="w-8 h-8 rounded bg-amber-950/40 border border-amber-700/30 flex items-center justify-center flex-shrink-0">
                                     <Users className="w-3.5 h-3.5 text-amber-500/60" />
@@ -1543,9 +1543,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         {/* Portrait + name row */}
                         <div className="flex items-start gap-2.5">
                           <div className="flex-shrink-0">
-                            {npc.portrait ? (
+                            {npc.hasPortrait ? (
                               <img
-                                src={npc.portrait}
+                                src={`/api/npcs/${npc.id}/portrait`}
                                 alt={npc.name}
                                 className="w-14 h-14 rounded object-cover object-top border border-current/20"
                                 data-testid={`img-npc-portrait-${npc.id}`}

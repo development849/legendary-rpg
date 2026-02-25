@@ -459,8 +459,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const npcs = await db.select().from(npcLog)
         .where(eq(npcLog.partyId, req.params.id))
         .orderBy(desc(npcLog.updatedAt));
-      res.json(npcs);
-      // Fire-and-forget portrait generation for any NPCs that don't have one yet
+      const lite = npcs.map((n: any) => {
+        const { portrait, ...rest } = n;
+        return { ...rest, hasPortrait: !!portrait };
+      });
+      res.json(lite);
       const missing = npcs.filter((n: any) => !n.portrait);
       if (missing.length > 0) {
         const { generateNpcPortrait } = await import("./gmOrchestrator");
@@ -475,6 +478,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
     } catch (e) { res.status(500).json({ error: "Failed to get NPC log" }); }
+  });
+
+  app.get("/api/npcs/:id/portrait", requireAuth, async (req: any, res) => {
+    try {
+      const { npcLog } = await import("@shared/schema");
+      const [npc] = await db.select({ portrait: npcLog.portrait })
+        .from(npcLog).where(eq(npcLog.id, req.params.id)).limit(1);
+      if (!npc?.portrait) return res.status(404).json({ error: "No portrait" });
+      const match = npc.portrait.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (match) {
+        const buf = Buffer.from(match[2], "base64");
+        res.set({ "Content-Type": match[1], "Cache-Control": "public, max-age=86400" });
+        return res.send(buf);
+      }
+      res.set({ "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
+      res.send(Buffer.from(npc.portrait, "base64"));
+    } catch (e) { res.status(500).json({ error: "Failed to get portrait" }); }
   });
 
   // Player action → GM response (streaming)

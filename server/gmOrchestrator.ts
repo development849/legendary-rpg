@@ -168,18 +168,14 @@ export async function generateLobbyBackground(): Promise<void> {
     });
 
     const prompt = [
-      "Oil painting, classical realism style, dark fantasy art.",
-      "Interior of a medieval stone tavern filled with rowdy adventurers celebrating after a quest.",
-      "Armoured warriors clinking tankards, a hooded rogue laughing, a robed wizard with a glowing staff leaning on the bar.",
+      "Generate an image that looks EXACTLY like the provided reference painting — same medium, same brushwork, same palette, same level of realism.",
+      "Subject: Interior of a grand medieval stone tavern, crowded with a diverse party of fantasy adventurers celebrating after a quest.",
+      "The crowd MUST include diverse fantasy races and genders: a tall female elf with pointed ears raising a goblet, a stout male dwarf with a braided beard laughing heartily, a green-skinned half-orc woman arm-wrestling at a table, a hooded tiefling man with small horns leaning against a pillar, a halfling woman standing on a bench to reach her drink, a dark-skinned human woman in plate armour clinking tankards with a pale elven man in flowing robes.",
       "Warm orange-gold light from a massive stone fireplace and iron candle chandeliers hanging from heavy timber beams.",
-      "Heavy oak tables strewn with maps, coins, and platters of roasted game. A bard strumming a lute in the corner.",
+      "Heavy oak tables strewn with maps, coins, and platters of roasted game.",
       "Rough-hewn stone walls hung with old shields, antlers, and faded banners. Barrels and bottles behind a carved wooden bar.",
       "Thick atmosphere of wood smoke, candle haze, and deep chiaroscuro shadows.",
-      "Painted in the style of the provided reference image — rich impasto brushwork, luminous glazes, realistic proportions.",
-      "Classical oil painting technique with visible brushstrokes. Rembrandt-like dramatic lighting.",
-      "Cinematic wide composition. Muted earth tones — burnt umber, raw sienna, ochre gold, deep crimson.",
-      "Hyper-detailed fine art. Museum quality. Absolutely NO cartoon, NO cel-shading, NO flat colours, NO digital illustration look.",
-      "No text, no HUD, no UI overlays.",
+      "Cinematic wide composition. No text, no HUD, no UI overlays.",
     ].join(" ");
 
     const fs = await import("fs");

@@ -1028,6 +1028,22 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
                   const canEquip = (item: any) => item.type === "weapon" || item.type === "armor";
 
+                  const rarityColors: Record<string, string> = {
+                    common: "text-zinc-400 border-zinc-500/30 bg-zinc-500/10",
+                    uncommon: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+                    rare: "text-blue-400 border-blue-500/30 bg-blue-500/10",
+                    epic: "text-purple-400 border-purple-500/30 bg-purple-500/10",
+                    legendary: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+                  };
+
+                  const rarityBorder: Record<string, string> = {
+                    common: "",
+                    uncommon: "border-l-2 border-l-emerald-500/50",
+                    rare: "border-l-2 border-l-blue-500/50",
+                    epic: "border-l-2 border-l-purple-500/50",
+                    legendary: "border-l-2 border-l-amber-500/60",
+                  };
+
                   return (
                     <div className="space-y-3">
                       {/* Character header */}
@@ -1058,16 +1074,23 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                               const props = formatProps(item);
                               const isEquipped = !!item.equipped;
                               const equipable = canEquip(item);
+                              const rarity = item.rarity ?? (equipable ? "common" : null);
+                              const rBorder = rarity ? (rarityBorder[rarity] ?? "") : "";
                               return (
                                 <div
                                   key={originalIndex}
                                   data-testid={`item-inventory-${originalIndex}`}
-                                  className={`rounded px-2.5 py-2 ${isEquipped ? "bg-primary/10 border border-primary/30" : "bg-secondary/30"}`}
+                                  className={`rounded px-2.5 py-2 ${rBorder} ${isEquipped ? "bg-primary/10 border border-primary/30" : "bg-secondary/30"}`}
                                 >
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-1.5">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
                                         <p className="text-sm font-sans font-medium leading-tight">{item.name}</p>
+                                        {rarity && rarity !== "common" && (
+                                          <span className={`text-[9px] font-sans font-bold uppercase tracking-wider px-1 py-0 rounded border ${rarityColors[rarity] ?? rarityColors.common}`} data-testid={`badge-rarity-${originalIndex}`}>
+                                            {rarity}
+                                          </span>
+                                        )}
                                         {isEquipped && (
                                           <Badge variant="default" className="text-[10px] px-1 py-0 h-4 bg-primary/80" data-testid={`badge-equipped-${originalIndex}`}>E</Badge>
                                         )}
@@ -1364,21 +1387,36 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                       {(() => {
                         const equipped = ((char.inventory as any[]) ?? []).filter((i: any) => i.equipped);
                         if (equipped.length === 0) return null;
+                        const sheetRarityText: Record<string, string> = {
+                          common: "text-zinc-400",
+                          uncommon: "text-emerald-400",
+                          rare: "text-blue-400",
+                          epic: "text-purple-400",
+                          legendary: "text-amber-400",
+                        };
                         return (
                           <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1.5" data-testid="equipped-gear">
                             <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
                               <Sword className="w-3 h-3 text-primary" /> Equipped Gear
                             </p>
-                            {equipped.map((item: any, i: number) => (
-                              <div key={i} className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-sans font-medium">{item.name}</span>
-                                <span className="text-[10px] text-muted-foreground">
-                                  {item.type === "weapon" && item.properties?.damage ? `${item.properties.damage}${item.properties.bonus ? ` +${item.properties.bonus}` : ""}` : ""}
-                                  {item.type === "armor" && item.properties?.ac ? `AC ${item.properties.ac}` : ""}
-                                  {item.type === "armor" && item.properties?.ac_bonus ? `+${item.properties.ac_bonus} AC` : ""}
-                                </span>
-                              </div>
-                            ))}
+                            {equipped.map((item: any, i: number) => {
+                              const rarity = item.rarity ?? "common";
+                              return (
+                                <div key={i} className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className={`text-xs font-sans font-medium ${rarity !== "common" ? (sheetRarityText[rarity] ?? "") : ""}`}>{item.name}</span>
+                                    {rarity !== "common" && (
+                                      <span className={`text-[8px] font-sans font-bold uppercase ${sheetRarityText[rarity] ?? ""}`}>{rarity}</span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                                    {item.type === "weapon" && item.properties?.damage ? `${item.properties.damage}${item.properties.bonus ? ` +${item.properties.bonus}` : ""}` : ""}
+                                    {item.type === "armor" && item.properties?.ac ? `AC ${item.properties.ac}` : ""}
+                                    {item.type === "armor" && item.properties?.ac_bonus ? `+${item.properties.ac_bonus} AC` : ""}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         );
                       })()}

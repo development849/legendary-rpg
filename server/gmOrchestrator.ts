@@ -634,6 +634,63 @@ export async function runGM(
   onDone(fullText, updates, parsed?.dice_requests ?? []);
 }
 
+function consolidateCoins(inv: any[]): any[] {
+  const coinPattern = /coin|gold|silver|copper|money|gp\b|pouch.*coin|bag.*gold/i;
+  let totalGold = 0;
+  let firstPouchIdx = -1;
+  const toRemove: number[] = [];
+
+  for (let i = 0; i < inv.length; i++) {
+    const item = inv[i];
+    if (item.type !== "treasure") continue;
+    const hasValue = typeof item.properties?.value === "number";
+    const nameMatchesCoin = coinPattern.test(item.name || "");
+    if (hasValue || nameMatchesCoin) {
+      const val = item.properties?.value ?? 0;
+      totalGold += val;
+      if (firstPouchIdx === -1) {
+        firstPouchIdx = i;
+      } else {
+        toRemove.push(i);
+      }
+    }
+  }
+
+  if (toRemove.length === 0 && firstPouchIdx >= 0 && inv[firstPouchIdx].properties?.value === totalGold) {
+    return inv;
+  }
+
+  const result = inv.filter((_, idx) => !toRemove.includes(idx));
+  if (totalGold > 0) {
+    if (firstPouchIdx >= 0) {
+      const pIdx = result.indexOf(inv[firstPouchIdx]);
+      if (pIdx >= 0) {
+        result[pIdx] = { qty: 1, name: `Coin Pouch (${totalGold}gp)`, type: "treasure", properties: { value: totalGold } };
+      }
+    } else {
+      result.push({ qty: 1, name: `Coin Pouch (${totalGold}gp)`, type: "treasure", properties: { value: totalGold } });
+    }
+  } else if (firstPouchIdx >= 0) {
+    const pIdx = result.indexOf(inv[firstPouchIdx]);
+    if (pIdx >= 0) result.splice(pIdx, 1);
+  }
+
+  return result;
+}
+
+function sortInventory(inv: any[]): any[] {
+  const typeOrder: Record<string, number> = { weapon: 0, armor: 1, consumable: 2, tool: 3, misc: 4, treasure: 5 };
+  return [...inv].sort((a, b) => {
+    const ea = a.equipped ? 0 : 1;
+    const eb = b.equipped ? 0 : 1;
+    if (ea !== eb) return ea - eb;
+    const ta = typeOrder[a.type] ?? 4;
+    const tb = typeOrder[b.type] ?? 4;
+    if (ta !== tb) return ta - tb;
+    return (a.name || "").localeCompare(b.name || "");
+  });
+}
+
 /** Resolve a character by its UUID, falling back to matching by name within the party */
 async function resolveCharacter(characterIdOrName: string, partyId: string) {
   // First try direct UUID lookup
@@ -708,7 +765,9 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
               else if (nameLower.includes("robe") || nameLower.includes("cloth")) item.properties.ac = 10;
               else item.properties.ac = 12;
             }
-            const inv = [...existing, item];
+            let inv = [...existing, item];
+            inv = consolidateCoins(inv);
+            inv = sortInventory(inv);
             await db.update(characters).set({ inventory: inv }).where(eq(characters.id, char.id));
             await db.insert(gameEvents).values({
               partyId, campaignId, eventType: "ITEM_GRANTED", actorId: "gm",
@@ -728,8 +787,8 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
         case "GOLD_CHANGED": {
           const char = await resolveCharacter(update.character_id, partyId);
           if (char) {
-            const inv = [...(char.inventory as any[])];
-            // Find the coin pouch (any treasure item with a numeric value property)
+            let inv = [...(char.inventory as any[])];
+            inv = consolidateCoins(inv);
             const pouchIdx = inv.findIndex(
               (i: any) => i.type === "treasure" && typeof i.properties?.value === "number"
             );
@@ -746,9 +805,9 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
                 };
               }
             } else if (delta > 0) {
-              // No pouch yet — create one from earned gold
               inv.push({ qty: 1, name: `Coin Pouch (${delta}gp)`, type: "treasure", properties: { value: delta } });
             }
+            inv = sortInventory(inv);
             await db.update(characters).set({ inventory: inv }).where(eq(characters.id, char.id));
             await db.insert(gameEvents).values({
               partyId, campaignId, eventType: "GOLD_CHANGED", actorId: "gm",

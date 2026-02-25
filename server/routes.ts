@@ -12,7 +12,7 @@ import {
   saveChatMessage, getPartyMessages, getWorldState,
 } from "./storage";
 import { rollDice } from "./gameEngine";
-import { runGM, generateLocationBackground, generateHallBackground } from "./gmOrchestrator";
+import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground } from "./gmOrchestrator";
 import { db } from "./db";
 import { locationScenes, partyMembers } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -351,6 +351,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json({ imageData: null, pending: true });
     } catch (e) {
       res.status(500).json({ error: "Failed to fetch hall background" });
+    }
+  });
+
+  app.get("/api/system/lobby-background", async (_req, res) => {
+    try {
+      const [row] = await db.select({ imageData: locationScenes.imageData })
+        .from(locationScenes)
+        .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "party_lobby")));
+      if (row) {
+        res.set("Cache-Control", "public, max-age=604800, immutable");
+        return res.json({ imageData: row.imageData, pending: false });
+      }
+      generateLobbyBackground().catch(console.error);
+      res.json({ imageData: null, pending: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch lobby background" });
     }
   });
 

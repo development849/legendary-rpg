@@ -151,6 +151,75 @@ export async function generateHallBackground(): Promise<void> {
   }
 }
 
+let _lobbyBgInFlight = false;
+export async function generateLobbyBackground(): Promise<void> {
+  if (_lobbyBgInFlight) return;
+  const [existing] = await db.select({ id: locationScenes.id })
+    .from(locationScenes)
+    .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "party_lobby")));
+  if (existing) return;
+
+  _lobbyBgInFlight = true;
+  try {
+    const { GoogleGenAI, Modality } = await import("@google/genai");
+    const ai = new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+      httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+    });
+
+    const prompt = [
+      "Wide cinematic fantasy painting of a raucous tavern celebration scene.",
+      "A diverse band of fantasy adventurers — warriors, rogues, mages, elves, dwarves, half-orcs — gathered around heavy oak tables.",
+      "Tankards raised high in a toast, ale sloshing, hearty laughter. A bard playing a lute on a barrel in the corner.",
+      "Roaring stone fireplace casting warm amber light. Iron chandeliers with dripping candles overhead.",
+      "Plates of roasted meat, bread, and cheese scattered across the table. Dice and cards mid-game.",
+      "Rough stone walls with mounted shields and crossed swords. Barrels stacked behind a wooden bar.",
+      "Warm tavern atmosphere — wood smoke, golden candlelight, deep shadows in the corners.",
+      "Epic wide establishing shot. Atmospheric painterly digital art. Dramatic volumetric lighting.",
+      "Deep colour palette — warm amber, rich ochre, firelight orange, deep shadow. Fantasy concept art quality.",
+      "Ultra-detailed, cinematic depth, luminous painterly style. No HUD, no text, no UI elements.",
+    ].join(" ");
+
+    const fs = await import("fs");
+    const path = await import("path");
+    const styleRefPath = path.join(process.cwd(), "attached_assets", "Snip20260221_1_1771705188223.png");
+    const styleRefBase64 = fs.existsSync(styleRefPath)
+      ? fs.readFileSync(styleRefPath).toString("base64")
+      : null;
+
+    const parts: any[] = [];
+    if (styleRefBase64) {
+      parts.push({ text: "Use this image as the visual style reference:" });
+      parts.push({ inlineData: { mimeType: "image/png", data: styleRefBase64 } });
+    }
+    parts.push({ text: prompt });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-image-preview",
+      contents: [{ role: "user", parts }],
+      config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+    });
+
+    const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+    if (!imagePart?.inlineData?.data) return;
+
+    const mimeType = imagePart.inlineData.mimeType || "image/png";
+    const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+
+    await db.insert(locationScenes).values({
+      partyId: "system",
+      locationName: "party_lobby",
+      imageData: dataUrl,
+    }).onConflictDoNothing();
+
+    console.log("[GM] Party lobby background generated and saved.");
+  } catch (e) {
+    console.error("[GM] Lobby background generation failed:", e);
+  } finally {
+    _lobbyBgInFlight = false;
+  }
+}
+
 // In-memory lock: prevents concurrent or repeated portrait generation for the same NPC
 const _portraitInFlight = new Set<string>();
 

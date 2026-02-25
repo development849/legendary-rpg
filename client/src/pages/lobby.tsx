@@ -19,6 +19,21 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [ws, setWs] = useState<WebSocket | null>(null);
+  const [lobbyBg, setLobbyBg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const r = await fetch("/api/system/lobby-background");
+        const d = await r.json();
+        if (!cancelled && d.imageData) setLobbyBg(d.imageData);
+        else if (!cancelled && d.pending) setTimeout(poll, 8000);
+      } catch {}
+    };
+    poll();
+    return () => { cancelled = true; };
+  }, []);
 
   const { data, isLoading, refetch } = useQuery<any>({
     queryKey: [`/api/parties/${partyId}`],
@@ -80,8 +95,14 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/50 sticky top-0 z-50">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {lobbyBg && (
+        <div className="absolute inset-0 z-0">
+          <img src={lobbyBg} alt="" className="w-full h-full object-cover object-center" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background/90" />
+        </div>
+      )}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} data-testid="button-back">
             <ArrowLeft className="w-4 h-4" />
@@ -92,9 +113,9 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-10 space-y-6">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 py-10 space-y-6">
         {/* Campaign Info */}
-        <div className="relative rounded-md border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent p-6 overflow-hidden">
+        <div className="relative rounded-md border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent backdrop-blur-sm p-6 overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
           <div className="relative space-y-1">
             <p className="text-primary text-xs font-sans tracking-widest uppercase">Campaign</p>
@@ -107,7 +128,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Invite Code */}
-          <Card>
+          <Card className="backdrop-blur-sm bg-card/80">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-sans tracking-widest uppercase text-muted-foreground">Invite Friends</CardTitle>
             </CardHeader>
@@ -127,7 +148,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
           </Card>
 
           {/* Party Members */}
-          <Card>
+          <Card className="backdrop-blur-sm bg-card/80">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-sans tracking-widest uppercase text-muted-foreground">The Company</CardTitle>
             </CardHeader>

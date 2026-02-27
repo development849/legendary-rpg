@@ -574,14 +574,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           gmFullText += chunk;
           res.write(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`);
         },
-        async (fullText, updates, diceRequests) => {
+        async (fullText, updates, diceRequests, quickActions) => {
           // Save GM message
           const gmMsg = await saveChatMessage({
             partyId,
             userId: undefined,
             role: "gm",
             content: fullText,
-            metadata: { updates, diceRequests },
+            metadata: { updates, diceRequests, quickActions },
           });
 
           // Broadcast GM message and any updates
@@ -590,7 +590,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             broadcastToParty(partyId, { type: "STATE_UPDATE", updates });
           }
 
-          res.write(`data: ${JSON.stringify({ type: "done", message: gmMsg, updates, diceRequests })}\n\n`);
+          res.write(`data: ${JSON.stringify({ type: "done", message: gmMsg, updates, diceRequests, quickActions })}\n\n`);
           res.end();
         },
       );

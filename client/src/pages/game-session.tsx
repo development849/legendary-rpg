@@ -186,6 +186,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         if (Array.isArray(data)) {
           setMessages(data);
           if (data.length > 0) setIsFirstTurn(false);
+          const lastGm = [...data].reverse().find((m: ChatMsg) => m.role === "gm");
+          const savedQa = lastGm?.metadata?.quickActions;
+          if (Array.isArray(savedQa) && savedQa.length > 0) setQuickActions(savedQa);
         }
         setMessagesLoaded(true);
       })
@@ -249,12 +252,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         });
         if (msg.message.role === "gm") {
           setIsFirstTurn(false);
-          // Refresh party data so inventory/HP/XP reflect any GM-applied updates
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
-          // Refresh character situations for split-party tracking
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/situations`] });
-          // Refresh NPC log so companion status (joined/left) is immediately visible
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/npcs`] });
+          const wsQa = msg.message?.metadata?.quickActions;
+          if (Array.isArray(wsQa) && wsQa.length > 0) setQuickActions(wsQa);
         }
       }
     };
@@ -378,18 +380,14 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             } else if (evt.type === "done") {
               setStreamingContent("");
               setIsStreaming(false);
-              // The WS broadcast handles message addition
-              // But add it if not already present
               if (evt.message) {
                 setMessages(prev => {
                   if (prev.find(m => m.id === evt.message.id)) return prev;
                   return [...prev.filter(m => !m.id.startsWith("opt-")), evt.message];
                 });
               }
-              // Extract quick actions from metadata
-              if (evt.message?.metadata?.updates) {
-                // Parse quick actions from gm response if embedded
-              }
+              const qa = evt.quickActions ?? evt.message?.metadata?.quickActions ?? [];
+              if (qa.length > 0) setQuickActions(qa);
             }
           } catch (_) {}
         }

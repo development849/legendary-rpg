@@ -1004,7 +1004,18 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     }`}>
                       {isMyTurn ? "Your Turn!" : `${turnHint.character}'s Turn`}
                     </span>
-                    <span className="text-xs font-serif italic text-muted-foreground/80 truncate">{turnHint.prompt}</span>
+                    <span className="text-xs font-serif italic text-muted-foreground/80 truncate">
+                      {isMyTurn && myChar
+                        ? turnHint.prompt
+                            .replace(new RegExp(`\\b${myChar.name}\\b`, "gi"), "you")
+                            .replace(/\byou's\b/gi, "your")
+                            .replace(/\byou is\b/gi, "you are")
+                            .replace(/\byou sees\b/gi, "you see")
+                            .replace(/\byou hears\b/gi, "you hear")
+                            .replace(/\byou notices\b/gi, "you notice")
+                            .replace(/\byou feels\b/gi, "you feel")
+                        : turnHint.prompt}
+                    </span>
                   </div>
                 </div>
               </div>

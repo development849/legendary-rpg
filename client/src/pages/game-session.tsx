@@ -534,12 +534,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
     const msgType = msg.metadata?.msgType ?? "action";
 
-    // OOC message — grey, clearly marked out-of-character
+    // OOC message — clearly marked out-of-character
     if (msgType === "ooc") {
       return (
-        <div key={msg.id} className="text-center py-1" data-testid={`message-ooc-${msg.id}`}>
-          <span className="text-xs font-sans text-muted-foreground/60 italic bg-muted/30 rounded px-3 py-1">
-            (( <span className="text-muted-foreground/80 not-italic font-medium">{playerName}:</span> {msg.content} ))
+        <div key={msg.id} className="text-center py-1.5" data-testid={`message-ooc-${msg.id}`}>
+          <span className="text-sm font-sans text-muted-foreground italic bg-muted/60 rounded-md px-4 py-1.5 inline-block border border-border/50">
+            (( <span className="text-foreground/70 not-italic font-semibold">{playerName}:</span> {msg.content} ))
           </span>
         </div>
       );

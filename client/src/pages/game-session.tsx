@@ -11,7 +11,7 @@ import {
   Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown,
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
-  Volume2, VolumeX, Settings
+  Settings
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -162,14 +162,6 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [rolledPrompts, setRolledPrompts] = useState<Record<string, boolean>>({});
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
   const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
-  const [gmVoiceEnabled, setGmVoiceEnabled] = useState(() => localStorage.getItem("gm_voice_enabled") === "true");
-  const [gmVoiceName, setGmVoiceName] = useState(() => localStorage.getItem("gm_voice_name") || "onyx");
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
-  const speakingMsgId = useRef<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioCacheRef = useRef<Map<string, string>>(new Map());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -246,63 +238,6 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     };
   }, [currentLocation, partyId]);
 
-  // Persist voice settings
-  useEffect(() => { localStorage.setItem("gm_voice_enabled", gmVoiceEnabled ? "true" : "false"); }, [gmVoiceEnabled]);
-  useEffect(() => { localStorage.setItem("gm_voice_name", gmVoiceName); }, [gmVoiceName]);
-
-  const GM_VOICES: { id: string; label: string; desc: string }[] = [
-    { id: "onyx", label: "Onyx — The Sage", desc: "Deep, authoritative narrator" },
-    { id: "echo", label: "Echo — The Wanderer", desc: "Warm, adventurous storyteller" },
-    { id: "fable", label: "Fable — The Bard", desc: "Expressive, theatrical voice" },
-    { id: "nova", label: "Nova — The Oracle", desc: "Clear, wise feminine voice" },
-    { id: "shimmer", label: "Shimmer — The Fey", desc: "Ethereal, enchanting narrator" },
-    { id: "alloy", label: "Alloy — The Chronicler", desc: "Balanced, versatile voice" },
-  ];
-
-  async function speakNarrative(text: string, msgId: string) {
-    if (isSpeaking && speakingMsgId.current === msgId) {
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-      setIsSpeaking(false);
-      speakingMsgId.current = null;
-      return;
-    }
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-
-    const cleaned = text.replace(/[*_#`]/g, "").replace(/\([^)]*\)/g, "").trim();
-    if (!cleaned) return;
-
-    const cacheKey = `${gmVoiceName}:${msgId}`;
-    let audioUrl = audioCacheRef.current.get(cacheKey);
-
-    if (!audioUrl) {
-      setIsLoadingAudio(true);
-      speakingMsgId.current = msgId;
-      try {
-        const res = await fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: cleaned, voice: gmVoiceName }),
-        });
-        if (!res.ok) throw new Error("TTS failed");
-        const blob = await res.blob();
-        audioUrl = URL.createObjectURL(blob);
-        audioCacheRef.current.set(cacheKey, audioUrl);
-      } catch (e) {
-        setIsLoadingAudio(false);
-        speakingMsgId.current = null;
-        return;
-      }
-      setIsLoadingAudio(false);
-    }
-
-    const audio = new Audio(audioUrl);
-    audioRef.current = audio;
-    speakingMsgId.current = msgId;
-    audio.onplay = () => setIsSpeaking(true);
-    audio.onended = () => { setIsSpeaking(false); speakingMsgId.current = null; };
-    audio.onerror = () => { setIsSpeaking(false); speakingMsgId.current = null; };
-    audio.play().catch(() => { setIsSpeaking(false); speakingMsgId.current = null; });
-  }
 
   // Auto-scroll
   useEffect(() => {
@@ -352,13 +287,6 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/npcs`] });
             const wsQa = msg.message?.metadata?.quickActions;
             if (Array.isArray(wsQa) && wsQa.length > 0) setQuickActions(wsQa);
-            if (gmVoiceEnabled && wasNew) {
-              try {
-                const jm = msg.message.content.match(/```json\s*([\s\S]*?)\s*```/) || msg.message.content.match(/(\{[\s\S]*\})/);
-                const narr = jm ? JSON.parse(jm[1])?.narrative : msg.message.content;
-                if (narr) speakNarrative(narr, msg.message.id);
-              } catch (_) { speakNarrative(msg.message.content, msg.message.id); }
-            }
           }
         } else if (msg.type === "STATE_UPDATE") {
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
@@ -519,13 +447,6 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               if (qa.length > 0) setQuickActions(qa);
               const th = evt.turnHint ?? evt.message?.metadata?.turnHint ?? null;
               if (th) setTurnHint(th);
-              if (gmVoiceEnabled && evt.message) {
-                try {
-                  const jm = evt.message.content.match(/```json\s*([\s\S]*?)\s*```/) || evt.message.content.match(/(\{[\s\S]*\})/);
-                  const narr = jm ? JSON.parse(jm[1])?.narrative : evt.message.content;
-                  if (narr) speakNarrative(narr, evt.message.id);
-                } catch (_) { speakNarrative(evt.message.content, evt.message.id); }
-              }
             }
           } catch (_) {}
         }
@@ -596,21 +517,6 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           <div className="flex items-center gap-2">
             <Scroll className="w-3.5 h-3.5 text-primary flex-shrink-0" />
             <span className="text-xs font-sans tracking-widest text-primary uppercase flex-1">The Chronicle</span>
-            <button
-              onClick={() => speakNarrative(narrative, msg.id)}
-              disabled={isLoadingAudio && speakingMsgId.current !== msg.id}
-              data-testid={`button-speak-${msg.id}`}
-              className={`p-1 rounded transition-colors ${
-                isLoadingAudio && speakingMsgId.current === msg.id
-                  ? "text-primary/50 animate-pulse"
-                  : isSpeaking && speakingMsgId.current === msg.id
-                  ? "text-primary bg-primary/15"
-                  : "text-muted-foreground/40 hover:text-primary/70"
-              }`}
-              title={isLoadingAudio && speakingMsgId.current === msg.id ? "Generating audio..." : isSpeaking && speakingMsgId.current === msg.id ? "Stop" : "Read aloud"}
-            >
-              {isSpeaking && speakingMsgId.current === msg.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-            </button>
           </div>
           <div className="narrative-bg rounded-md p-4 prose-fantasy text-foreground/90">
             <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-p:my-2">
@@ -774,133 +680,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 </TooltipContent>
               </Tooltip>
             ))}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-8 w-8 ${gmVoiceEnabled ? "text-primary" : ""}`}
-              onClick={() => setShowVoiceSettings(p => !p)}
-              data-testid="button-voice-settings"
-              title="GM Voice Settings"
-            >
-              <Volume2 className="w-4 h-4" />
-            </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowCharacters(p => !p)} data-testid="button-toggle-chars">
               <Users className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </header>
-
-      {showVoiceSettings && (
-        <div className="flex-shrink-0 border-b border-border bg-card/95 backdrop-blur-sm z-30 px-4 py-3 space-y-3" data-testid="voice-settings-panel">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-sans font-bold tracking-wider uppercase text-muted-foreground">GM Voice</span>
-            <button
-              onClick={() => { setGmVoiceEnabled(p => !p); }}
-              data-testid="button-toggle-voice"
-              className={`relative w-10 h-5 rounded-full transition-colors ${gmVoiceEnabled ? "bg-primary" : "bg-secondary"}`}
-            >
-              <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gmVoiceEnabled ? "translate-x-5" : ""}`} />
-            </button>
-          </div>
-
-          {gmVoiceEnabled && (
-            <>
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-sans tracking-widest text-muted-foreground/60 uppercase">Voice Presets</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {gmVoicePresets.map(preset => {
-                    const matchVoice = availableVoices.find(preset.filter);
-                    return (
-                      <button
-                        key={preset.label}
-                        onClick={() => {
-                          if (matchVoice) setGmVoiceName(matchVoice.name);
-                          setGmVoicePitch(preset.pitch);
-                          setGmVoiceRate(preset.rate);
-                          speakNarrative("Greetings, adventurer. The tale awaits.", "preview");
-                        }}
-                        data-testid={`button-preset-${preset.label}`}
-                        className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                          matchVoice && gmVoiceName === matchVoice.name && gmVoicePitch === preset.pitch
-                            ? "border-primary bg-primary/15 text-primary"
-                            : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-sans tracking-widest text-muted-foreground/60 uppercase">System Voice</span>
-                <select
-                  value={gmVoiceName}
-                  onChange={(e) => {
-                    setGmVoiceName(e.target.value);
-                    speakNarrative("Testing, one two three.", "preview");
-                  }}
-                  data-testid="select-voice"
-                  className="w-full bg-secondary border border-border rounded px-2 py-1 text-xs text-foreground"
-                >
-                  <option value="">Default</option>
-                  {availableVoices
-                    .filter(v => /en[-_]/i.test(v.lang))
-                    .map(v => (
-                      <option key={v.name} value={v.name}>{v.name}</option>
-                    ))}
-                  {availableVoices.filter(v => !/en[-_]/i.test(v.lang)).length > 0 && (
-                    <optgroup label="Other Languages">
-                      {availableVoices
-                        .filter(v => !/en[-_]/i.test(v.lang))
-                        .map(v => (
-                          <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
-                        ))}
-                    </optgroup>
-                  )}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-sans tracking-widest text-muted-foreground/60 uppercase">Speed</span>
-                  <input
-                    type="range" min="0.5" max="1.5" step="0.05" value={gmVoiceRate}
-                    onChange={e => setGmVoiceRate(parseFloat(e.target.value))}
-                    data-testid="input-voice-rate"
-                    className="w-full accent-primary h-1"
-                  />
-                  <div className="flex justify-between text-[9px] text-muted-foreground/40">
-                    <span>Slow</span><span>{gmVoiceRate.toFixed(2)}×</span><span>Fast</span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] font-sans tracking-widest text-muted-foreground/60 uppercase">Pitch</span>
-                  <input
-                    type="range" min="0.3" max="2.0" step="0.05" value={gmVoicePitch}
-                    onChange={e => setGmVoicePitch(parseFloat(e.target.value))}
-                    data-testid="input-voice-pitch"
-                    className="w-full accent-primary h-1"
-                  />
-                  <div className="flex justify-between text-[9px] text-muted-foreground/40">
-                    <span>Deep</span><span>{gmVoicePitch.toFixed(2)}</span><span>High</span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => speakNarrative("You push open the heavy door and step into the flickering torchlight. Something moves in the shadows ahead.", "preview")}
-                data-testid="button-test-voice"
-                className="text-xs text-primary hover:text-primary/80 font-sans transition-colors"
-              >
-                ▶ Test voice
-              </button>
-            </>
-          )}
-        </div>
-      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main Chat Area */}

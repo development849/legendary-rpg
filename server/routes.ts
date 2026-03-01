@@ -519,40 +519,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) { res.status(500).json({ error: "Failed to get portrait" }); }
   });
 
-  // Text-to-speech using OpenAI TTS
-  app.post("/api/tts", requireAuth, async (req: any, res) => {
-    try {
-      const { text, voice = "onyx" } = req.body;
-      if (!text || typeof text !== "string") return res.status(400).json({ error: "text required" });
-
-      const validVoices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
-      const selectedVoice = validVoices.includes(voice) ? voice : "onyx";
-
-      const OpenAI = (await import("openai")).default;
-      const openai = new OpenAI({
-        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-      });
-
-      const cleaned = text.replace(/[*_#`]/g, "").replace(/\([^)]*\)/g, "").trim().slice(0, 4000);
-
-      const mp3 = await openai.audio.speech.create({
-        model: "tts-1",
-        voice: selectedVoice as any,
-        input: cleaned,
-        speed: 0.95,
-      });
-
-      const buffer = Buffer.from(await mp3.arrayBuffer());
-      res.setHeader("Content-Type", "audio/mpeg");
-      res.setHeader("Content-Length", buffer.length);
-      res.send(buffer);
-    } catch (e: any) {
-      console.error("[TTS] Error:", e.message);
-      res.status(500).json({ error: "TTS generation failed" });
-    }
-  });
-
   // Player action → GM response (streaming)
   app.post("/api/parties/:id/action", requireAuth, async (req: any, res) => {
     try {

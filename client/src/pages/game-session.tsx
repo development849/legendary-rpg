@@ -983,25 +983,33 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           </ScrollArea>
 
           {/* Turn Hint */}
-          {turnHint && !isStreaming && !sending && (
-            <div className="flex-shrink-0 px-4 py-1.5 border-t border-border/40 bg-primary/5 relative z-10">
-              <div className="max-w-3xl mx-auto flex items-center gap-2 text-xs" data-testid="turn-hint-banner">
-                {(() => {
-                  const myChar = myMember?.character;
-                  const isMyTurn = myChar && turnHint.character.toLowerCase() === myChar.name.toLowerCase();
-                  return (
-                    <>
-                      <span className={`font-sans font-bold ${isMyTurn ? "text-primary" : "text-muted-foreground"}`}>
-                        {isMyTurn ? "Your turn" : `${turnHint.character}'s turn`}
-                      </span>
-                      <span className="text-muted-foreground/60">—</span>
-                      <span className="font-serif italic text-muted-foreground truncate">{turnHint.prompt}</span>
-                    </>
-                  );
-                })()}
+          {turnHint && !isStreaming && !sending && (() => {
+            const myChar = myMember?.character;
+            const isMyTurn = myChar && turnHint.character.toLowerCase() === myChar.name.toLowerCase();
+            return (
+              <div className={`flex-shrink-0 px-4 relative z-10 border-t ${
+                isMyTurn
+                  ? "py-3 bg-primary/15 border-primary/40 animate-pulse"
+                  : "py-2 bg-muted/50 border-border/40"
+              }`}>
+                <div className="max-w-3xl mx-auto flex items-center gap-3" data-testid="turn-hint-banner">
+                  <div className={`flex items-center justify-center rounded-full flex-shrink-0 ${
+                    isMyTurn ? "w-8 h-8 bg-primary text-primary-foreground" : "w-6 h-6 bg-muted-foreground/20 text-muted-foreground"
+                  }`}>
+                    <Sword className={isMyTurn ? "w-4 h-4" : "w-3 h-3"} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className={`font-sans font-bold tracking-wide uppercase ${
+                      isMyTurn ? "text-sm text-primary" : "text-xs text-muted-foreground"
+                    }`}>
+                      {isMyTurn ? "Your Turn!" : `${turnHint.character}'s Turn`}
+                    </span>
+                    <span className="text-xs font-serif italic text-muted-foreground/80 truncate">{turnHint.prompt}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Quick Actions */}
           {quickActions.length > 0 && !isStreaming && (

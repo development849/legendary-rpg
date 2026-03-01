@@ -160,6 +160,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const recognitionRef = useRef<any>(null);
   const [rolledPrompts, setRolledPrompts] = useState<Record<string, boolean>>({});
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
+  const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -190,6 +191,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           const lastGm = [...data].reverse().find((m: ChatMsg) => m.role === "gm");
           const savedQa = lastGm?.metadata?.quickActions;
           if (Array.isArray(savedQa) && savedQa.length > 0) setQuickActions(savedQa);
+          const savedTh = lastGm?.metadata?.turnHint;
+          if (savedTh?.character) setTurnHint(savedTh);
         }
         setMessagesLoaded(true);
       })
@@ -283,6 +286,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           }
         } else if (msg.type === "STATE_UPDATE") {
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+        } else if (msg.type === "TURN_HINT" && msg.turnHint) {
+          setTurnHint(msg.turnHint);
         }
       };
 
@@ -436,6 +441,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               }
               const qa = evt.quickActions ?? evt.message?.metadata?.quickActions ?? [];
               if (qa.length > 0) setQuickActions(qa);
+              const th = evt.turnHint ?? evt.message?.metadata?.turnHint ?? null;
+              if (th) setTurnHint(th);
             }
           } catch (_) {}
         }
@@ -755,6 +762,27 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               </div>
             )}
           </ScrollArea>
+
+          {/* Turn Hint */}
+          {turnHint && !isStreaming && !sending && (
+            <div className="flex-shrink-0 px-4 py-1.5 border-t border-border/40 bg-primary/5 relative z-10">
+              <div className="max-w-3xl mx-auto flex items-center gap-2 text-xs" data-testid="turn-hint-banner">
+                {(() => {
+                  const myChar = myMember?.character;
+                  const isMyTurn = myChar && turnHint.character.toLowerCase() === myChar.name.toLowerCase();
+                  return (
+                    <>
+                      <span className={`font-sans font-bold ${isMyTurn ? "text-primary" : "text-muted-foreground"}`}>
+                        {isMyTurn ? "Your turn" : `${turnHint.character}'s turn`}
+                      </span>
+                      <span className="text-muted-foreground/60">—</span>
+                      <span className="font-serif italic text-muted-foreground truncate">{turnHint.prompt}</span>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions */}
           {quickActions.length > 0 && !isStreaming && (

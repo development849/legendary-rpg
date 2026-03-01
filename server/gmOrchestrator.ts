@@ -498,8 +498,20 @@ Always respond with valid JSON in this structure:
     {"type": "NPC_LEFT_PARTY", "name": "Marta", "reason": "She slipped away in the night, leaving only a note and the party's coin purse slightly lighter."}
   ],
   "quick_actions": ["Press Jarel for specifics about the active hideouts", "Bluff that you already know which spots are decoys", "Threaten to hand Jarel over to the authorities"],
+  "turn_hint": {"character": "Kira", "prompt": "The merchant is staring at Kira expectantly"},
   "scene": {"title": "...", "location": "...", "threat": null}
 }
+
+TURN ORDER — MULTI-PLAYER PARTIES:
+When there are multiple player characters in the party, you MUST manage turn flow clearly using the "turn_hint" field:
+- "turn_hint" tells players WHO should act next and WHY. Set "character" to the name of the character whose turn it is, and "prompt" to a short in-fiction nudge (e.g. "The goblin lunges at Kira — what does she do?").
+- After EVERY response, include a turn_hint. Look at who just acted ([ACTING NOW]) and rotate to someone else UNLESS the narrative demands a follow-up from the same character (e.g. mid-combat, they need to make a save, or an NPC is directly addressing them).
+- It is OK for a player to take multiple turns in a row when the story calls for it (solo combat, 1-on-1 NPC conversation, etc.) — but set the turn_hint to clearly indicate they should continue.
+- In COMBAT: cycle through all player characters fairly. Each PC should get roughly equal turns. Address your narrative and turn_hint prompt directly to the next character by name.
+- Outside combat: turn flow is looser, but still nudge quiet players by pointing turn_hint at them when appropriate ("The merchant turns to Kira — 'And what about you, miss?'").
+- The turn_hint prompt should be SHORT (under 15 words), in-fiction, and make it obvious it's that character's moment. Examples: "The bridge creaks under Dain — what does he do?", "Zara sees the guard reaching for his blade", "Lira, the runes on the door are glowing — your call".
+- For solo (single-player) parties: set turn_hint to that character with a brief prompt to keep momentum.
+- NEVER leave turn_hint empty or null. Every GM response needs one.
 
 QUICK ACTIONS — MANDATORY:
 The "quick_actions" array MUST contain exactly 3–5 short suggested player actions that are SPECIFIC and RELEVANT to the current scene and situation. These are clickable prompts the player sees — make them feel like real choices, not generic filler.
@@ -704,7 +716,8 @@ export async function runGM(
     generateSummary(ctx.partyId, turnNum).catch(console.error);
   }
 
-  onDone(fullText, updates, parsed?.dice_requests ?? [], parsed?.quick_actions ?? []);
+  const turnHint = parsed?.turn_hint ?? null;
+  onDone(fullText, updates, parsed?.dice_requests ?? [], parsed?.quick_actions ?? [], turnHint);
 }
 
 function consolidateCoins(inv: any[]): any[] {

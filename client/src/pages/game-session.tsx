@@ -159,6 +159,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const [rolledPrompts, setRolledPrompts] = useState<Record<string, boolean>>({});
+  const [expandedMember, setExpandedMember] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -878,20 +879,34 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         if (!char) return null;
                         const hpPct = Math.round((char.currentHp / char.maxHp) * 100);
                         const stats = (char.stats as Record<string, number>) || {};
+                        const isExpanded = expandedMember === char.id;
+                        const isMe = m.userId === user?.id;
+                        const items = (char.inventory as any[]) ?? [];
+                        const abilities = (char.abilities as any[]) ?? [];
+                        const equippedItems = items.filter((i: any) => i.equipped);
+                        const rarityCol: Record<string, string> = {
+                          common: "text-zinc-400", uncommon: "text-emerald-400",
+                          rare: "text-blue-400", epic: "text-purple-400", legendary: "text-amber-400",
+                        };
                         return (
-                          <div key={m.id} className="rounded-md border border-border bg-card p-3 space-y-2">
-                            <div className="flex items-center gap-2">
+                          <div key={m.id} className={`rounded-md border bg-card p-3 space-y-2 transition-colors ${isMe ? "border-primary/30" : "border-border"}`}>
+                            <button
+                              className="flex items-center gap-2 w-full text-left"
+                              onClick={() => setExpandedMember(isExpanded ? null : char.id)}
+                              data-testid={`button-expand-member-${char.id}`}
+                            >
                               {char.profilePicture ? (
                                 <img src={char.profilePicture} alt={char.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
                               ) : (
                                 <Sword className={`w-4 h-4 flex-shrink-0 ${classColors[char.class] ?? "text-muted-foreground"}`} />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="font-sans font-bold text-sm tracking-wide truncate">{char.name}</p>
+                                <p className="font-sans font-bold text-sm tracking-wide truncate">{char.name}{isMe ? " (You)" : ""}</p>
                                 <p className="text-xs text-muted-foreground capitalize">{char.race} {char.class}</p>
                               </div>
                               <Badge variant="secondary" className="text-xs flex-shrink-0">Lv.{char.level}</Badge>
-                            </div>
+                              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                            </button>
                             <div className="space-y-1">
                               <div className="flex justify-between items-center">
                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -925,6 +940,94 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                 {(char.conditions as string[]).map((c: string) => (
                                   <Badge key={c} variant="destructive" className="text-xs">{c}</Badge>
                                 ))}
+                              </div>
+                            )}
+
+                            {isExpanded && (
+                              <div className="space-y-3 pt-2 border-t border-border/60">
+                                {/* Full Stats */}
+                                <div>
+                                  <p className="text-[10px] font-sans tracking-widest text-muted-foreground/60 uppercase mb-1.5">All Attributes</p>
+                                  <div className="grid grid-cols-3 gap-1">
+                                    {(["might", "agility", "endurance", "intellect", "will", "presence"] as const).map((key) => {
+                                      const val = stats[key] ?? 10;
+                                      const mod = Math.floor((val - 10) / 2);
+                                      const labels: Record<string, string> = { might: "MGT", agility: "AGI", endurance: "END", intellect: "INT", will: "WIL", presence: "PRE" };
+                                      return (
+                                        <div key={key} className="text-center bg-secondary/40 rounded px-1 py-1">
+                                          <p className="text-muted-foreground/60 text-[10px]">{labels[key]}</p>
+                                          <p className="text-xs font-sans font-bold">{val} <span className="text-muted-foreground/50">({mod >= 0 ? `+${mod}` : mod})</span></p>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Equipped Gear */}
+                                {equippedItems.length > 0 && (
+                                  <div>
+                                    <p className="text-[10px] font-sans tracking-widest text-muted-foreground/60 uppercase mb-1.5">Equipped</p>
+                                    <div className="space-y-1">
+                                      {equippedItems.map((item: any, i: number) => (
+                                        <div key={i} className="flex items-center justify-between text-xs">
+                                          <span className={`font-serif ${rarityCol[item.rarity] ?? "text-foreground"}`}>{item.name}</span>
+                                          <span className="text-muted-foreground/50 font-sans text-[10px]">
+                                            {item.properties?.damage ?? (item.properties?.ac ? `AC ${item.properties.ac}${item.properties.ac_bonus ? `+${item.properties.ac_bonus}` : ""}` : "")}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Full Inventory */}
+                                <div>
+                                  <p className="text-[10px] font-sans tracking-widest text-muted-foreground/60 uppercase mb-1.5">Inventory ({items.length})</p>
+                                  <div className="space-y-0.5 max-h-40 overflow-y-auto">
+                                    {items.map((item: any, i: number) => (
+                                      <div key={i} className="flex items-center justify-between text-xs py-0.5">
+                                        <span className={`font-serif truncate mr-2 ${rarityCol[item.rarity] ?? "text-foreground/80"}`}>
+                                          {item.qty > 1 ? `${item.qty}× ` : ""}{item.name}
+                                          {item.equipped && <span className="text-primary/60 text-[9px] ml-1">✦</span>}
+                                        </span>
+                                        <span className="text-muted-foreground/40 font-sans text-[10px] capitalize flex-shrink-0">{item.type}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Abilities */}
+                                {abilities.length > 0 && (
+                                  <div>
+                                    <p className="text-[10px] font-sans tracking-widest text-muted-foreground/60 uppercase mb-1.5">Abilities</p>
+                                    <div className="space-y-1.5">
+                                      {abilities.map((ab: any, i: number) => (
+                                        <div key={i}>
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="text-xs font-sans font-semibold text-foreground">{ab.name}</span>
+                                            {ab.source === "background" && (
+                                              <span className="text-[9px] text-primary/50 font-sans">BG</span>
+                                            )}
+                                            {ab.usesMax > 0 && (
+                                              <span className="text-[9px] text-muted-foreground/50 ml-auto">{ab.usesLeft}/{ab.usesMax}</span>
+                                            )}
+                                          </div>
+                                          {ab.description && (
+                                            <p className="text-[10px] text-muted-foreground/60 leading-snug mt-0.5">{ab.description}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Backstory snippet */}
+                                {char.backstory && (
+                                  <div>
+                                    <p className="text-[10px] font-sans tracking-widest text-muted-foreground/60 uppercase mb-1">Backstory</p>
+                                    <p className="text-[11px] font-serif text-muted-foreground/70 leading-snug italic line-clamp-4">{char.backstory}</p>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

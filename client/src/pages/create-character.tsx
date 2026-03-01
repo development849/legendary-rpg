@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Sword, Dices, Shield, ScrollText, CheckCircle2, Target, Star, Flame, Music, Sparkles, RotateCcw } from "lucide-react";
+import { ArrowLeft, Sword, Dices, Shield, ScrollText, CheckCircle2, Target, Star, Flame, Music, Sparkles, RotateCcw, Shuffle, Loader2, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
@@ -216,6 +216,15 @@ const RACE_BONUSES: Record<string, Record<string, number>> = {
   "Firbolg":    { will: 2, might: 1 },
 };
 
+const GENDERS = [
+  { id: "female", label: "Female" },
+  { id: "male", label: "Male" },
+  { id: "non-binary", label: "Non-Binary" },
+  { id: "agender", label: "Agender" },
+  { id: "genderfluid", label: "Genderfluid" },
+  { id: "prefer-not-to-say", label: "Prefer Not to Say" },
+];
+
 const PERSONALITY_TRAITS = [
   "Brave", "Cunning", "Compassionate", "Ruthless", "Wise", "Reckless",
   "Honourable", "Ambitious", "Haunted", "Cheerful", "Stoic", "Pious",
@@ -233,7 +242,7 @@ const FLAWS = [
   "Owes a dangerous debt", "Fears death above all", "Cannot trust anyone", "Lost faith",
 ];
 
-type Step = "class" | "race" | "stats" | "details" | "confirm";
+type Step = "class" | "race" | "stats" | "details" | "confirm" | "portrait";
 
 export default function CreateCharacterPage() {
   const [, navigate] = useLocation();
@@ -243,6 +252,7 @@ export default function CreateCharacterPage() {
   const [step, setStep] = useState<Step>("class");
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedRace, setSelectedRace] = useState<string>("");
+  const [selectedGender, setSelectedGender] = useState<string>("");
   const [customStats, setCustomStats] = useState<Record<string, number> | null>(null);
   const [name, setName] = useState("");
   const [background, setBackground] = useState("");
@@ -253,8 +263,11 @@ export default function CreateCharacterPage() {
   const [backstory, setBackstory] = useState("");
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [createdCharId, setCreatedCharId] = useState<string | null>(null);
+  const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
+  const [generatingPortrait, setGeneratingPortrait] = useState(false);
 
-  const steps: Step[] = ["class", "race", "stats", "details", "confirm"];
+  const steps: Step[] = ["class", "race", "stats", "details", "confirm", "portrait"];
   const stepIdx = steps.indexOf(step);
 
   // Stat customization helpers
@@ -353,29 +366,100 @@ export default function CreateCharacterPage() {
     }
     setLoading(true);
     try {
-      await apiRequest("POST", "/api/characters", {
-        name: name.trim(),
-        class: selectedClass,
-        race: selectedRace,
-        background,
-        appearance,
-        backstory: backstory.trim() || undefined,
-        customBaseStats: customStats ?? undefined,
+      const res = await fetch("/api/characters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: name.trim(),
+          class: selectedClass,
+          race: selectedRace,
+          background,
+          appearance,
+          backstory: backstory.trim() || undefined,
+          customBaseStats: customStats ?? undefined,
+          gender: selectedGender || undefined,
+        }),
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/characters"] });
-      toast({ title: "Hero created!", description: `${name} stands ready for adventure.` });
-      navigate("/dashboard");
-    } catch (e: any) {
-      if (e.message?.startsWith("401")) {
+      if (res.status === 401) {
         queryClient.setQueryData(["/api/auth/user"], null);
         toast({ title: "Session expired", description: "Please sign in again to continue.", variant: "destructive" });
         navigate("/auth");
         return;
       }
+      if (!res.ok) throw new Error((await res.json()).error);
+      const char = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/characters"] });
+      setCreatedCharId(char.id);
+      toast({ title: "Hero created!", description: `${name} stands ready for adventure.` });
+      setStep("portrait");
+    } catch (e: any) {
       toast({ title: "Failed", description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleGeneratePortrait() {
+    if (!createdCharId) return;
+    setGeneratingPortrait(true);
+    try {
+      const res = await fetch(`/api/characters/${createdCharId}/generate-portrait`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ appearanceDetails: appearance }),
+      });
+      if (!res.ok) throw new Error("Portrait generation failed");
+      const data = await res.json();
+      setPortraitUrl(data.portrait);
+      await fetch(`/api/characters/${createdCharId}/portrait`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ portrait: data.portrait }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/characters"] });
+      toast({ title: "Portrait created!", description: "Your hero's likeness has been captured." });
+    } catch (e: any) {
+      toast({ title: "Portrait failed", description: "You can generate one later from your character card.", variant: "destructive" });
+    } finally {
+      setGeneratingPortrait(false);
+    }
+  }
+
+  function randomizeCharacter() {
+    const rCls = CLASSES[Math.floor(Math.random() * CLASSES.length)];
+    const rRace = RACES[Math.floor(Math.random() * RACES.length)];
+    const rGender = GENDERS[Math.floor(Math.random() * (GENDERS.length - 1))];
+    const rBg = BACKGROUNDS[Math.floor(Math.random() * BACKGROUNDS.length)];
+    const traits: string[] = [];
+    const shuffled = [...PERSONALITY_TRAITS].sort(() => Math.random() - 0.5);
+    traits.push(...shuffled.slice(0, 2 + Math.floor(Math.random() * 2)));
+    const rMotivation = MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
+    const rFlaw = FLAWS[Math.floor(Math.random() * FLAWS.length)];
+
+    const fantasyNames = [
+      "Aldric", "Brynn", "Caelum", "Dara", "Elara", "Fenwick", "Gael", "Hestia",
+      "Idris", "Jora", "Kael", "Lyra", "Morrigan", "Nyx", "Oren", "Petra",
+      "Quill", "Rowan", "Sable", "Theron", "Umber", "Vesper", "Wren", "Xara",
+      "Yara", "Zephyr", "Ashara", "Bram", "Cirdan", "Dahlia", "Eirik", "Freya",
+      "Grimshaw", "Isolde", "Kaelen", "Liora", "Mazrek", "Niamh", "Ondra", "Ravenna",
+    ];
+    const rName = fantasyNames[Math.floor(Math.random() * fantasyNames.length)];
+
+    setSelectedClass(rCls.id);
+    setSelectedRace(rRace.name);
+    setSelectedGender(rGender.id);
+    setCustomStats({ ...CLASS_BASE_STATS[rCls.id] });
+    setName(rName);
+    setBackground(rBg);
+    setSelectedTraits(traits);
+    setMotivation(rMotivation);
+    setFlaw(rFlaw);
+    setAppearance("");
+    setBackstory("");
+    setStep("confirm");
   }
 
   const cls = CLASSES.find(c => c.id === selectedClass);
@@ -391,6 +475,11 @@ export default function CreateCharacterPage() {
           <div>
             <span className="font-sans font-bold tracking-widest text-sm">CREATE YOUR HERO</span>
           </div>
+          {step === "class" && (
+            <Button variant="outline" size="sm" onClick={randomizeCharacter} className="ml-2 text-xs gap-1.5" data-testid="button-random-character">
+              <Shuffle className="w-3.5 h-3.5" /> Random Hero
+            </Button>
+          )}
           <div className="ml-auto flex items-center gap-1">
             {steps.map((s, i) => (
               <div key={s} className={`h-1 w-8 rounded-full transition-colors ${i <= stepIdx ? "bg-primary" : "bg-secondary"}`} />
@@ -594,7 +683,7 @@ export default function CreateCharacterPage() {
             </div>
             <div className="max-w-2xl mx-auto space-y-6">
 
-              {/* Name & Background row */}
+              {/* Name & Gender row */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Hero Name *</label>
@@ -608,16 +697,37 @@ export default function CreateCharacterPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Appearance (optional)</label>
-                  <input
-                    className="w-full bg-input border border-border rounded-md px-4 py-3 text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-                    placeholder="Tall, silver-streaked hair, storm-grey eyes..."
-                    value={appearance}
-                    onChange={e => setAppearance(e.target.value)}
-                    maxLength={200}
-                    data-testid="input-appearance"
-                  />
+                  <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Gender</label>
+                  <div className="flex flex-wrap gap-2">
+                    {GENDERS.map(g => (
+                      <button
+                        key={g.id}
+                        onClick={() => setSelectedGender(selectedGender === g.id ? "" : g.id)}
+                        data-testid={`button-gender-${g.id}`}
+                        className={`px-3 py-2 rounded-md border text-sm font-serif transition-all hover-elevate ${
+                          selectedGender === g.id
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-card text-foreground"
+                        }`}
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              </div>
+
+              {/* Appearance */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Appearance (optional)</label>
+                <input
+                  className="w-full bg-input border border-border rounded-md px-4 py-3 text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+                  placeholder="Tall, silver-streaked hair, storm-grey eyes..."
+                  value={appearance}
+                  onChange={e => setAppearance(e.target.value)}
+                  maxLength={200}
+                  data-testid="input-appearance"
+                />
               </div>
 
               {/* Background */}
@@ -815,7 +925,7 @@ export default function CreateCharacterPage() {
                     <div>
                       <p className="font-sans font-bold tracking-wider text-xl">{name}</p>
                       <p className="text-muted-foreground text-sm font-serif font-normal">
-                        {selectedRace} {cls.name} · {background}
+                        {selectedGender && selectedGender !== "prefer-not-to-say" ? `${GENDERS.find(g => g.id === selectedGender)?.label} ` : ""}{selectedRace} {cls.name} · {background}
                       </p>
                     </div>
                   </CardTitle>
@@ -915,6 +1025,63 @@ export default function CreateCharacterPage() {
               <Button onClick={handleCreate} disabled={loading} data-testid="button-create-hero">
                 {loading ? "Forging your legend..." : "Enter the Chronicle"}
               </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Portrait */}
+        {step === "portrait" && (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-sans font-bold tracking-widest">Your Hero's Portrait</h2>
+              <p className="text-muted-foreground font-serif italic">Bring your legend to life with an AI-generated portrait</p>
+            </div>
+
+            <div className="max-w-md mx-auto space-y-6">
+              {portraitUrl ? (
+                <div className="space-y-4">
+                  <div className="relative aspect-[3/4] rounded-lg overflow-hidden border border-primary/30 shadow-lg">
+                    <img src={portraitUrl} alt={name} className="w-full h-full object-cover" data-testid="img-portrait-preview" />
+                  </div>
+                  <div className="flex gap-3 justify-center">
+                    <Button variant="outline" onClick={handleGeneratePortrait} disabled={generatingPortrait} data-testid="button-regenerate-portrait">
+                      {generatingPortrait ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Regenerating...</> : <><RotateCcw className="w-4 h-4 mr-2" /> Regenerate</>}
+                    </Button>
+                    <Button onClick={() => navigate("/dashboard")} data-testid="button-finish">
+                      Enter the Chronicle
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="aspect-[3/4] rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-4 bg-card/50">
+                    {generatingPortrait ? (
+                      <>
+                        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                        <p className="text-muted-foreground font-serif italic text-center px-6">
+                          The court painter is capturing your likeness...
+                        </p>
+                        <p className="text-xs text-muted-foreground/50 font-sans">This usually takes 15–30 seconds</p>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-12 h-12 text-muted-foreground/40" />
+                        <p className="text-muted-foreground font-serif italic text-center px-6">
+                          Generate an AI portrait of {name}, or skip and add one later
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex gap-3 justify-center">
+                    <Button variant="outline" onClick={() => navigate("/dashboard")} data-testid="button-skip-portrait">
+                      Skip for Now
+                    </Button>
+                    <Button onClick={handleGeneratePortrait} disabled={generatingPortrait} data-testid="button-generate-portrait">
+                      {generatingPortrait ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate Portrait</>}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

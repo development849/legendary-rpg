@@ -13,6 +13,7 @@ export const characters = pgTable("characters", {
   name: text("name").notNull(),
   class: text("class").notNull(), // fighter, rogue, wizard, cleric
   race: text("race").notNull(),
+  gender: text("gender").default(""),
   background: text("background").notNull(),
   appearance: text("appearance").default(""),
   backstory: text("backstory").default(""),

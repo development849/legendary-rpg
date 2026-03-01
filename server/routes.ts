@@ -110,11 +110,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/characters", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
-      const { name, class: cls, race, background, appearance, backstory, customBaseStats } = req.body;
+      const { name, class: cls, race, background, appearance, backstory, customBaseStats, gender } = req.body;
       if (!name || !cls || !race || !background) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-      const char = await createCharacter(userId, { name, class: cls, race, background, appearance, backstory, customBaseStats });
+      const char = await createCharacter(userId, { name, class: cls, race, background, appearance, backstory, customBaseStats, gender });
       res.status(201).json(char);
     } catch (e) { res.status(500).json({ error: "Failed to create character" }); }
   });
@@ -192,8 +192,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const outfitHint = classOutfitMap[char.class as string] ?? "detailed fantasy adventurer outfit";
       const bgAtmosphere = backgroundAtmosphereMap[char.background as string] ?? "dramatic fantasy environment with atmospheric depth";
 
+      const genderDesc = char.gender && char.gender !== "prefer-not-to-say"
+        ? ` ${char.gender}` : "";
       const prompt = [
-        `Cinematic fantasy portrait painting of a ${levelDesc} ${char.race} ${char.class} named ${char.name},`,
+        `Cinematic fantasy portrait painting of a${genderDesc} ${levelDesc} ${char.race} ${char.class} named ${char.name},`,
         appearanceParts ? `${appearanceParts},` : "",
         `wearing ${outfitHint},`,
         `set against ${bgAtmosphere},`,

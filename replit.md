@@ -16,7 +16,7 @@ Mythweave is an online fantasy RPG where an AI Game Master (powered by GPT-4o) r
 - `client/src/pages/landing.tsx` — Marketing/landing with CTAs to auth page
 - `client/src/pages/auth.tsx` — Registration/Login: tabbed form with email/password + Replit OAuth option
 - `client/src/pages/dashboard.tsx` — Main hub: character list, active parties, join party
-- `client/src/pages/create-character.tsx` — 5-step character creation (class → race → stats → details → confirm)
+- `client/src/pages/create-character.tsx` — 6-step character creation (class → race → stats → details → confirm → portrait) with Random Hero generator
 - `client/src/pages/appearance-editor.tsx` — Portrait Studio: full character context display, DALL-E 3 generation, save/regenerate
 - `client/src/pages/create-campaign.tsx` — Campaign creation with GM pacing settings
 - `client/src/pages/lobby.tsx` — Party lobby with invite codes, ready states
@@ -35,9 +35,11 @@ Mythweave is an online fantasy RPG where an AI Game Master (powered by GPT-4o) r
 ### Characters
 8 classes: Fighter, Rogue, Wizard, Cleric, Ranger, Paladin, Barbarian, Bard
 12 races: Human, Elf, Dwarf, Halfling, Half-Orc, Tiefling, Dragonborn, Gnome, Aasimar, Tabaxi, Genasi, Firbolg (each with racial stat bonuses)
+Gender: Female, Male, Non-Binary, Agender, Genderfluid, Prefer Not to Say (optional field, stored in DB, used in portrait generation prompts)
 Stats: Might, Agility, Endurance, Intellect, Will, Presence
 Backstory: AI-generated (via GPT-4o) or manually written; includes personality traits, motivation, flaw; stored in DB and shown on character sheet + wired into GM prompt
-Portrait: AI-generated via DALL-E 3 (WLOP + Guweiz cinematic style); prompt built from full character context: class→outfit map, background→atmosphere map, stat-derived physique hints, level descriptor, backstory narrative; stored as base64 data URL; editable via Portrait Studio page accessible from character sheet
+Portrait: AI-generated via Gemini (cinematic fantasy style with style reference); prompt built from full character context: class→outfit map, background→atmosphere map, stat-derived physique hints, level descriptor, gender; stored as base64 data URL; editable via Portrait Studio page; also generated in-flow at end of character creation (step 6)
+Random Hero: "Random Hero" button on class step generates a fully randomized character (class, race, gender, stats, name, background, traits, motivation, flaw) and jumps to confirm
 Stat customization: Point-envelope system in character creation step 3 "Allocate Attributes" — player redistributes class stat budget (min 8, max 16 per stat); racial bonuses shown separately; total envelope fixed per class
 Background abilities: 12 background-specific abilities (Battle-Hardened, Street Network, Pathfinder, etc.) granted at creation alongside class abilities; displayed separately on character sheet with visual distinction
 Event-sourced: HP, XP, inventory, conditions, abilities all updatable by GM

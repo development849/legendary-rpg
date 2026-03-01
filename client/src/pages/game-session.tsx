@@ -163,13 +163,13 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
   const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
   const [gmVoiceEnabled, setGmVoiceEnabled] = useState(() => localStorage.getItem("gm_voice_enabled") === "true");
-  const [gmVoiceName, setGmVoiceName] = useState(() => localStorage.getItem("gm_voice_name") || "");
-  const [gmVoiceRate, setGmVoiceRate] = useState(() => parseFloat(localStorage.getItem("gm_voice_rate") || "0.95"));
-  const [gmVoicePitch, setGmVoicePitch] = useState(() => parseFloat(localStorage.getItem("gm_voice_pitch") || "1.0"));
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [gmVoiceName, setGmVoiceName] = useState(() => localStorage.getItem("gm_voice_name") || "onyx");
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const speakingMsgId = useRef<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCacheRef = useRef<Map<string, string>>(new Map());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -246,59 +246,62 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     };
   }, [currentLocation, partyId]);
 
-  // Load available voices
-  useEffect(() => {
-    const loadVoices = () => {
-      const voices = speechSynthesis.getVoices();
-      if (voices.length > 0) setAvailableVoices(voices);
-    };
-    loadVoices();
-    speechSynthesis.onvoiceschanged = loadVoices;
-    return () => { speechSynthesis.onvoiceschanged = null; };
-  }, []);
-
   // Persist voice settings
   useEffect(() => { localStorage.setItem("gm_voice_enabled", gmVoiceEnabled ? "true" : "false"); }, [gmVoiceEnabled]);
   useEffect(() => { localStorage.setItem("gm_voice_name", gmVoiceName); }, [gmVoiceName]);
-  useEffect(() => { localStorage.setItem("gm_voice_rate", String(gmVoiceRate)); }, [gmVoiceRate]);
-  useEffect(() => { localStorage.setItem("gm_voice_pitch", String(gmVoicePitch)); }, [gmVoicePitch]);
 
-  const gmVoicePresets: { label: string; filter: (v: SpeechSynthesisVoice) => boolean; pitch: number; rate: number }[] = [
-    { label: "🧙 Wise Sage", filter: v => /daniel|male|david|james|richard/i.test(v.name), pitch: 0.8, rate: 0.85 },
-    { label: "👸 Royal Herald", filter: v => /samantha|female|karen|fiona|victoria|zira/i.test(v.name), pitch: 1.1, rate: 0.9 },
-    { label: "🐉 Dragon Lord", filter: v => /male|david|thomas|daniel/i.test(v.name), pitch: 0.5, rate: 0.75 },
-    { label: "🧝 Elven Narrator", filter: v => /female|samantha|moira|tessa|karen/i.test(v.name), pitch: 1.3, rate: 1.0 },
-    { label: "💀 Dark Crypt", filter: v => /male|alex|daniel|david/i.test(v.name), pitch: 0.4, rate: 0.7 },
-    { label: "🎭 Bard's Tale", filter: v => /english|daniel|british/i.test(v.name), pitch: 1.0, rate: 1.05 },
+  const GM_VOICES: { id: string; label: string; desc: string }[] = [
+    { id: "onyx", label: "Onyx — The Sage", desc: "Deep, authoritative narrator" },
+    { id: "echo", label: "Echo — The Wanderer", desc: "Warm, adventurous storyteller" },
+    { id: "fable", label: "Fable — The Bard", desc: "Expressive, theatrical voice" },
+    { id: "nova", label: "Nova — The Oracle", desc: "Clear, wise feminine voice" },
+    { id: "shimmer", label: "Shimmer — The Fey", desc: "Ethereal, enchanting narrator" },
+    { id: "alloy", label: "Alloy — The Chronicler", desc: "Balanced, versatile voice" },
   ];
 
-  function speakNarrative(text: string, msgId: string) {
-    if (!("speechSynthesis" in window)) return;
+  async function speakNarrative(text: string, msgId: string) {
     if (isSpeaking && speakingMsgId.current === msgId) {
-      speechSynthesis.cancel();
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
       setIsSpeaking(false);
       speakingMsgId.current = null;
       return;
     }
-    speechSynthesis.cancel();
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+
     const cleaned = text.replace(/[*_#`]/g, "").replace(/\([^)]*\)/g, "").trim();
     if (!cleaned) return;
 
-    const utterance = new SpeechSynthesisUtterance(cleaned);
-    const voices = speechSynthesis.getVoices();
-    if (gmVoiceName) {
-      const match = voices.find(v => v.name === gmVoiceName);
-      if (match) utterance.voice = match;
-    } else if (voices.length > 0) {
-      const english = voices.find(v => /en[-_]/i.test(v.lang) && !v.name.includes("Google"));
-      if (english) utterance.voice = english;
+    const cacheKey = `${gmVoiceName}:${msgId}`;
+    let audioUrl = audioCacheRef.current.get(cacheKey);
+
+    if (!audioUrl) {
+      setIsLoadingAudio(true);
+      speakingMsgId.current = msgId;
+      try {
+        const res = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: cleaned, voice: gmVoiceName }),
+        });
+        if (!res.ok) throw new Error("TTS failed");
+        const blob = await res.blob();
+        audioUrl = URL.createObjectURL(blob);
+        audioCacheRef.current.set(cacheKey, audioUrl);
+      } catch (e) {
+        setIsLoadingAudio(false);
+        speakingMsgId.current = null;
+        return;
+      }
+      setIsLoadingAudio(false);
     }
-    utterance.rate = gmVoiceRate;
-    utterance.pitch = gmVoicePitch;
-    utterance.onstart = () => { setIsSpeaking(true); speakingMsgId.current = msgId; };
-    utterance.onend = () => { setIsSpeaking(false); speakingMsgId.current = null; };
-    utterance.onerror = () => { setIsSpeaking(false); speakingMsgId.current = null; };
-    speechSynthesis.speak(utterance);
+
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    speakingMsgId.current = msgId;
+    audio.onplay = () => setIsSpeaking(true);
+    audio.onended = () => { setIsSpeaking(false); speakingMsgId.current = null; };
+    audio.onerror = () => { setIsSpeaking(false); speakingMsgId.current = null; };
+    audio.play().catch(() => { setIsSpeaking(false); speakingMsgId.current = null; });
   }
 
   // Auto-scroll
@@ -595,9 +598,16 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             <span className="text-xs font-sans tracking-widest text-primary uppercase flex-1">The Chronicle</span>
             <button
               onClick={() => speakNarrative(narrative, msg.id)}
+              disabled={isLoadingAudio && speakingMsgId.current !== msg.id}
               data-testid={`button-speak-${msg.id}`}
-              className={`p-1 rounded transition-colors ${isSpeaking && speakingMsgId.current === msg.id ? "text-primary bg-primary/15" : "text-muted-foreground/40 hover:text-primary/70"}`}
-              title={isSpeaking && speakingMsgId.current === msg.id ? "Stop reading" : "Read aloud"}
+              className={`p-1 rounded transition-colors ${
+                isLoadingAudio && speakingMsgId.current === msg.id
+                  ? "text-primary/50 animate-pulse"
+                  : isSpeaking && speakingMsgId.current === msg.id
+                  ? "text-primary bg-primary/15"
+                  : "text-muted-foreground/40 hover:text-primary/70"
+              }`}
+              title={isLoadingAudio && speakingMsgId.current === msg.id ? "Generating audio..." : isSpeaking && speakingMsgId.current === msg.id ? "Stop" : "Read aloud"}
             >
               {isSpeaking && speakingMsgId.current === msg.id ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
             </button>

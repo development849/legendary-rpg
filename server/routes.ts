@@ -418,6 +418,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!party) return res.status(404).json({ error: "Invalid invite code" });
 
       const member = await joinParty(party.id, userId, characterId);
+      const members = await getPartyMembers(party.id);
+      broadcastToParty(party.id, { type: "MEMBER_UPDATE", members });
       res.json({ party, member });
     } catch (e) { res.status(500).json({ error: "Failed to join party" }); }
   });
@@ -432,6 +434,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!party) return res.status(404).json({ error: "Party not found" });
 
       const member = await joinParty(party.id, userId, characterId);
+      const members = await getPartyMembers(party.id);
+      broadcastToParty(party.id, { type: "MEMBER_UPDATE", members });
       res.json({ party, member });
     } catch (e) { res.status(500).json({ error: "Failed to join party" }); }
   });

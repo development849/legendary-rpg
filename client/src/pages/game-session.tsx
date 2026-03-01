@@ -239,30 +239,77 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
 
-  // WebSocket
+  // WebSocket with auto-reconnect and heartbeat
   useEffect(() => {
-    const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`;
-    const socket = new WebSocket(wsUrl);
-    socket.onopen = () => socket.send(JSON.stringify({ type: "JOIN_PARTY", partyId }));
-    socket.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
-      if (msg.type === "MESSAGE") {
-        setMessages(prev => {
-          if (prev.find(m => m.id === msg.message.id)) return prev;
-          return [...prev, msg.message];
-        });
-        if (msg.message.role === "gm") {
-          setIsFirstTurn(false);
+    let socket: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+    let closed = false;
+    let reconnectDelay = 1000;
+
+    function connect() {
+      if (closed) return;
+      const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`;
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = () => {
+        reconnectDelay = 1000;
+        socket!.send(JSON.stringify({ type: "JOIN_PARTY", partyId }));
+        heartbeatTimer = setInterval(() => {
+          if (socket?.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: "PING" }));
+          }
+        }, 25000);
+      };
+
+      socket.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === "MESSAGE") {
+          setMessages(prev => {
+            const incoming = msg.message;
+            const isDupe = prev.some(m => m.id === incoming.id);
+            if (isDupe) return prev;
+            const isOwnOptimistic = incoming.role === "player" && incoming.userId === user?.id;
+            const filtered = isOwnOptimistic ? prev.filter(m => !m.id.startsWith("opt-")) : prev;
+            return [...filtered, incoming];
+          });
+          if (msg.message.role === "gm") {
+            setIsFirstTurn(false);
+            queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+            queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/situations`] });
+            queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/npcs`] });
+            const wsQa = msg.message?.metadata?.quickActions;
+            if (Array.isArray(wsQa) && wsQa.length > 0) setQuickActions(wsQa);
+          }
+        } else if (msg.type === "STATE_UPDATE") {
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/situations`] });
-          queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/npcs`] });
-          const wsQa = msg.message?.metadata?.quickActions;
-          if (Array.isArray(wsQa) && wsQa.length > 0) setQuickActions(wsQa);
         }
-      }
+      };
+
+      socket.onclose = () => {
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        if (!closed) {
+          reconnectTimer = setTimeout(() => {
+            reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
+            connect();
+          }, reconnectDelay);
+        }
+      };
+
+      socket.onerror = () => {
+        socket?.close();
+      };
+    }
+
+    connect();
+
+    return () => {
+      closed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      socket?.close();
     };
-    return () => socket.close();
-  }, [partyId]);
+  }, [partyId, user?.id]);
 
   // Start adventure only after messages have loaded and none exist yet
   useEffect(() => {

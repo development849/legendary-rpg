@@ -380,7 +380,7 @@ Abilities: ${(c.abilities as any[]).map((a: any) => a.name).join(", ")}${c.backs
     ].filter(Boolean).join("\n");
   }).join("\n\n");
 
-  return `You are the Game Master for "${campaign.name}", an online fantasy RPG using the Legendary RPG Lite ruleset.
+  return `You are the Game Master for "${campaign.name}", an online fantasy RPG using the Legendary Lite ruleset.
 
 CAMPAIGN SETTING:
 ${campaign.description || "A rich fantasy world full of danger and wonder."}
@@ -422,7 +422,7 @@ ${recentSummaries || "This is the beginning of the adventure."}
 ACTIVE ARCS:
 ${activeArcs || "No active arcs yet."}
 
-RULES - LEGENDARY RPG LITE:
+RULES - LEGENDARY LITE:
 - d20 system with ability modifiers
 - DC: trivial=5, easy=8, moderate=12, hard=16, very hard=20, legendary=25
 - Advantage/disadvantage: roll twice, keep highest/lowest

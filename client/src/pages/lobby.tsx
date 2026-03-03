@@ -74,7 +74,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
   function copyInviteCode() {
     if (!party) return;
     navigator.clipboard.writeText(party.inviteCode).then(() => {
-      toast({ title: "Copied!", description: `Invite code ${party.inviteCode} copied to clipboard` });
+      toast({ title: "Copied!", description: `Invite code ${party.inviteCode} copied to clipboard`, variant: "success" as any });
     });
   }
 

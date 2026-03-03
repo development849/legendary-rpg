@@ -391,7 +391,7 @@ export default function CreateCharacterPage() {
       const char = await res.json();
       queryClient.invalidateQueries({ queryKey: ["/api/characters"] });
       setCreatedCharId(char.id);
-      toast({ title: "Hero created!", description: `${name} stands ready for adventure.` });
+      toast({ title: "Hero created!", description: `${name} stands ready for adventure.`, variant: "success" as any });
       setStep("portrait");
     } catch (e: any) {
       toast({ title: "Failed", description: e.message, variant: "destructive" });
@@ -420,7 +420,7 @@ export default function CreateCharacterPage() {
         body: JSON.stringify({ portrait: data.portrait }),
       });
       queryClient.invalidateQueries({ queryKey: ["/api/characters"] });
-      toast({ title: "Portrait created!", description: "Your hero's likeness has been captured." });
+      toast({ title: "Portrait created!", description: "Your hero's likeness has been captured.", variant: "success" as any });
     } catch (e: any) {
       toast({ title: "Portrait failed", description: "You can generate one later from your character card.", variant: "destructive" });
     } finally {

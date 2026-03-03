@@ -145,7 +145,7 @@ export default function AuthPage() {
         toast({ title: "Session error", description: "Account created but session could not be established. Please sign in.", variant: "destructive" });
         return;
       }
-      toast({ title: "Welcome to Legendary℠!", description: `Your account has been created, ${data.displayName}.` });
+      toast({ title: "Welcome to Legendary℠!", description: `Your account has been created, ${data.displayName}.`, variant: "success" as any });
       navigate("/dashboard");
     } catch {
       toast({ title: "Network error", description: "Could not connect. Please try again.", variant: "destructive" });
@@ -173,7 +173,7 @@ export default function AuthPage() {
         toast({ title: "Session error", description: "Signed in but session could not be established. Please try again.", variant: "destructive" });
         return;
       }
-      toast({ title: "Welcome back!", description: `Signed in as ${body.user.firstName || body.user.username}.` });
+      toast({ title: "Welcome back!", description: `Signed in as ${body.user.firstName || body.user.username}.`, variant: "success" as any });
       navigate("/dashboard");
     } catch {
       toast({ title: "Network error", description: "Could not connect. Please try again.", variant: "destructive" });

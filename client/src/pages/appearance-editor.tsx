@@ -52,7 +52,7 @@ export default function AppearanceEditorPage({ characterId }: AppearanceEditorPr
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/characters/${characterId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/characters"] });
-      toast({ title: "Portrait saved", description: "Your character portrait has been applied." });
+      toast({ title: "Portrait saved", description: "Your character portrait has been applied.", variant: "success" as any });
       navigate(`/characters/${characterId}`);
     },
     onError: () => {

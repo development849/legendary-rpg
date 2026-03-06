@@ -606,7 +606,7 @@ CRITICAL RULES:
 MANDATORY PRE-FLIGHT CHECKLIST — run this EVERY turn before writing proposed_updates:
 Step 1 — Named NPCs: Who appears in my narrative this turn by name? List them. Are they in KNOWN NPCS above? If not → NPC_MET required.
 Step 2 — NPC Relationships: For each NPC in this scene who IS already in KNOWN NPCS, check their [relationship] tag. Has the player's action this turn made that NPC feel differently about the party? Helped them → friendlier. Threatened them → more hostile. Killed → deceased. If any relationship should change → NPC_RELATIONSHIP_CHANGED required.
-Step 3 — Gold: Did any gold change hands? → GOLD_CHANGED required.
+Step 3 — Gold: Did any gold/coins/money change hands in any way — found, looted, picked up, earned, received, paid, spent, gambled, stolen? If the narrative mentions coins, a coin pouch, a bag of gold, a reward, or any currency amount → GOLD_CHANGED is MANDATORY with the correct positive or negative delta. Finding a "bag of coins" without a GOLD_CHANGED update is ALWAYS a bug. The character's coin pouch will NOT update unless you emit this.
 Step 4 — Items: Did anyone gain an item? → ITEM_GRANTED required (+ GOLD_CHANGED if purchased).
 Step 5 — Story facts: Did I state a location, reward, name, or key plot detail? → PLOT_FACT_SET required.
 Step 6 — Situations: Did any character's location or circumstances change? → SITUATION_UPDATED required.
@@ -731,6 +731,23 @@ export async function runGM(
   }
 
   const updates = parsed?.proposed_updates ?? [];
+
+  // Safety net: detect gold/coin mentions in narrative without a GOLD_CHANGED update
+  const narrative = parsed?.narrative ?? "";
+  const goldMentionPattern = /\b(\d+)\s*(?:gold|gp|coins?|copper|silver|pieces?)\b|bag\s+of\s+(?:gold|coins?)|coin\s+pouch|pouch\s+of\s+(?:gold|coins?)|found?\s+(?:\d+\s*)?(?:gold|coins?)|pick(?:ed|s)?\s+up\s+.*(?:gold|coins?)|loot(?:ed|s)?\s+.*(?:gold|coins?)/i;
+  const hasGoldInNarrative = goldMentionPattern.test(narrative);
+  const hasGoldUpdate = updates.some((u: any) => u.type === "GOLD_CHANGED");
+  if (hasGoldInNarrative && !hasGoldUpdate && ctx.actingCharacterId) {
+    const goldAmountMatch = narrative.match(/\b(\d+)\s*(?:gold|gp|coins?)\b/i);
+    const amount = goldAmountMatch ? parseInt(goldAmountMatch[1]) : 5;
+    console.log(`[GM Safety Net] Narrative mentions gold/coins but no GOLD_CHANGED emitted. Auto-injecting +${amount}gp for character ${ctx.actingCharacterId}`);
+    updates.push({
+      type: "GOLD_CHANGED",
+      character_id: ctx.actingCharacterId,
+      delta: amount,
+      reason: "Coins found (auto-detected from narrative)",
+    });
+  }
 
   // Process updates
   await processUpdates(updates, ctx.partyId, ctx.campaignId);

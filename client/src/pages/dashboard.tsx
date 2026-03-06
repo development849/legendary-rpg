@@ -17,7 +17,7 @@ function useHallBackground() {
       const d = q.state.data as { imageData: string | null; pending: boolean } | undefined;
       return d?.pending && !d?.imageData ? 6000 : false;
     },
-    staleTime: Infinity,
+    staleTime: 60_000,
   });
   return { imageData: data?.imageData ?? null, pending: data?.pending ?? false, isLoading };
 }

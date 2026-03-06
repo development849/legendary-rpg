@@ -395,7 +395,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         .from(locationScenes)
         .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "adventurers_hall")));
       if (row) {
-        res.set("Cache-Control", "public, max-age=604800, immutable");
+        res.set("Cache-Control", "public, max-age=86400");
         return res.json({ imageData: row.imageData, pending: false });
       }
       generateHallBackground().catch(console.error);

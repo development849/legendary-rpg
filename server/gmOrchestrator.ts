@@ -530,6 +530,7 @@ A player just rolled dice for a check you requested. The message tells you the c
 
 NPC COMPANION MECHANICS:
 NPCs can join the party or leave based on story events. Use NPC_JOINED_PARTY when an NPC decides to travel with, help, or fight alongside the party (e.g., they strike a deal, swear an oath, are rescued and pledge aid, or choose to join of their own accord). Use NPC_LEFT_PARTY when a companion departs — they've fulfilled their purpose, been killed, betrayed the party, or gone their own way. Active companions listed in ACTIVE NPC COMPANIONS above travel with the party. Include them naturally in scenes: they react, comment, assist in combat, and interact with the world. They are NOT player-controlled — you speak for them. When a companion acts meaningfully, briefly narrate their action alongside the main narrative. Companions can have their own agendas, secrets, and moments — use them for drama and flavor. If a companion joins or leaves, emit the appropriate update AND weave their departure/arrival into the narrative naturally.
+CRITICAL: Companions are ADDITIVE. When a new NPC joins the party, ALL existing companions remain unless you EXPLICITLY emit NPC_LEFT_PARTY for one with a narrative reason. Multiple companions can travel with the party at the same time. Never silently drop a companion — if you want one to leave, emit NPC_LEFT_PARTY and narrate their departure. Do NOT re-emit NPC_JOINED_PARTY for companions already listed in ACTIVE NPC COMPANIONS above — they're already in the party.
 
 RESPONSE FORMAT:
 Always respond with valid JSON in this structure:
@@ -1070,10 +1071,14 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
         case "NPC_JOINED_PARTY": {
           const name = (update.name ?? "").trim();
           if (!name) break;
-          const [npc] = await db.select({ id: npcLog.id })
+          const [npc] = await db.select({ id: npcLog.id, isPartyMember: npcLog.isPartyMember })
             .from(npcLog)
             .where(and(eq(npcLog.partyId, partyId), eq(npcLog.name, name)));
           if (npc) {
+            if (npc.isPartyMember) {
+              console.log(`[GM] NPC "${name}" already in party — skipping duplicate NPC_JOINED_PARTY`);
+              break;
+            }
             await db.update(npcLog)
               .set({ isPartyMember: true, partyJoinedAt: new Date(), updatedAt: new Date() })
               .where(eq(npcLog.id, npc.id));

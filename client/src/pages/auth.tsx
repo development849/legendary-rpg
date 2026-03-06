@@ -191,7 +191,7 @@ export default function AuthPage() {
         <div className="relative space-y-10">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <img src={logoPath} alt="Legendary" className="w-14 h-14 rounded-md" />
+              <img src={logoPath} alt="Legendary" className="w-14 h-14 rounded-md object-contain" />
             </div>
             <h1 className="text-4xl font-sans font-bold tracking-widest text-foreground glow-gold">
               LEGENDARY<sup className="text-lg align-super ml-1">℠</sup>

@@ -21,7 +21,7 @@ export default function LandingPage() {
         <div className="relative z-10 max-w-4xl mx-auto space-y-8">
           {/* Logo */}
           <div className="flex items-center justify-center mb-2">
-            <img src={logoPath} alt="Legendary" className="w-32 h-32 md:w-40 md:h-40 drop-shadow-2xl" />
+            <img src={logoPath} alt="Legendary" className="w-32 h-32 md:w-40 md:h-40 drop-shadow-2xl object-contain" />
           </div>
 
           {/* Title */}

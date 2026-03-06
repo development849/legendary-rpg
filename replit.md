@@ -61,6 +61,7 @@ Event-sourced: HP, XP, inventory, conditions, abilities all updatable by GM
 - Location naming: GM instructed to give proper fantasy names (not generic descriptions); scene.region groups locations hierarchically
 - Journey Map: locations grouped by region with collapsible sections; fast-travel button on non-current locations sends travel action to GM
 - Codex system: GM emits `RECIPE_DISCOVERED` when player learns crafting recipes/spells/enchantments; stored in world state `recipes` array; Codex sidebar tab shows recipes with ingredient checklists cross-referenced against inventory; "Craft/Perform" button when all ingredients collected
+- Equipment slots: server enforces hand slot rules — 1 two-handed weapon OR up to 2 one-handed weapons OR 1 one-handed + shield; only 1 body armor; equipping auto-swaps conflicting items (e.g. equipping a 2H weapon unequips all other weapons/shields); UI shows slot hints (2H/1H/off-hand/Body) next to equip buttons and slot labels (2H/MH/OH/Body) in character sheet
 - Auto-summarizes every 10 turns for memory management
 
 ## API Routes

@@ -1315,15 +1315,29 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
                   const toggleEquip = async (itemIndex: number, equipped: boolean) => {
                     try {
-                      await fetch(`/api/characters/${char.id}/equip`, {
+                      const resp = await fetch(`/api/characters/${char.id}/equip`, {
                         method: "PATCH",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ itemIndex, equipped }),
                       });
+                      if (!resp.ok) {
+                        const err = await resp.json().catch(() => null);
+                        toast({ title: err?.error ?? "Failed to equip", variant: "destructive" });
+                        return;
+                      }
                       queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
                     } catch {
                       toast({ title: "Failed to update equipment", variant: "destructive" });
                     }
+                  };
+
+                  const getHandSlotHint = (item: any): string | null => {
+                    if (item.type !== "weapon" && !(item.type === "armor" && item.properties?.ac_bonus)) return null;
+                    const isShield = item.type === "armor" && !!item.properties?.ac_bonus;
+                    const isTwoHanded = !!item.properties?.two_handed;
+                    if (isTwoHanded) return "2 hands";
+                    if (isShield) return "off-hand";
+                    return "1 hand";
                   };
 
                   const formatProps = (item: any) => {
@@ -1425,19 +1439,27 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                       {item.qty > 1 && (
                                         <span className="text-xs font-sans font-bold text-primary">x{item.qty}</span>
                                       )}
-                                      {equipable && (
-                                        <button
-                                          data-testid={`btn-equip-${originalIndex}`}
-                                          onClick={() => toggleEquip(originalIndex, !isEquipped)}
-                                          className={`text-[10px] font-sans font-medium px-1.5 py-0.5 rounded transition-colors ${
-                                            isEquipped
-                                              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                                              : "bg-primary/20 text-primary hover:bg-primary/30"
-                                          }`}
-                                        >
-                                          {isEquipped ? "Unequip" : "Equip"}
-                                        </button>
-                                      )}
+                                      {equipable && (() => {
+                                        const slotHint = getHandSlotHint(item);
+                                        return (
+                                          <div className="flex items-center gap-1">
+                                            {slotHint && !isEquipped && (
+                                              <span className="text-[9px] text-muted-foreground/40 font-sans">{slotHint}</span>
+                                            )}
+                                            <button
+                                              data-testid={`btn-equip-${originalIndex}`}
+                                              onClick={() => toggleEquip(originalIndex, !isEquipped)}
+                                              className={`text-[10px] font-sans font-medium px-1.5 py-0.5 rounded transition-colors ${
+                                                isEquipped
+                                                  ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                                                  : "bg-primary/20 text-primary hover:bg-primary/30"
+                                              }`}
+                                            >
+                                              {isEquipped ? "Unequip" : "Equip"}
+                                            </button>
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
                                   </div>
                                 </div>
@@ -1892,6 +1914,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           epic: "text-purple-400",
                           legendary: "text-amber-400",
                         };
+                        const getSlotLabel = (it: any) => {
+                          if (it.type === "weapon") return it.properties?.two_handed ? "2H" : "MH";
+                          if (it.type === "armor" && it.properties?.ac_bonus) return "OH";
+                          if (it.type === "armor" && it.properties?.ac) return "Body";
+                          return "";
+                        };
                         return (
                           <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-1.5" data-testid="equipped-gear">
                             <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
@@ -1899,9 +1927,13 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             </p>
                             {equipped.map((item: any, i: number) => {
                               const rarity = item.rarity ?? "common";
+                              const slot = getSlotLabel(item);
                               return (
                                 <div key={i} className="flex items-center justify-between gap-2">
                                   <div className="flex items-center gap-1.5 min-w-0">
+                                    {slot && (
+                                      <span className="text-[8px] font-sans font-bold text-muted-foreground/40 w-6 flex-shrink-0">{slot}</span>
+                                    )}
                                     <span className={`text-xs font-sans font-medium ${rarity !== "common" ? (sheetRarityText[rarity] ?? "") : ""}`}>{item.name}</span>
                                     {rarity !== "common" && (
                                       <span className={`text-[8px] font-sans font-bold uppercase ${sheetRarityText[rarity] ?? ""}`}>{rarity}</span>

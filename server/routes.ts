@@ -281,6 +281,57 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ error: "Only weapons and armor can be equipped" });
       }
 
+      if (equipped) {
+        const isWeapon = item.type === "weapon";
+        const isShield = item.type === "armor" && !!item.properties?.ac_bonus;
+        const isBodyArmor = item.type === "armor" && !item.properties?.ac_bonus;
+        const isTwoHanded = !!item.properties?.two_handed;
+
+        if (isWeapon || isShield) {
+          const equippedWeapons: number[] = [];
+          const equippedShields: number[] = [];
+          let equippedTwoHander: number | null = null;
+
+          inv.forEach((it: any, idx: number) => {
+            if (idx === itemIndex || !it.equipped) return;
+            if (it.type === "weapon") {
+              equippedWeapons.push(idx);
+              if (it.properties?.two_handed) equippedTwoHander = idx;
+            }
+            if (it.type === "armor" && it.properties?.ac_bonus) {
+              equippedShields.push(idx);
+            }
+          });
+
+          if (isTwoHanded) {
+            for (const idx of equippedWeapons) inv[idx] = { ...inv[idx], equipped: false };
+            for (const idx of equippedShields) inv[idx] = { ...inv[idx], equipped: false };
+          } else if (isShield) {
+            if (equippedTwoHander !== null) {
+              inv[equippedTwoHander] = { ...inv[equippedTwoHander], equipped: false };
+            }
+            for (const idx of equippedShields) inv[idx] = { ...inv[idx], equipped: false };
+          } else {
+            if (equippedTwoHander !== null) {
+              inv[equippedTwoHander] = { ...inv[equippedTwoHander], equipped: false };
+            }
+            const oneHandedWeapons = equippedWeapons.filter(idx => !inv[idx].properties?.two_handed);
+            if (oneHandedWeapons.length >= 2) {
+              inv[oneHandedWeapons[0]] = { ...inv[oneHandedWeapons[0]], equipped: false };
+            }
+          }
+        }
+
+        if (isBodyArmor) {
+          inv.forEach((it: any, idx: number) => {
+            if (idx === itemIndex || !it.equipped) return;
+            if (it.type === "armor" && !it.properties?.ac_bonus) {
+              inv[idx] = { ...inv[idx], equipped: false };
+            }
+          });
+        }
+      }
+
       inv[itemIndex] = { ...item, equipped };
       const updated = await updateCharacter(req.params.id, { inventory: inv } as any);
       res.json(updated);

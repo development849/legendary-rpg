@@ -71,7 +71,7 @@ export default function DashboardPage() {
           }}
         />
       )}
-      <div className="fixed inset-0 z-0 bg-gradient-to-t from-background via-background/90 to-background/40" />
+      <div className="fixed inset-0 z-0 bg-gradient-to-t from-background/95 via-background/60 to-background/20" />
       {/* Header */}
       <header className="relative z-10 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">

@@ -1138,29 +1138,62 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           <p className="text-[10px] font-sans tracking-widest text-muted-foreground/50 uppercase pt-1 pb-0.5 border-t border-border flex items-center gap-1.5">
                             <Users className="w-3 h-3" /> NPC Companions
                           </p>
-                          {companions.map((npc: any) => (
-                            <div key={npc.id} data-testid={`card-companion-${npc.id}`} className="rounded-md border border-amber-700/40 bg-amber-950/20 p-3 space-y-1.5">
-                              <div className="flex items-center gap-2">
-                                {npc.hasPortrait ? (
-                                  <img src={`/api/npcs/${npc.id}/portrait`} alt={npc.name} className="w-8 h-8 rounded object-cover object-top flex-shrink-0 border border-amber-700/30" />
-                                ) : (
-                                  <div className="w-8 h-8 rounded bg-amber-950/40 border border-amber-700/30 flex items-center justify-center flex-shrink-0">
-                                    <Users className="w-3.5 h-3.5 text-amber-500/60" />
+                          {companions.map((npc: any) => {
+                            const npcExpanded = expandedMember === `npc-${npc.id}`;
+                            return (
+                              <div key={npc.id} data-testid={`card-companion-${npc.id}`} className="rounded-md border border-amber-700/40 bg-amber-950/20 p-3 space-y-1.5">
+                                <button
+                                  className="flex items-center gap-2 w-full text-left"
+                                  onClick={() => setExpandedMember(npcExpanded ? null : `npc-${npc.id}`)}
+                                  data-testid={`button-expand-companion-${npc.id}`}
+                                >
+                                  {npc.hasPortrait ? (
+                                    <img src={`/api/npcs/${npc.id}/portrait`} alt={npc.name} className="w-8 h-8 rounded object-cover object-top flex-shrink-0 border border-amber-700/30" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded bg-amber-950/40 border border-amber-700/30 flex items-center justify-center flex-shrink-0">
+                                      <Users className="w-3.5 h-3.5 text-amber-500/60" />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-sans font-bold text-sm tracking-wide truncate text-amber-200">{npc.name}</p>
+                                    <p className="text-xs text-amber-400/70 italic truncate">{npc.role}</p>
+                                  </div>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded border border-amber-600/50 bg-amber-900/40 text-amber-400 font-sans tracking-wide uppercase flex-shrink-0">
+                                    Companion
+                                  </span>
+                                  <ChevronDown className={`w-3.5 h-3.5 text-amber-500/50 transition-transform ${npcExpanded ? "rotate-180" : ""}`} />
+                                </button>
+                                {npc.description && (
+                                  <p className="text-[11px] text-muted-foreground/80 leading-snug">{npc.description}</p>
+                                )}
+                                {npcExpanded && (
+                                  <div className="space-y-2 pt-2 border-t border-amber-700/30">
+                                    {npc.hasPortrait && (
+                                      <img src={`/api/npcs/${npc.id}/portrait`} alt={npc.name} className="w-full rounded-md object-cover object-top border border-amber-700/30 max-h-48" />
+                                    )}
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                      <div>
+                                        <p className="text-[10px] text-muted-foreground/50 font-sans uppercase">Relationship</p>
+                                        <p className="text-xs font-sans font-semibold capitalize text-amber-300">{npc.relationship ?? "neutral"}</p>
+                                      </div>
+                                      {npc.lastSeen && (
+                                        <div>
+                                          <p className="text-[10px] text-muted-foreground/50 font-sans uppercase">Last Seen</p>
+                                          <p className="text-xs font-serif text-muted-foreground/80">{npc.lastSeen}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                    {npc.notes && (
+                                      <div>
+                                        <p className="text-[10px] text-muted-foreground/50 font-sans uppercase">Notes</p>
+                                        <p className="text-[11px] font-serif text-muted-foreground/70 leading-snug">{npc.notes}</p>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-sans font-bold text-sm tracking-wide truncate text-amber-200">{npc.name}</p>
-                                  <p className="text-xs text-amber-400/70 italic truncate">{npc.role}</p>
-                                </div>
-                                <span className="text-[9px] px-1.5 py-0.5 rounded border border-amber-600/50 bg-amber-900/40 text-amber-400 font-sans tracking-wide uppercase flex-shrink-0">
-                                  Companion
-                                </span>
                               </div>
-                              {npc.description && (
-                                <p className="text-[11px] text-muted-foreground/80 leading-snug">{npc.description}</p>
-                              )}
-                            </div>
-                          ))}
+                            );
+                          })}
                         </>
                       )}
                     </div>

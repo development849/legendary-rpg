@@ -2252,7 +2252,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
         const sellableItems = playerItems
           .map((item: any, idx: number) => ({ item, idx }))
-          .filter(({ item }) => !item.equipped && !(["treasure", "currency"].includes(item.type) && /coin|gold|pouch/i.test(item.name || "")));
+          .filter(({ item }) => !(["treasure", "currency"].includes(item.type) && /coin|gold|pouch/i.test(item.name || "")));
 
         const getSellPrice = (item: any): number => {
           const rarityMultiplier: Record<string, number> = { common: 0.25, uncommon: 0.4, rare: 0.5, epic: 0.5, legendary: 0.6 };
@@ -2426,13 +2426,15 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         const rColor = rarityColors[item.rarity ?? "common"] ?? "text-zinc-400";
                         const props = formatItemProps(item.properties);
                         const price = getSellPrice(item);
+                        const isEquipped = !!item.equipped;
                         return (
-                          <div key={idx} className="flex items-center gap-2.5 rounded-md bg-secondary/30 px-3 py-2 hover:bg-secondary/50 transition-colors" data-testid={`shop-item-sell-${idx}`}>
+                          <div key={idx} className={`flex items-center gap-2.5 rounded-md px-3 py-2 transition-colors ${isEquipped ? "bg-secondary/15 opacity-60" : "bg-secondary/30 hover:bg-secondary/50"}`} data-testid={`shop-item-sell-${idx}`}>
                             <Icon className={`w-4 h-4 flex-shrink-0 ${rColor}`} />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className={`text-xs font-sans font-medium ${rColor}`}>{item.name}</span>
                                 {item.qty > 1 && <span className="text-[10px] text-muted-foreground">x{item.qty}</span>}
+                                {isEquipped && <span className="text-[8px] font-sans font-bold uppercase text-sky-400">EQUIPPED</span>}
                                 {(item.rarity ?? "common") !== "common" && (
                                   <span className={`text-[8px] font-sans font-bold uppercase ${rColor}`}>{item.rarity}</span>
                                 )}
@@ -2440,16 +2442,16 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                               {props && <p className="text-[10px] text-muted-foreground">{props}</p>}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                              <span className="text-xs font-sans font-bold text-emerald-400">+{price}gp</span>
+                              <span className={`text-xs font-sans font-bold ${isEquipped ? "text-muted-foreground" : "text-emerald-400"}`}>+{price}gp</span>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                disabled={shopBusy}
+                                disabled={shopBusy || isEquipped}
                                 onClick={() => handleSell(idx, item)}
                                 className="h-7 px-2.5 text-[10px]"
                                 data-testid={`button-sell-${idx}`}
                               >
-                                Sell
+                                {isEquipped ? "Unequip" : "Sell"}
                               </Button>
                             </div>
                           </div>

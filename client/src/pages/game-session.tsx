@@ -948,39 +948,38 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           <div className="w-72 flex-shrink-0 border-l border-border bg-card/50 flex flex-col overflow-hidden">
             {/* Panel header with tabs */}
             <div className="flex-shrink-0 border-b border-border">
-              <div className="flex items-center px-1 pt-2.5 pb-0">
-                <div className="flex flex-1 min-w-0">
-                  {([
-                    { id: "party", icon: Users, label: "Party" },
-                    { id: "sheet", icon: BookOpen, label: "Sheet" },
-                    { id: "inventory", icon: Package, label: "Bag" },
-                    { id: "codex", icon: Scroll, label: "Codex" },
-                    { id: "map", icon: MapPin, label: "Map" },
-                    { id: "dice", icon: Dices, label: "Dice" },
-                    { id: "log", icon: ScrollText, label: "Cast" },
-                  ] as const).map(tab => (
-                    <Tooltip key={tab.id}>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => setSidebarTab(tab.id)}
-                          data-testid={`button-sidebar-tab-${tab.id}`}
-                          className={`flex flex-col items-center gap-0.5 px-1.5 py-1.5 text-[9px] font-sans tracking-wide transition-colors border-b-2 flex-1 min-w-0 ${
-                            sidebarTab === tab.id
-                              ? "text-primary border-primary"
-                              : "text-muted-foreground border-transparent hover:text-foreground"
-                          }`}
-                        >
-                          <tab.icon className="w-3.5 h-3.5" />
-                          <span className="truncate w-full text-center">{tab.label}</span>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">{tab.label}</TooltipContent>
-                    </Tooltip>
-                  ))}
+              <div className="flex items-center px-0.5 py-1.5 gap-0">
+                {([
+                  { id: "party", icon: Users, label: "Party" },
+                  { id: "sheet", icon: BookOpen, label: "Sheet" },
+                  { id: "inventory", icon: Package, label: "Bag" },
+                  { id: "codex", icon: Scroll, label: "Codex" },
+                  { id: "map", icon: MapPin, label: "Map" },
+                  { id: "dice", icon: Dices, label: "Dice" },
+                  { id: "log", icon: ScrollText, label: "Cast" },
+                ] as const).map(tab => (
+                  <Tooltip key={tab.id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setSidebarTab(tab.id)}
+                        data-testid={`button-sidebar-tab-${tab.id}`}
+                        className={`flex items-center justify-center w-9 h-8 rounded transition-colors ${
+                          sidebarTab === tab.id
+                            ? "text-primary bg-primary/10"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        <tab.icon className="w-4 h-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">{tab.label}</TooltipContent>
+                  </Tooltip>
+                ))}
+                <div className="ml-auto">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowCharacters(false)}>
+                    <ChevronDown className="w-4 h-4 rotate-90" />
+                  </Button>
                 </div>
-                <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0 ml-0.5" onClick={() => setShowCharacters(false)}>
-                  <ChevronDown className="w-3.5 h-3.5 rotate-90" />
-                </Button>
               </div>
             </div>
 

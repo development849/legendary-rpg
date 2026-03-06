@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Scroll, Target, Star, Flame, Music } from "lucide-react";
 import type { Character } from "@shared/schema";
-import logoPath from "@assets/legendary-logo.png";
+import logoPath from "@assets/legendary-logo-transparent.png";
 
 function useHallBackground() {
   const { data, isLoading } = useQuery<{ imageData: string | null; pending: boolean }>({

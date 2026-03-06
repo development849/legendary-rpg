@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sword, Shield, Scroll, Users, Sparkles, Dices } from "lucide-react";
-import logoPath from "@assets/legendary-logo.png";
+import logoPath from "@assets/legendary-logo-transparent.png";
 
 export default function LandingPage() {
   return (

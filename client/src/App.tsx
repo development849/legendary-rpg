@@ -13,7 +13,7 @@ import GameSessionPage from "@/pages/game-session";
 import CharacterSheetPage from "@/pages/character-sheet";
 import LobbyPage from "@/pages/lobby";
 import AppearanceEditorPage from "@/pages/appearance-editor";
-import logoPath from "@assets/legendary-logo.png";
+import logoPath from "@assets/legendary-logo-transparent.png";
 
 function LoadingScreen() {
   return (

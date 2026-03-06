@@ -57,6 +57,7 @@ Event-sourced: HP, XP, inventory, conditions, abilities all updatable by GM
 - Parses JSON response: `{narrative, dice_requests, proposed_updates, quick_actions, scene}`
 - Applies state changes: HP, XP, items (with equipped status), conditions
 - Item properties: weapons require `damage` (e.g. "1d8"), armor requires `ac`; GM prompt enforces this via Critical Rule #6
+- NPC companions: GM emits `NPC_JOINED_PARTY` with full stat block (level, max_hp, ac, stats, abilities, inventory); handler saves to npc_log; companion cards in Party tab show full character sheet (stats grid, abilities, gear, HP/AC/Level badges)
 - Auto-summarizes every 10 turns for memory management
 
 ## API Routes

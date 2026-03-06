@@ -1175,6 +1175,71 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                     {npc.hasPortrait && (
                                       <img src={`/api/npcs/${npc.id}/portrait`} alt={npc.name} className="w-full rounded-md object-cover object-top border border-amber-700/30 max-h-48" />
                                     )}
+                                    {/* Combat stats bar */}
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-amber-900/40 border border-amber-700/30 text-amber-300" data-testid={`text-npc-level-${npc.id}`}>
+                                        Lv {npc.level ?? 1}
+                                      </span>
+                                      <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-red-900/30 border border-red-700/30 text-red-300" data-testid={`text-npc-hp-${npc.id}`}>
+                                        HP {npc.currentHp ?? npc.maxHp ?? 10}/{npc.maxHp ?? 10}
+                                      </span>
+                                      <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-blue-900/30 border border-blue-700/30 text-blue-300" data-testid={`text-npc-ac-${npc.id}`}>
+                                        AC {npc.ac ?? 10}
+                                      </span>
+                                    </div>
+                                    {/* Ability scores */}
+                                    {npc.stats && Object.keys(npc.stats).length > 0 && (
+                                      <div className="grid grid-cols-3 gap-1" data-testid={`stats-npc-${npc.id}`}>
+                                        {[
+                                          { key: "might", label: "MIG" },
+                                          { key: "agility", label: "AGI" },
+                                          { key: "endurance", label: "END" },
+                                          { key: "intellect", label: "INT" },
+                                          { key: "will", label: "WIL" },
+                                          { key: "presence", label: "PRE" },
+                                        ].map(({ key, label }) => {
+                                          const val = (npc.stats as any)[key];
+                                          if (val == null) return null;
+                                          const mod = Math.floor((val - 10) / 2);
+                                          return (
+                                            <div key={key} className="text-center py-0.5 rounded bg-amber-950/30 border border-amber-800/20">
+                                              <p className="text-[9px] text-amber-500/60 font-sans">{label}</p>
+                                              <p className="text-xs font-sans font-bold text-amber-200">{val}</p>
+                                              <p className="text-[9px] text-amber-400/50">{mod >= 0 ? `+${mod}` : mod}</p>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                    {/* Abilities */}
+                                    {npc.abilities && (npc.abilities as any[]).length > 0 && (
+                                      <div data-testid={`abilities-npc-${npc.id}`}>
+                                        <p className="text-[10px] text-muted-foreground/50 font-sans uppercase mb-0.5">Abilities</p>
+                                        {(npc.abilities as any[]).map((a: any, i: number) => (
+                                          <div key={i} className="text-[11px] mb-0.5">
+                                            <span className="font-sans font-semibold text-amber-300">{a.name}</span>
+                                            {a.description && <span className="text-muted-foreground/60 ml-1">— {a.description}</span>}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {/* Inventory */}
+                                    {npc.inventory && (npc.inventory as any[]).length > 0 && (
+                                      <div data-testid={`inventory-npc-${npc.id}`}>
+                                        <p className="text-[10px] text-muted-foreground/50 font-sans uppercase mb-0.5">Gear</p>
+                                        {(npc.inventory as any[]).map((item: any, i: number) => (
+                                          <div key={i} className="flex items-center gap-1 text-[11px]">
+                                            <span className={`font-sans ${item.equipped ? "text-amber-200 font-semibold" : "text-muted-foreground/70"}`}>
+                                              {item.name}
+                                            </span>
+                                            {item.equipped && <span className="text-[8px] text-amber-500/50 uppercase">eq</span>}
+                                            {item.properties?.damage && <span className="text-[9px] text-red-400/60 ml-auto">{item.properties.damage}</span>}
+                                            {item.properties?.ac && <span className="text-[9px] text-blue-400/60 ml-auto">AC {item.properties.ac}</span>}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {/* Relationship & notes */}
                                     <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                                       <div>
                                         <p className="text-[10px] text-muted-foreground/50 font-sans uppercase">Relationship</p>

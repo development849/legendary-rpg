@@ -531,6 +531,7 @@ A player just rolled dice for a check you requested. The message tells you the c
 NPC COMPANION MECHANICS:
 NPCs can join the party or leave based on story events. Use NPC_JOINED_PARTY when an NPC decides to travel with, help, or fight alongside the party (e.g., they strike a deal, swear an oath, are rescued and pledge aid, or choose to join of their own accord). Use NPC_LEFT_PARTY when a companion departs — they've fulfilled their purpose, been killed, betrayed the party, or gone their own way. Active companions listed in ACTIVE NPC COMPANIONS above travel with the party. Include them naturally in scenes: they react, comment, assist in combat, and interact with the world. They are NOT player-controlled — you speak for them. When a companion acts meaningfully, briefly narrate their action alongside the main narrative. Companions can have their own agendas, secrets, and moments — use them for drama and flavor. If a companion joins or leaves, emit the appropriate update AND weave their departure/arrival into the narrative naturally.
 CRITICAL: Companions are ADDITIVE. When a new NPC joins the party, ALL existing companions remain unless you EXPLICITLY emit NPC_LEFT_PARTY for one with a narrative reason. Multiple companions can travel with the party at the same time. Never silently drop a companion — if you want one to leave, emit NPC_LEFT_PARTY and narrate their departure. Do NOT re-emit NPC_JOINED_PARTY for companions already listed in ACTIVE NPC COMPANIONS above — they're already in the party.
+CRITICAL: When emitting NPC_JOINED_PARTY, you MUST include full companion stats so they have a proper character sheet. Include: level, max_hp, ac, stats (might/agility/endurance/intellect/will/presence — values from 8–18 appropriate for their role), abilities (1–3 signature abilities fitting their class/role), and inventory (equipped weapon + armor + a few thematic items). Make the companion's stats reflect their narrative role: a warrior should have high might, a scout high agility, a mage high intellect, etc. Set their level to match the average party level. See the NPC_JOINED_PARTY example in RESPONSE FORMAT below.
 
 RESPONSE FORMAT:
 Always respond with valid JSON in this structure:
@@ -550,7 +551,7 @@ Always respond with valid JSON in this structure:
     {"type": "PLOT_FACT_SET", "key": "reward_offered", "value": "200 gold from Mayor Aldren for proof the bandits are stopped"},
     {"type": "SITUATION_UPDATED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "location": "The Dockside Tavern", "situation": "Negotiating with the fence about the stolen ledger. Tension is high.", "active_npcs": [{"name": "Marta", "role": "fence, nervous"}], "companions": ["Other character names sharing this scene"]},
     {"type": "NPC_RELATIONSHIP_CHANGED", "name": "Marta", "relationship": "friendly", "reason": "The party saved her from the thieves"},
-    {"type": "NPC_JOINED_PARTY", "name": "Marta", "reason": "She agreed to guide the party through the sewers in exchange for protection."},
+    {"type": "NPC_JOINED_PARTY", "name": "Marta", "reason": "She agreed to guide the party through the sewers in exchange for protection.", "level": 2, "max_hp": 16, "ac": 13, "stats": {"might": 10, "agility": 14, "endurance": 12, "intellect": 10, "will": 10, "presence": 12}, "abilities": [{"id": "sneak_attack", "name": "Sneak Attack", "description": "Extra 1d6 damage when attacking with advantage"}], "inventory": [{"name": "Short Sword", "type": "weapon", "qty": 1, "rarity": "common", "equipped": true, "properties": {"damage": "1d6", "bonus": 0}}, {"name": "Leather Armor", "type": "armor", "qty": 1, "rarity": "common", "equipped": true, "properties": {"ac": 11}}]},
     {"type": "NPC_LEFT_PARTY", "name": "Marta", "reason": "She slipped away in the night, leaving only a note and the party's coin purse slightly lighter."}
   ],
   "quick_actions": ["Press Jarel for specifics about the active hideouts", "Bluff that you already know which spots are decoys", "Threaten to hand Jarel over to the authorities"],
@@ -1079,8 +1080,19 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
               console.log(`[GM] NPC "${name}" already in party — skipping duplicate NPC_JOINED_PARTY`);
               break;
             }
+            const companionStats: any = {
+              isPartyMember: true,
+              partyJoinedAt: new Date(),
+              updatedAt: new Date(),
+            };
+            if (update.level) companionStats.level = update.level;
+            if (update.max_hp) { companionStats.maxHp = update.max_hp; companionStats.currentHp = update.max_hp; }
+            if (update.ac) companionStats.ac = update.ac;
+            if (update.stats) companionStats.stats = update.stats;
+            if (update.abilities) companionStats.abilities = update.abilities;
+            if (update.inventory) companionStats.inventory = update.inventory;
             await db.update(npcLog)
-              .set({ isPartyMember: true, partyJoinedAt: new Date(), updatedAt: new Date() })
+              .set(companionStats)
               .where(eq(npcLog.id, npc.id));
             await db.insert(gameEvents).values({
               partyId, campaignId, eventType: "NPC_JOINED_PARTY", actorId: "gm",

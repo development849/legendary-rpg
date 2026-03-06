@@ -526,67 +526,86 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               ))}
             </div>
           </div>
-          {diceRequests.length > 0 && (
-            <div className="space-y-1.5 mt-1">
-              {diceRequests.map((req: any, i: number) => {
-                const promptKey = `${msg.id}-${i}`;
-                const alreadyRolled = !!rolledPrompts[promptKey];
-                const modStr = req.modifier > 0 ? `+${req.modifier}` : req.modifier < 0 ? `${req.modifier}` : "";
-                const advStr = req.advantage && req.advantage !== "normal" ? ` (${req.advantage})` : "";
-                return (
-                  <div key={i} className="flex items-center gap-2.5 bg-amber-950/25 border border-amber-800/35 rounded-md px-3 py-2" data-testid={`dice-prompt-${promptKey}`}>
-                    <Dices className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-sans text-amber-200/90 font-semibold leading-tight">{req.purpose}</p>
-                      <p className="text-xs text-muted-foreground/60 font-mono">{req.character} — {req.die ?? "d20"}{modStr}{advStr}</p>
+          {diceRequests.length > 0 && (() => {
+            const firstUnrolledIdx = diceRequests.findIndex((_: any, i: number) => !rolledPrompts[`${msg.id}-${i}`]);
+            return (
+              <div className="space-y-1.5 mt-1">
+                {diceRequests.map((req: any, i: number) => {
+                  const promptKey = `${msg.id}-${i}`;
+                  const alreadyRolled = !!rolledPrompts[promptKey];
+                  const isNext = i === firstUnrolledIdx;
+                  const isQueued = i > firstUnrolledIdx && firstUnrolledIdx >= 0;
+                  const modStr = req.modifier > 0 ? `+${req.modifier}` : req.modifier < 0 ? `${req.modifier}` : "";
+                  const advStr = req.advantage && req.advantage !== "normal" ? ` (${req.advantage})` : "";
+
+                  if (isQueued) {
+                    return (
+                      <div key={i} className="flex items-center gap-2.5 bg-amber-950/10 border border-amber-800/15 rounded-md px-3 py-2 opacity-40" data-testid={`dice-prompt-${promptKey}`}>
+                        <Dices className="w-4 h-4 text-amber-400/40 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-sans text-amber-200/50 font-semibold leading-tight">{req.purpose}</p>
+                          <p className="text-xs text-muted-foreground/30 font-mono">{req.character} — {req.die ?? "d20"}{modStr}{advStr}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground/30 italic px-2">Queued</span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={i} className={`flex items-center gap-2.5 rounded-md px-3 py-2 ${isNext ? "bg-amber-950/25 border border-amber-800/35" : "bg-amber-950/15 border border-amber-800/20"}`} data-testid={`dice-prompt-${promptKey}`}>
+                      <Dices className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-sans text-amber-200/90 font-semibold leading-tight">{req.purpose}</p>
+                        <p className="text-xs text-muted-foreground/60 font-mono">{req.character} — {req.die ?? "d20"}{modStr}{advStr}</p>
+                      </div>
+                      {alreadyRolled ? (
+                        <span className="text-xs text-muted-foreground/40 italic px-2">Rolled ✓</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-3 text-xs border-amber-700/50 text-amber-300 hover:bg-amber-900/30 hover:text-amber-200"
+                          data-testid={`button-roll-${promptKey}`}
+                          onClick={async () => {
+                            setRolledPrompts(prev => ({ ...prev, [promptKey]: true }));
+                            try {
+                              const res = await fetch("/api/dice/roll", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  die: req.die ?? "d20",
+                                  count: 1,
+                                  modifier: req.modifier ?? 0,
+                                  advantageState: req.advantage ?? "normal",
+                                  label: req.purpose,
+                                }),
+                              });
+                              const data = await res.json();
+                              const total = data.total;
+                              const rolls = data.rolls?.join(", ") ?? total;
+                              const dcMatch = req.purpose?.match(/dc\s*(\d+)/i);
+                              const dc = dcMatch ? parseInt(dcMatch[1]) : null;
+                              const dcText = dc ? ` vs DC ${dc}` : "";
+                              const outcome = dc ? (total >= dc ? " — SUCCESS" : " — FAILURE") : "";
+                              sendAction(
+                                `[ROLL RESULT] ${req.character ?? "Character"} — ${req.purpose}: rolled ${total} [${rolls}] on ${req.die ?? "d20"}${modStr}${dcText}${outcome}`,
+                                undefined,
+                                "action"
+                              );
+                            } catch (_) {
+                              setRolledPrompts(prev => { const n = { ...prev }; delete n[promptKey]; return n; });
+                            }
+                          }}
+                        >
+                          🎲 Roll
+                        </Button>
+                      )}
                     </div>
-                    {alreadyRolled ? (
-                      <span className="text-xs text-muted-foreground/40 italic px-2">Rolled ✓</span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-3 text-xs border-amber-700/50 text-amber-300 hover:bg-amber-900/30 hover:text-amber-200"
-                        data-testid={`button-roll-${promptKey}`}
-                        onClick={async () => {
-                          setRolledPrompts(prev => ({ ...prev, [promptKey]: true }));
-                          try {
-                            const res = await fetch("/api/dice/roll", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                die: req.die ?? "d20",
-                                count: 1,
-                                modifier: req.modifier ?? 0,
-                                advantageState: req.advantage ?? "normal",
-                                label: req.purpose,
-                              }),
-                            });
-                            const data = await res.json();
-                            const total = data.total;
-                            const rolls = data.rolls?.join(", ") ?? total;
-                            const dcMatch = req.purpose?.match(/dc\s*(\d+)/i);
-                            const dc = dcMatch ? parseInt(dcMatch[1]) : null;
-                            const dcText = dc ? ` vs DC ${dc}` : "";
-                            const outcome = dc ? (total >= dc ? " — SUCCESS" : " — FAILURE") : "";
-                            sendAction(
-                              `[ROLL RESULT] ${req.character ?? "Character"} — ${req.purpose}: rolled ${total} [${rolls}] on ${req.die ?? "d20"}${modStr}${dcText}${outcome}`,
-                              undefined,
-                              "action"
-                            );
-                          } catch (_) {
-                            setRolledPrompts(prev => { const n = { ...prev }; delete n[promptKey]; return n; });
-                          }
-                        }}
-                      >
-                        🎲 Roll
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       );
     }

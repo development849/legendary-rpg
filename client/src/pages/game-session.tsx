@@ -1914,8 +1914,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           epic: "text-purple-400",
                           legendary: "text-amber-400",
                         };
-                        const getSlotLabel = (it: any) => {
-                          if (it.type === "weapon") return it.properties?.two_handed ? "2H" : "MH";
+                        const getSlotLabel = (it: any, allEquipped: any[]) => {
+                          if (it.type === "weapon" && it.properties?.two_handed) return "2H";
+                          if (it.type === "weapon") {
+                            const weaponsBefore = allEquipped.filter((e: any) => e.type === "weapon" && !e.properties?.two_handed);
+                            return weaponsBefore.indexOf(it) === 0 ? "MH" : "OH";
+                          }
                           if (it.type === "armor" && it.properties?.ac_bonus) return "OH";
                           if (it.type === "armor" && it.properties?.ac) return "Body";
                           return "";
@@ -1927,7 +1931,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             </p>
                             {equipped.map((item: any, i: number) => {
                               const rarity = item.rarity ?? "common";
-                              const slot = getSlotLabel(item);
+                              const slot = getSlotLabel(item, equipped);
                               return (
                                 <div key={i} className="flex items-center justify-between gap-2">
                                   <div className="flex items-center gap-1.5 min-w-0">

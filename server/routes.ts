@@ -286,39 +286,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const isShield = item.type === "armor" && !!item.properties?.ac_bonus;
         const isBodyArmor = item.type === "armor" && !item.properties?.ac_bonus;
         const isTwoHanded = !!item.properties?.two_handed;
+        const handsNeeded = (isWeapon || isShield) ? (isTwoHanded ? 2 : 1) : 0;
 
-        if (isWeapon || isShield) {
-          const equippedWeapons: number[] = [];
-          const equippedShields: number[] = [];
-          let equippedTwoHander: number | null = null;
-
+        if (handsNeeded > 0) {
+          const handItems: { idx: number; hands: number }[] = [];
           inv.forEach((it: any, idx: number) => {
             if (idx === itemIndex || !it.equipped) return;
-            if (it.type === "weapon") {
-              equippedWeapons.push(idx);
-              if (it.properties?.two_handed) equippedTwoHander = idx;
-            }
-            if (it.type === "armor" && it.properties?.ac_bonus) {
-              equippedShields.push(idx);
+            const isW = it.type === "weapon";
+            const isS = it.type === "armor" && !!it.properties?.ac_bonus;
+            if (isW || isS) {
+              handItems.push({ idx, hands: it.properties?.two_handed ? 2 : 1 });
             }
           });
 
-          if (isTwoHanded) {
-            for (const idx of equippedWeapons) inv[idx] = { ...inv[idx], equipped: false };
-            for (const idx of equippedShields) inv[idx] = { ...inv[idx], equipped: false };
-          } else if (isShield) {
-            if (equippedTwoHander !== null) {
-              inv[equippedTwoHander] = { ...inv[equippedTwoHander], equipped: false };
-            }
-            for (const idx of equippedShields) inv[idx] = { ...inv[idx], equipped: false };
-          } else {
-            if (equippedTwoHander !== null) {
-              inv[equippedTwoHander] = { ...inv[equippedTwoHander], equipped: false };
-            }
-            const oneHandedWeapons = equippedWeapons.filter(idx => !inv[idx].properties?.two_handed);
-            if (oneHandedWeapons.length >= 2) {
-              inv[oneHandedWeapons[0]] = { ...inv[oneHandedWeapons[0]], equipped: false };
-            }
+          let handsUsed = handItems.reduce((sum, h) => sum + h.hands, 0);
+          let i = 0;
+          while (handsUsed + handsNeeded > 2 && i < handItems.length) {
+            inv[handItems[i].idx] = { ...inv[handItems[i].idx], equipped: false };
+            handsUsed -= handItems[i].hands;
+            i++;
           }
         }
 

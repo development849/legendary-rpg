@@ -2020,6 +2020,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     unknown: "text-yellow-400 border-yellow-700 bg-yellow-950/40",
                     deceased: "text-zinc-500 border-zinc-700 bg-zinc-900/40",
                   };
+                  const MAX_NOTES = 120;
                   if (npcs.length === 0) {
                     return (
                       <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
@@ -2031,59 +2032,70 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   }
                   const companions = npcs.filter((n: any) => n.isPartyMember);
                   const others = npcs.filter((n: any) => !n.isPartyMember);
-                  const renderNpc = (npc: any) => {
+
+                  const locationGroups: Record<string, any[]> = {};
+                  others.forEach((npc: any) => {
+                    const loc = npc.lastSeen || "Unknown";
+                    if (!locationGroups[loc]) locationGroups[loc] = [];
+                    locationGroups[loc].push(npc);
+                  });
+                  const sortedLocations = Object.keys(locationGroups).sort((a, b) => {
+                    const latestA = Math.max(...locationGroups[a].map((n: any) => new Date(n.updatedAt).getTime()));
+                    const latestB = Math.max(...locationGroups[b].map((n: any) => new Date(n.updatedAt).getTime()));
+                    return latestB - latestA;
+                  });
+
+                  const renderNpc = (npc: any, compact = false) => {
                     const rel = npc.relationship ?? "neutral";
                     const colorCls = npc.isPartyMember
                       ? "text-amber-300 border-amber-700/60 bg-amber-950/30"
                       : (relColor[rel] ?? relColor.neutral);
+                    const notesText = npc.notes ?? "";
+                    const truncNotes = notesText.length > MAX_NOTES ? notesText.substring(0, MAX_NOTES) + "..." : notesText;
                     return (
-                      <div key={npc.id} data-testid={`card-npc-${npc.id}`} className={`rounded-md border p-3 space-y-1.5 ${colorCls}`}>
-                        {/* Portrait + name row */}
-                        <div className="flex items-start gap-2.5">
+                      <div key={npc.id} data-testid={`card-npc-${npc.id}`} className={`rounded-md border p-2.5 space-y-1 ${colorCls}`}>
+                        <div className="flex items-start gap-2">
                           <div className="flex-shrink-0">
                             {npc.hasPortrait ? (
                               <img
                                 src={`/api/npcs/${npc.id}/portrait`}
                                 alt={npc.name}
-                                className="w-14 h-14 rounded object-cover object-top border border-current/20"
+                                className={`${compact ? "w-10 h-10" : "w-12 h-12"} rounded object-cover object-top border border-current/20`}
                                 data-testid={`img-npc-portrait-${npc.id}`}
                               />
                             ) : (
-                              <div className="w-14 h-14 rounded bg-muted/50 border border-current/20 animate-pulse flex items-center justify-center">
-                                <ScrollText className="w-5 h-5 text-muted-foreground/30" />
+                              <div className={`${compact ? "w-10 h-10" : "w-12 h-12"} rounded bg-muted/50 border border-current/20 animate-pulse flex items-center justify-center`}>
+                                <ScrollText className="w-4 h-4 text-muted-foreground/30" />
                               </div>
                             )}
                           </div>
                           <div className="flex-1 min-w-0 space-y-0.5">
-                            <div className="flex items-start justify-between gap-1 flex-wrap">
-                              <span className="font-semibold text-sm leading-tight">{npc.name}</span>
-                              <div className="flex gap-1 flex-wrap">
+                            <div className="flex items-start justify-between gap-1">
+                              <span className="font-semibold text-xs leading-tight">{npc.name}</span>
+                              <div className="flex gap-1 flex-shrink-0">
                                 {npc.isPartyMember && (
-                                  <span className="text-[9px] px-1.5 py-0.5 rounded border border-amber-600/60 bg-amber-900/40 text-amber-400 font-sans tracking-wide uppercase flex-shrink-0">
-                                    ★ Companion
+                                  <span className="text-[9px] px-1 py-0.5 rounded border border-amber-600/60 bg-amber-900/40 text-amber-400 font-sans tracking-wide uppercase">
+                                    ★
                                   </span>
                                 )}
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide whitespace-nowrap border flex-shrink-0 ${relColor[rel] ?? relColor.neutral}`}>
+                                <span className={`text-[9px] px-1 py-0.5 rounded font-medium uppercase tracking-wide whitespace-nowrap border ${relColor[rel] ?? relColor.neutral}`}>
                                   {rel}
                                 </span>
                               </div>
                             </div>
                             {npc.role && (
-                              <p className="text-xs text-muted-foreground italic leading-tight">{npc.role}</p>
+                              <p className="text-[10px] text-muted-foreground italic leading-tight truncate">{npc.role}</p>
                             )}
-                            {npc.lastSeen && (
-                              <p className="text-[10px] text-muted-foreground/70">
-                                <span className="font-medium">Last seen:</span> {npc.lastSeen}
+                            {!compact && npc.lastSeen && (
+                              <p className="text-[10px] text-muted-foreground/60 truncate">
+                                <MapPin className="w-2.5 h-2.5 inline -mt-0.5 mr-0.5" />{npc.lastSeen}
                               </p>
                             )}
                           </div>
                         </div>
-                        {npc.description && (
-                          <p className="text-xs leading-snug">{npc.description}</p>
-                        )}
-                        {npc.notes && (
-                          <p className="text-[10px] text-muted-foreground/80 border-t border-current/20 pt-1.5">
-                            {npc.notes}
+                        {truncNotes && (
+                          <p className="text-[10px] text-muted-foreground/70 leading-snug pl-0.5">
+                            {truncNotes}
                           </p>
                         )}
                       </div>
@@ -2094,17 +2106,56 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                       {companions.length > 0 && (
                         <>
                           <p className="text-[10px] font-sans tracking-widest text-amber-500/70 uppercase flex items-center gap-1.5">
-                            <Users className="w-3 h-3" /> Active Companions
+                            <Users className="w-3 h-3" /> Companions ({companions.length})
                           </p>
-                          {companions.map(renderNpc)}
-                          {others.length > 0 && (
-                            <p className="text-[10px] font-sans tracking-widest text-muted-foreground/40 uppercase pt-1 border-t border-border flex items-center gap-1.5">
-                              <ScrollText className="w-3 h-3" /> Known Characters
-                            </p>
-                          )}
+                          <div className="space-y-1.5">
+                            {companions.map((n: any) => renderNpc(n))}
+                          </div>
                         </>
                       )}
-                      {others.map(renderNpc)}
+                      {sortedLocations.length > 0 && (
+                        <>
+                          {companions.length > 0 && (
+                            <div className="border-t border-border pt-1.5" />
+                          )}
+                          <p className="text-[10px] font-sans tracking-widest text-muted-foreground/40 uppercase flex items-center gap-1.5">
+                            <ScrollText className="w-3 h-3" /> Known Characters ({others.length})
+                          </p>
+                          {sortedLocations.map(loc => {
+                            const locNpcs = locationGroups[loc];
+                            const isExpanded = expandedRegions.has(`cast-${loc}`);
+                            return (
+                              <div key={loc}>
+                                <button
+                                  onClick={() => {
+                                    setExpandedRegions(prev => {
+                                      const next = new Set(prev);
+                                      const key = `cast-${loc}`;
+                                      if (next.has(key)) next.delete(key);
+                                      else next.add(key);
+                                      return next;
+                                    });
+                                  }}
+                                  className="w-full flex items-center gap-1.5 py-1 text-left group"
+                                  data-testid={`cast-location-${loc}`}
+                                >
+                                  <ChevronDown className={`w-3 h-3 text-muted-foreground/50 transition-transform ${isExpanded ? "" : "-rotate-90"}`} />
+                                  <MapPin className="w-3 h-3 text-primary/50" />
+                                  <span className="text-[11px] font-sans font-medium text-muted-foreground group-hover:text-foreground transition-colors truncate">
+                                    {loc}
+                                  </span>
+                                  <span className="text-[9px] text-muted-foreground/40 ml-auto flex-shrink-0">{locNpcs.length}</span>
+                                </button>
+                                {isExpanded && (
+                                  <div className="space-y-1.5 ml-2 mt-0.5">
+                                    {locNpcs.map((n: any) => renderNpc(n, true))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
                     </div>
                   );
                 })()}

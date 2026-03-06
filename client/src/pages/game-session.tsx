@@ -1013,8 +1013,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               </div>
             </div>
 
-            <ScrollArea className="flex-1">
-              <div className="p-3 space-y-3">
+            <ScrollArea className="flex-1 w-full">
+              <div className="p-3 space-y-3 overflow-hidden break-words">
 
                 {/* PARTY TAB */}
                 {sidebarTab === "party" && (() => {
@@ -1461,7 +1461,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                         )}
                                       </div>
                                       {props && (
-                                        <p className="text-xs text-muted-foreground mt-0.5">{props}</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5 break-words">{props}</p>
                                       )}
                                     </div>
                                     <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
@@ -1517,7 +1517,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                 )}
                               </div>
                               {ab.description && (
-                                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{ab.description}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5 leading-snug break-words">{ab.description}</p>
                               )}
                             </div>
                           ))}
@@ -1568,7 +1568,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                         <span className="truncate">{sit.location}</span>
                                       </p>
                                       {sit.situation && (
-                                        <p className="text-xs font-serif text-muted-foreground leading-snug italic">{sit.situation}</p>
+                                        <p className="text-xs font-serif text-muted-foreground leading-snug italic break-words">{sit.situation}</p>
                                       )}
                                       {companions.length > 0 && (
                                         <p className="text-xs font-sans text-muted-foreground/60 mt-0.5">
@@ -1690,8 +1690,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                                 <p className="text-xs text-muted-foreground font-serif italic mt-0.5 leading-tight ml-[18px]">{loc.title}</p>
                                               )}
                                               {loc.threat && (
-                                                <p className="text-xs text-red-400 mt-0.5 flex items-center gap-1 ml-[18px]">
-                                                  <Skull className="w-2.5 h-2.5" /> {loc.threat}
+                                                <p className="text-xs text-red-400 mt-0.5 flex items-start gap-1 ml-[18px]">
+                                                  <Skull className="w-2.5 h-2.5 flex-shrink-0 mt-0.5" /> <span className="break-words">{loc.threat}</span>
                                                 </p>
                                               )}
                                               <p className="text-xs text-muted-foreground/40 mt-1 ml-[18px]">Turn {loc.firstVisitedTurn}</p>
@@ -2159,7 +2159,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           </div>
                         </div>
                         {truncNotes && (
-                          <p className="text-[10px] text-muted-foreground/70 leading-snug pl-0.5">
+                          <p className="text-[10px] text-muted-foreground/70 leading-snug pl-0.5 break-words">
                             {truncNotes}
                           </p>
                         )}

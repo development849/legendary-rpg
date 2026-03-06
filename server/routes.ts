@@ -12,7 +12,7 @@ import {
   saveChatMessage, getPartyMessages, getWorldState,
 } from "./storage";
 import { rollDice, enforceHandLimits } from "./gameEngine";
-import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground } from "./gmOrchestrator";
+import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
 import { db } from "./db";
 import { characters as charsTable, locationScenes, partyMembers } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -493,6 +493,69 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       broadcastToParty(req.params.id, { type: "MEMBER_UPDATE", members });
       res.json({ success: true });
     } catch (e) { res.status(500).json({ error: "Failed to update ready state" }); }
+  });
+
+  // ── Shop Buy / Sell ──────────────────────────────────────────────────────────
+
+  app.post("/api/parties/:id/shop/buy", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user!.id;
+      const partyId = req.params.id;
+      const { characterId, item, price } = req.body;
+      if (!characterId || !item || typeof price !== "number" || price < 0)
+        return res.status(400).json({ error: "Missing characterId, item, or price" });
+      const [char] = await db.select().from(charsTable).where(eq(charsTable.id, characterId));
+      if (!char) return res.status(404).json({ error: "Character not found" });
+      let inv = [...(char.inventory as any[])];
+      inv = consolidateCoins(inv);
+      const pouchIdx = inv.findIndex((i: any) => isCoinItem(i));
+      const gold = pouchIdx >= 0 ? (inv[pouchIdx].properties?.value ?? 0) : 0;
+      if (gold < price) return res.status(400).json({ error: "Not enough gold" });
+      const newGold = gold - price;
+      if (pouchIdx >= 0) {
+        if (newGold === 0) inv.splice(pouchIdx, 1);
+        else inv[pouchIdx] = { ...inv[pouchIdx], name: `Coin Pouch (${newGold}gp)`, properties: { ...inv[pouchIdx].properties, value: newGold } };
+      }
+      const newItem = { qty: item.qty ?? 1, name: item.name, type: item.type ?? "misc", rarity: item.rarity ?? "common", equipped: false, properties: item.properties ?? {} };
+      inv.push(newItem);
+      inv = sortInventory(inv);
+      await db.update(charsTable).set({ inventory: inv }).where(eq(charsTable.id, characterId));
+      broadcastToParty(partyId, { type: "STATE_UPDATE", updates: [{ type: "SHOP_BUY" }] });
+      res.json({ ok: true, gold: newGold, item: newItem });
+    } catch (e: any) { res.status(500).json({ error: "Buy failed" }); }
+  });
+
+  app.post("/api/parties/:id/shop/sell", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user!.id;
+      const partyId = req.params.id;
+      const { characterId, itemIndex, sellPrice } = req.body;
+      if (!characterId || typeof itemIndex !== "number" || typeof sellPrice !== "number")
+        return res.status(400).json({ error: "Missing characterId, itemIndex, or sellPrice" });
+      const [char] = await db.select().from(charsTable).where(eq(charsTable.id, characterId));
+      if (!char) return res.status(404).json({ error: "Character not found" });
+      let inv = [...(char.inventory as any[])];
+      if (itemIndex < 0 || itemIndex >= inv.length) return res.status(400).json({ error: "Invalid item index" });
+      const soldItem = inv[itemIndex];
+      if (soldItem.equipped) return res.status(400).json({ error: "Unequip item before selling" });
+      const currentQty = soldItem.qty ?? 1;
+      if (currentQty <= 1) inv.splice(itemIndex, 1);
+      else inv[itemIndex] = { ...soldItem, qty: currentQty - 1 };
+      inv = consolidateCoins(inv);
+      if (sellPrice > 0) {
+        const pouchIdx = inv.findIndex((i: any) => isCoinItem(i));
+        if (pouchIdx >= 0) {
+          const newGold = (inv[pouchIdx].properties?.value ?? 0) + sellPrice;
+          inv[pouchIdx] = { ...inv[pouchIdx], name: `Coin Pouch (${newGold}gp)`, properties: { ...inv[pouchIdx].properties, value: newGold } };
+        } else {
+          inv.push({ qty: 1, name: `Coin Pouch (${sellPrice}gp)`, type: "treasure", properties: { value: sellPrice } });
+        }
+      }
+      inv = sortInventory(inv);
+      await db.update(charsTable).set({ inventory: inv }).where(eq(charsTable.id, characterId));
+      broadcastToParty(partyId, { type: "STATE_UPDATE", updates: [{ type: "SHOP_SELL" }] });
+      res.json({ ok: true, soldItem: soldItem.name, sellPrice });
+    } catch (e: any) { res.status(500).json({ error: "Sell failed" }); }
   });
 
   // ── Messages ────────────────────────────────────────────────────────────────

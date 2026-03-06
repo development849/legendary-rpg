@@ -11,7 +11,7 @@ import {
   Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown, ChevronRight,
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
-  Settings, Navigation
+  Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,6 +26,21 @@ interface ChatMsg {
   userId?: string;
   metadata?: any;
   createdAt: string;
+}
+
+interface ShopItem {
+  name: string;
+  type: string;
+  rarity: string;
+  price: number;
+  properties: Record<string, any>;
+  qty?: number;
+}
+
+interface ShopData {
+  merchant_name: string;
+  shop_flavor: string;
+  inventory: ShopItem[];
 }
 
 type TabType = "chat" | "characters" | "dice";
@@ -163,6 +178,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
   const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set());
   const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
+  const [shopData, setShopData] = useState<ShopData | null>(null);
+  const [shopTab, setShopTab] = useState<"buy" | "sell">("buy");
+  const [shopBusy, setShopBusy] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -288,6 +306,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/npcs`] });
             const wsQa = msg.message?.metadata?.quickActions;
             if (Array.isArray(wsQa) && wsQa.length > 0) setQuickActions(wsQa);
+            const wsUpdates = msg.message?.metadata?.updates ?? [];
+            const wsShop = wsUpdates.find((u: any) => u.type === "SHOP_OPENED");
+            if (wsShop) {
+              setShopData({ merchant_name: wsShop.merchant_name, shop_flavor: wsShop.shop_flavor ?? "", inventory: wsShop.inventory ?? [] });
+              setShopTab("buy");
+            }
           }
         } else if (msg.type === "STATE_UPDATE") {
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
@@ -448,6 +472,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               if (qa.length > 0) setQuickActions(qa);
               const th = evt.turnHint ?? evt.message?.metadata?.turnHint ?? null;
               if (th) setTurnHint(th);
+              const ups = evt.updates ?? evt.message?.metadata?.updates ?? [];
+              const shopUpdate = ups.find((u: any) => u.type === "SHOP_OPENED");
+              if (shopUpdate) {
+                setShopData({ merchant_name: shopUpdate.merchant_name, shop_flavor: shopUpdate.shop_flavor ?? "", inventory: shopUpdate.inventory ?? [] });
+                setShopTab("buy");
+              }
             }
           } catch (_) {}
         }
@@ -2200,6 +2230,235 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           </div>
         )}
       </div>
+
+      {shopData && (() => {
+        const myMember = members.find((m: any) => m.userId === user?.id);
+        const char = myMember?.character;
+        const playerItems: any[] = char?.inventory ?? [];
+        const playerGold = playerItems.find((i: any) => {
+          const coinTypes = ["treasure", "currency"];
+          const coinPat = /coin|gold|silver|copper|money|gp\b|pouch/i;
+          return coinTypes.includes(i.type) && (typeof i.properties?.value === "number" || coinPat.test(i.name || ""));
+        })?.properties?.value ?? 0;
+
+        const sellableItems = playerItems
+          .map((item: any, idx: number) => ({ item, idx }))
+          .filter(({ item }) => !item.equipped && !(["treasure", "currency"].includes(item.type) && /coin|gold|pouch/i.test(item.name || "")));
+
+        const getSellPrice = (item: any): number => {
+          const rarityMultiplier: Record<string, number> = { common: 0.25, uncommon: 0.4, rare: 0.5, epic: 0.5, legendary: 0.6 };
+          const baseValues: Record<string, number> = { weapon: 8, armor: 10, consumable: 3, tool: 2, document: 1, misc: 1, item: 1 };
+          const base = baseValues[item.type] ?? 2;
+          const mult = rarityMultiplier[item.rarity ?? "common"] ?? 0.25;
+          const bonus = item.properties?.bonus ?? 0;
+          const val = item.properties?.value;
+          if (typeof val === "number") return Math.max(1, Math.floor(val * 0.5));
+          return Math.max(1, Math.floor((base + bonus * 10) * mult * (item.qty ?? 1)));
+        };
+
+        const formatItemProps = (p: any) => {
+          if (!p || Object.keys(p).length === 0) return null;
+          const parts: string[] = [];
+          if (p.damage) parts.push(`${p.damage} dmg`);
+          if (p.bonus) parts.push(`+${p.bonus}`);
+          if (p.ac) parts.push(`AC ${p.ac}`);
+          if (p.ac_bonus) parts.push(`+${p.ac_bonus} AC`);
+          if (p.heal) parts.push(`heal ${p.heal}`);
+          if (p.two_handed) parts.push("2H");
+          if (p.thrown) parts.push("thrown");
+          if (p.finesse) parts.push("finesse");
+          return parts.length > 0 ? parts.join(" · ") : null;
+        };
+
+        const rarityColors: Record<string, string> = {
+          common: "text-zinc-400",
+          uncommon: "text-emerald-400",
+          rare: "text-blue-400",
+          epic: "text-purple-400",
+          legendary: "text-amber-400",
+        };
+
+        const typeIcons: Record<string, any> = {
+          weapon: Sword, armor: Shield, consumable: Coffee, tool: Wrench, misc: Package,
+        };
+
+        const handleBuy = async (shopItem: ShopItem) => {
+          if (!char || shopBusy) return;
+          setShopBusy(true);
+          try {
+            const resp = await fetch(`/api/parties/${partyId}/shop/buy`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ characterId: char.id, item: shopItem, price: shopItem.price }),
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+              toast({ title: data.error ?? "Purchase failed", variant: "destructive" });
+              return;
+            }
+            toast({ title: `Bought ${shopItem.name} for ${shopItem.price}gp` });
+            queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+          } catch {
+            toast({ title: "Purchase failed", variant: "destructive" });
+          } finally {
+            setShopBusy(false);
+          }
+        };
+
+        const handleSell = async (itemIndex: number, item: any) => {
+          if (!char || shopBusy) return;
+          const price = getSellPrice(item);
+          setShopBusy(true);
+          try {
+            const resp = await fetch(`/api/parties/${partyId}/shop/sell`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ characterId: char.id, itemIndex, sellPrice: price }),
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+              toast({ title: data.error ?? "Sale failed", variant: "destructive" });
+              return;
+            }
+            toast({ title: `Sold ${item.name} for ${price}gp` });
+            queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+          } catch {
+            toast({ title: "Sale failed", variant: "destructive" });
+          } finally {
+            setShopBusy(false);
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" data-testid="shop-overlay">
+            <div className="bg-card border border-border rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Store className="w-5 h-5 text-primary" />
+                  <div>
+                    <h2 className="text-sm font-sans font-bold" data-testid="shop-merchant-name">{shopData.merchant_name}</h2>
+                    {shopData.shop_flavor && <p className="text-[11px] text-muted-foreground font-serif italic">{shopData.shop_flavor}</p>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1">
+                    <Coins className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-xs font-sans font-bold text-amber-400" data-testid="shop-gold">{playerGold}gp</span>
+                  </div>
+                  <button onClick={() => setShopData(null)} className="text-muted-foreground hover:text-foreground" data-testid="button-shop-close">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex border-b border-border">
+                <button
+                  onClick={() => setShopTab("buy")}
+                  data-testid="button-shop-tab-buy"
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-sans font-medium transition-colors ${shopTab === "buy" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" /> Buy
+                </button>
+                <button
+                  onClick={() => setShopTab("sell")}
+                  data-testid="button-shop-tab-sell"
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-sans font-medium transition-colors ${shopTab === "sell" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" /> Sell
+                </button>
+              </div>
+
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="p-3 space-y-1.5">
+                  {shopTab === "buy" ? (
+                    shopData.inventory.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-6 font-serif italic">The merchant has nothing for sale.</p>
+                    ) : (
+                      shopData.inventory.map((item, i) => {
+                        const Icon = typeIcons[item.type] ?? Package;
+                        const rColor = rarityColors[item.rarity] ?? "text-zinc-400";
+                        const props = formatItemProps(item.properties);
+                        const canAfford = playerGold >= item.price;
+                        return (
+                          <div key={i} className="flex items-center gap-2.5 rounded-md bg-secondary/30 px-3 py-2 hover:bg-secondary/50 transition-colors" data-testid={`shop-item-buy-${i}`}>
+                            <Icon className={`w-4 h-4 flex-shrink-0 ${rColor}`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-xs font-sans font-medium ${rColor}`}>{item.name}</span>
+                                {item.rarity !== "common" && (
+                                  <span className={`text-[8px] font-sans font-bold uppercase ${rColor}`}>{item.rarity}</span>
+                                )}
+                              </div>
+                              {props && <p className="text-[10px] text-muted-foreground">{props}</p>}
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="text-xs font-sans font-bold text-amber-400">{item.price}gp</span>
+                              <Button
+                                size="sm"
+                                variant={canAfford ? "default" : "ghost"}
+                                disabled={!canAfford || shopBusy}
+                                onClick={() => handleBuy(item)}
+                                className="h-7 px-2.5 text-[10px]"
+                                data-testid={`button-buy-${i}`}
+                              >
+                                Buy
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )
+                  ) : (
+                    sellableItems.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-6 font-serif italic">Nothing to sell.</p>
+                    ) : (
+                      sellableItems.map(({ item, idx }) => {
+                        const Icon = typeIcons[item.type] ?? Package;
+                        const rColor = rarityColors[item.rarity ?? "common"] ?? "text-zinc-400";
+                        const props = formatItemProps(item.properties);
+                        const price = getSellPrice(item);
+                        return (
+                          <div key={idx} className="flex items-center gap-2.5 rounded-md bg-secondary/30 px-3 py-2 hover:bg-secondary/50 transition-colors" data-testid={`shop-item-sell-${idx}`}>
+                            <Icon className={`w-4 h-4 flex-shrink-0 ${rColor}`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-xs font-sans font-medium ${rColor}`}>{item.name}</span>
+                                {item.qty > 1 && <span className="text-[10px] text-muted-foreground">x{item.qty}</span>}
+                                {(item.rarity ?? "common") !== "common" && (
+                                  <span className={`text-[8px] font-sans font-bold uppercase ${rColor}`}>{item.rarity}</span>
+                                )}
+                              </div>
+                              {props && <p className="text-[10px] text-muted-foreground">{props}</p>}
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="text-xs font-sans font-bold text-emerald-400">+{price}gp</span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={shopBusy}
+                                onClick={() => handleSell(idx, item)}
+                                className="h-7 px-2.5 text-[10px]"
+                                data-testid={`button-sell-${idx}`}
+                              >
+                                Sell
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )
+                  )}
+                </div>
+              </ScrollArea>
+
+              <div className="px-4 py-2.5 border-t border-border">
+                <p className="text-[10px] text-muted-foreground text-center font-serif italic">Sell prices are roughly 25-50% of item value. Equipped items must be unequipped first.</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 }

@@ -584,6 +584,7 @@ Each action should be a concrete thing the player could do RIGHT NOW given what 
 CRITICAL RULES:
 1. Always include a SITUATION_UPDATED entry for every character whose situation changed this turn. This is how the GM tracks split-party storylines. The "situation" field should be a brief present-tense description (1–2 sentences) of what that character is currently doing and what stakes are in play.
 2. Whenever gold or coin changes hands — buying, selling, paying, finding, earning, gambling — you MUST emit a GOLD_CHANGED update. Use a negative delta for spending (e.g. -3 for spending 3gp) and positive for earning (+5 for finding 5gp). Never describe a purchase without emitting GOLD_CHANGED. The character's coin pouch is tracked in their inventory and will NOT update unless you emit this.
+   CRITICAL LOOT DISTRIBUTION RULE: When the party finds loot (a stash, chest, bag of coins, enemy's gold, etc.) and divides it, the player's share is ADDED to their coin pouch — use a POSITIVE delta equal to their share. Example: party finds 100 coins and splits 3 ways → each character gets GOLD_CHANGED with delta: +33. NEVER subtract from a character's existing gold to represent distributing found loot — found loot is new money being added, not old money being taken away.
 3. When granting a purchased item, pair ITEM_GRANTED with GOLD_CHANGED in the same response.
 4. NAMED NPC TRACKING — MANDATORY: Before finalizing your response, list every named NPC that appears in your narrative this turn. Check each one against the KNOWN NPCS list above. If they are NOT in KNOWN NPCS, you MUST emit NPC_MET for them — no exceptions. This includes NPCs who are speaking, being referenced, or acting in the scene. Use relationship: "friendly", "neutral", "hostile", "unknown", or "deceased". Put their most important detail in "notes" (their secret, agenda, or connection to the party). A response where a named NPC appears in the narrative but is absent from KNOWN NPCS, without a corresponding NPC_MET update, is always a mistake.
    NPC RELATIONSHIP UPDATES — MANDATORY: NPCs' feelings toward the party change over time based on player actions. Whenever an NPC's disposition shifts (e.g. a neutral NPC becomes friendly after the party helps them, or a friendly NPC turns hostile after being betrayed), you MUST emit NPC_RELATIONSHIP_CHANGED with the NPC's name, their new relationship ("friendly", "neutral", "hostile", "unknown", or "deceased"), and a brief reason. This is how the cast hostility meter stays accurate. Check the [relationship] tag for each KNOWN NPC against how they should feel NOW given recent events. Common triggers: party helped/saved them → friendlier; party threatened/attacked/stole → more hostile; NPC was killed → deceased; significant story reveals → relationship shift. Do NOT leave an NPC as "neutral" forever if the party has had meaningful interactions with them.
@@ -732,15 +733,19 @@ export async function runGM(
 
   const updates = parsed?.proposed_updates ?? [];
 
-  // Safety net: detect gold/coin mentions in narrative without a GOLD_CHANGED update
+  // Safety net: detect gold/coin acquisition in narrative without a GOLD_CHANGED update
+  // Only fires for clear "found/picked up/looted" language, NOT for distributing/splitting/paying
   const narrative = parsed?.narrative ?? "";
-  const goldMentionPattern = /\b(\d+)\s*(?:gold|gp|coins?|copper|silver|pieces?)\b|bag\s+of\s+(?:gold|coins?)|coin\s+pouch|pouch\s+of\s+(?:gold|coins?)|found?\s+(?:\d+\s*)?(?:gold|coins?)|pick(?:ed|s)?\s+up\s+.*(?:gold|coins?)|loot(?:ed|s)?\s+.*(?:gold|coins?)/i;
-  const hasGoldInNarrative = goldMentionPattern.test(narrative);
+  const goldAcquisitionPattern = /\b(?:found?|pick(?:ed|s)?\s+up|loot(?:ed|s)?|discover(?:ed|s)?|collect(?:ed|s)?|grab(?:bed|s)?)\b[^.]*?\b(\d+)\s*(?:gold|gp|coins?)\b/i;
+  const simpleGoldFound = /\b(\d+)\s*(?:gold|gp|coins?)\b/i;
+  const distributionPattern = /\b(?:divid|split|distribut|shar(?:e|ing)|gave|paid|spent|cost|buy|bought|hand(?:ed|s)?\s+over)\b/i;
+  const hasGoldAcquisition = goldAcquisitionPattern.test(narrative);
   const hasGoldUpdate = updates.some((u: any) => u.type === "GOLD_CHANGED");
-  if (hasGoldInNarrative && !hasGoldUpdate && ctx.actingCharacterId) {
-    const goldAmountMatch = narrative.match(/\b(\d+)\s*(?:gold|gp|coins?)\b/i);
+  const isDistribution = distributionPattern.test(narrative);
+  if (hasGoldAcquisition && !hasGoldUpdate && !isDistribution && ctx.actingCharacterId) {
+    const goldAmountMatch = narrative.match(simpleGoldFound);
     const amount = goldAmountMatch ? parseInt(goldAmountMatch[1]) : 5;
-    console.log(`[GM Safety Net] Narrative mentions gold/coins but no GOLD_CHANGED emitted. Auto-injecting +${amount}gp for character ${ctx.actingCharacterId}`);
+    console.log(`[GM Safety Net] Narrative mentions finding ${amount}gp but no GOLD_CHANGED emitted. Auto-injecting for character ${ctx.actingCharacterId}`);
     updates.push({
       type: "GOLD_CHANGED",
       character_id: ctx.actingCharacterId,
@@ -802,19 +807,24 @@ export async function runGM(
   onDone(fullText, updates, parsed?.dice_requests ?? [], parsed?.quick_actions ?? [], turnHint);
 }
 
-function consolidateCoins(inv: any[]): any[] {
+function isCoinItem(item: any): boolean {
+  const coinTypes = ["treasure", "currency"];
   const coinPattern = /coin|gold|silver|copper|money|gp\b|pouch.*coin|bag.*gold/i;
+  return coinTypes.includes(item.type) && (typeof item.properties?.value === "number" || coinPattern.test(item.name || ""));
+}
+
+function consolidateCoins(inv: any[]): any[] {
   let totalGold = 0;
   let firstPouchIdx = -1;
   const toRemove: number[] = [];
 
   for (let i = 0; i < inv.length; i++) {
     const item = inv[i];
-    if (item.type !== "treasure") continue;
+    if (!isCoinItem(item)) continue;
     const hasValue = typeof item.properties?.value === "number";
-    const nameMatchesCoin = coinPattern.test(item.name || "");
-    if (hasValue || nameMatchesCoin) {
-      const val = item.properties?.value ?? 0;
+    if (hasValue) {
+      const qty = item.qty ?? 1;
+      const val = (item.properties?.value ?? 0) * qty;
       totalGold += val;
       if (firstPouchIdx === -1) {
         firstPouchIdx = i;
@@ -958,7 +968,7 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
             let inv = [...(char.inventory as any[])];
             inv = consolidateCoins(inv);
             const pouchIdx = inv.findIndex(
-              (i: any) => i.type === "treasure" && typeof i.properties?.value === "number"
+              (i: any) => isCoinItem(i)
             );
             const delta = update.delta ?? 0;
             if (pouchIdx >= 0) {

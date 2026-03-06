@@ -1141,9 +1141,13 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           {companions.map((npc: any) => {
                             const npcExpanded = expandedMember === `npc-${npc.id}`;
                             return (
-                              <div key={npc.id} data-testid={`card-companion-${npc.id}`} className="rounded-md border border-amber-700/40 bg-amber-950/20 p-3 space-y-1.5">
+                              <div
+                                key={npc.id}
+                                data-testid={`card-companion-${npc.id}`}
+                                className="rounded-md border border-amber-700/40 bg-amber-950/20 p-3 space-y-1.5"
+                              >
                                 <button
-                                  className="flex items-center gap-2 w-full text-left"
+                                  className="flex items-center gap-2 w-full text-left cursor-pointer"
                                   onClick={() => setExpandedMember(npcExpanded ? null : `npc-${npc.id}`)}
                                   data-testid={`button-expand-companion-${npc.id}`}
                                 >

@@ -75,33 +75,63 @@ export async function generateHallBackground(): Promise<void> {
 
   _hallBgInFlight = true;
   try {
+    const hallScenes = [
+      "Interior of a legendary Adventurers Guild Hall carved into the base of a mountain — soaring natural stone vaulted ceiling fifty feet overhead with stalactites dripping with glowing blue-green bioluminescent moss, massive iron chandeliers the size of wagons suspended by ancient chains, their hundreds of candles casting pools of warm amber light that contrast against the cool stone. A grand central staircase of carved obsidian spirals upward past balcony levels lined with guild banners from centuries of campaigns. On the main floor, weathered oak tables covered in maps, scattered coins, and half-eaten feasts stretch toward a colossal fireplace where flames roar behind an ornate dragon-mouth hearth. Trophy weapons of legendary heroes — glowing swords, crystalline staves, a giant's axe — mounted on the walls between tall stained glass windows depicting epic battles. God-rays of amber firelight pierce through wood smoke haze creating volumetric shafts of light. Epic wide cinematic establishing shot.",
+      "A vast Adventurers Guild Hall built inside the ribcage of an ancient petrified dragon — the curved bone-white ribs arch overhead like cathedral vaults, draped in ivy and hanging lanterns that glow warm gold against the twilight sky visible through gaps above. The floor is polished dark stone, scattered with thick woven rugs. A massive round table dominates the center, carved from a single ancient tree trunk, its surface etched with a map of the known world and marked with guild tokens. Along the walls, weapon racks and armor stands display legendary gear behind glass cases lit from within. A three-story hearth built into the dragon's fossilized spine blazes with blue-tinged magical fire that casts dramatic dancing shadows. Floating motes of arcane light drift lazily through the smoky atmosphere. Wide cinematic shot, dramatic chiaroscuro lighting.",
+      "A grand guildhall built atop a sky-pier — open archways on three sides reveal a breathtaking vista of cloud-wreathed mountains and a distant valley far below at golden hour. The interior is warm roughhewn timber and ancient stone, with massive crossbeams overhead hung with iron lanterns, dried herb bundles, and weathered pennants from a hundred campaigns. A wall of cubbyholes stuffed with rolled scrolls and sealed letters forms the quest board. The far wall features a colossal relief map of the realm carved in stone and inlaid with glowing gemstones marking active quests. Warm firelight from twin hearths mixes with the cool blue-gold of the mountain sunset streaming through the arches. Atmospheric haze, volumetric god-rays, cinematic depth. Epic wide establishing shot.",
+    ];
+
+    const scene = hallScenes[Math.floor(Math.random() * hallScenes.length)];
+    let imageData: string | null = null;
+
     const { GoogleGenAI, Modality } = await import("@google/genai");
     const ai = new GoogleGenAI({
       apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
       httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
     });
 
-    const prompt = `Wide cinematic fantasy painting of a grand Adventurers Guild Hall interior. Soaring stone vaulted ceilings with massive carved arches and hanging iron chandeliers ablaze with candlelight. Long oak tables where cloaked adventurers gather over maps and steaming tankards. Notice boards on rough stone walls covered in rolled parchment scrolls. Trophy weapons, shields, and guild banners mounted between tall narrow windows. Roaring fireplaces casting rich amber and gold light. Atmospheric haze of wood smoke and lantern glow. Epic wide establishing shot. ${STYLE_PROMPT}`;
+    try {
+      const prompt = `${scene} ${STYLE_PROMPT} This is a hero image for a fantasy RPG guild hall — it should feel grand, legendary, and awe-inspiring. No people or characters visible. Environment only. Landscape orientation.`;
 
-    const parts: any[] = await getStyleRefParts();
-    parts.push({ text: prompt });
+      const parts: any[] = await getStyleRefParts();
+      parts.push({ text: prompt });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
-      contents: [{ role: "user", parts }],
-      config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
-    });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-pro-image-preview",
+        contents: [{ role: "user", parts }],
+        config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+      });
 
-    const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
-    if (!imagePart?.inlineData?.data) return;
+      const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+      if (imagePart?.inlineData?.data) {
+        const mimeType = imagePart.inlineData.mimeType || "image/png";
+        imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+      }
+    } catch (geminiErr: any) {
+      if (geminiErr?.status === 429) {
+        console.log("[GM] Hall bg: Gemini rate-limited, retrying without style refs...");
+        const simplePrompt = `${scene} Painterly fantasy concept art, atmospheric volumetric lighting, cinematic wide shot, landscape orientation. No text, no UI. No people.`;
+        const response = await ai.models.generateContent({
+          model: "gemini-3-pro-image-preview",
+          contents: [{ role: "user", parts: [{ text: simplePrompt }] }],
+          config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+        });
+        const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+        if (imagePart?.inlineData?.data) {
+          const mimeType = imagePart.inlineData.mimeType || "image/png";
+          imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+        }
+      } else {
+        throw geminiErr;
+      }
+    }
 
-    const mimeType = imagePart.inlineData.mimeType || "image/png";
-    const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+    if (!imageData) return;
 
     await db.insert(locationScenes).values({
       partyId: "system",
       locationName: "adventurers_hall",
-      imageData: dataUrl,
+      imageData,
     }).onConflictDoNothing();
 
     console.log("[GM] Adventurers Hall background generated and saved.");
@@ -235,33 +265,63 @@ export async function generateLobbyBackground(): Promise<void> {
 
   _lobbyBgInFlight = true;
   try {
+    const lobbyScenes = [
+      "A private war room deep inside an ancient guild tower — a heavy round oak table dominates the center, its surface scarred with knife marks and covered in unfurled maps held down by daggers and heavy coins. Tall candelabras cast pools of warm flickering amber light across the dark stone walls, which are hung with tattered campaign banners, crossed swords, and a mounted wyvern skull with empty eye sockets. A narrow arched window reveals a moonlit city skyline with distant cathedral spires. Shelves of leather-bound tomes and rolled scrolls line one wall. A smoldering brazier in the corner fills the room with thin wisps of incense smoke catching the candlelight. Intimate, atmospheric, cinematic — the calm before a great adventure. Wide establishing shot.",
+      "An enchanted planning chamber at the top of a wizard's tower — the circular room has walls of living stone that shimmer with faint embedded runes. A central table of polished dark wood displays a three-dimensional magical map projection showing terrain, routes, and glowing waypoints hovering inches above the surface. Tall arched windows on every side reveal a stunning panoramic vista — rolling hills, ancient forests, and a distant volcanic mountain wreathed in lightning at twilight. Floating orbs of soft golden light drift near the ceiling alongside slowly spinning astrolabes. Bookshelves curve along the walls between the windows. The atmosphere is warm, magical, and full of anticipation. Wide cinematic shot, golden hour lighting mixing with cool arcane glow.",
+      "A cozy private alcove in a cliffside tavern overlooking the sea — rough timber walls with a massive circular window framing a dramatic view of crashing waves against sea stacks at sunset. The room is lit by a wrought-iron chandelier with beeswax candles and a small stone fireplace with dancing flames. A heavy table with a nautical chart pinned under brass instruments, scattered gold coins, and a half-empty bottle of wine. Thick rope coils, an old ship's wheel, and harpoons mounted on the walls give it a seafaring character. Warm amber firelight blends with the cool blue-pink of the ocean sunset outside. Atmospheric, intimate, adventurous. Wide establishing shot.",
+    ];
+
+    const scene = lobbyScenes[Math.floor(Math.random() * lobbyScenes.length)];
+    let imageData: string | null = null;
+
     const { GoogleGenAI, Modality } = await import("@google/genai");
     const ai = new GoogleGenAI({
       apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
       httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
     });
 
-    const prompt = `Interior of a grand medieval stone tavern crowded with diverse fantasy adventurers celebrating after a quest. Tall female elf raising a goblet, stout dwarf with braided beard laughing, hooded tiefling leaning against a pillar. Warm orange-gold light from a massive stone fireplace and iron chandeliers hanging from heavy timber beams. Heavy oak tables strewn with maps, coins, and platters of roasted game. Rough-hewn stone walls hung with old shields and faded banners. Thick atmosphere of wood smoke, candle haze, and chiaroscuro shadows. Cinematic wide composition. ${STYLE_PROMPT}`;
+    try {
+      const prompt = `${scene} ${STYLE_PROMPT} This is a hero image for a fantasy RPG party room — it should feel intimate yet epic, like adventurers are about to embark on something legendary. No people or characters visible. Environment only. Landscape orientation.`;
 
-    const parts: any[] = await getStyleRefParts();
-    parts.push({ text: prompt });
+      const parts: any[] = await getStyleRefParts();
+      parts.push({ text: prompt });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
-      contents: [{ role: "user", parts }],
-      config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
-    });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-pro-image-preview",
+        contents: [{ role: "user", parts }],
+        config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+      });
 
-    const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
-    if (!imagePart?.inlineData?.data) return;
+      const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+      if (imagePart?.inlineData?.data) {
+        const mimeType = imagePart.inlineData.mimeType || "image/png";
+        imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+      }
+    } catch (geminiErr: any) {
+      if (geminiErr?.status === 429) {
+        console.log("[GM] Lobby bg: Gemini rate-limited, retrying without style refs...");
+        const simplePrompt = `${scene} Painterly fantasy concept art, atmospheric volumetric lighting, cinematic wide shot, landscape orientation. No text, no UI. No people.`;
+        const response = await ai.models.generateContent({
+          model: "gemini-3-pro-image-preview",
+          contents: [{ role: "user", parts: [{ text: simplePrompt }] }],
+          config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+        });
+        const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+        if (imagePart?.inlineData?.data) {
+          const mimeType = imagePart.inlineData.mimeType || "image/png";
+          imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+        }
+      } else {
+        throw geminiErr;
+      }
+    }
 
-    const mimeType = imagePart.inlineData.mimeType || "image/png";
-    const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+    if (!imageData) return;
 
     await db.insert(locationScenes).values({
       partyId: "system",
       locationName: "party_lobby",
-      imageData: dataUrl,
+      imageData,
     }).onConflictDoNothing();
 
     console.log("[GM] Party lobby background generated and saved.");

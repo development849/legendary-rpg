@@ -150,7 +150,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [quickActions, setQuickActions] = useState<string[]>(QUICK_ACTIONS_DEFAULT);
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [showCharacters, setShowCharacters] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<"party" | "inventory" | "map" | "dice" | "sheet" | "log">("party");
+  const [sidebarTab, setSidebarTab] = useState<"party" | "inventory" | "map" | "dice" | "sheet" | "log" | "codex">("party");
   const [isFirstTurn, setIsFirstTurn] = useState(true);
   const [messagesLoaded, setMessagesLoaded] = useState(false);
   const [sceneBackground, setSceneBackground] = useState<string | null>(null);
@@ -954,6 +954,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     { id: "party", icon: Users, label: "Party" },
                     { id: "sheet", icon: BookOpen, label: "Sheet" },
                     { id: "inventory", icon: Package, label: "Bag" },
+                    { id: "codex", icon: Scroll, label: "Codex" },
                     { id: "map", icon: MapPin, label: "Map" },
                     { id: "dice", icon: Dices, label: "Dice" },
                     { id: "log", icon: ScrollText, label: "Cast" },
@@ -1655,6 +1656,132 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           </div>
                         );
                       })()}
+                    </div>
+                  );
+                })()}
+
+                {/* CODEX TAB */}
+                {sidebarTab === "codex" && (() => {
+                  const ws: any = partyData?.worldState?.state ?? {};
+                  const recipes: any[] = ws.recipes ?? [];
+                  const char = myMember?.character;
+                  const inventory: any[] = (char?.inventory as any[]) ?? [];
+
+                  const countInInventory = (ingredientName: string) => {
+                    return inventory
+                      .filter((item: any) => item.name?.toLowerCase().includes(ingredientName.toLowerCase()))
+                      .reduce((sum: number, item: any) => sum + (item.qty ?? 1), 0);
+                  };
+
+                  return (
+                    <div className="space-y-3">
+                      <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5 pb-1">
+                        <Scroll className="w-3 h-3 text-primary" /> Codex
+                      </p>
+
+                      {recipes.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Scroll className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
+                          <p className="text-xs text-muted-foreground font-serif italic">
+                            No recipes discovered yet.
+                          </p>
+                          <p className="text-xs text-muted-foreground/50 mt-1">
+                            Discover spells, enchantments, and crafting recipes during your adventure.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {recipes.map((recipe: any, idx: number) => {
+                            const allCollected = recipe.ingredients.every((ing: any) =>
+                              countInInventory(ing.name) >= (ing.qty ?? 1)
+                            );
+                            const collectedCount = recipe.ingredients.filter((ing: any) =>
+                              countInInventory(ing.name) >= (ing.qty ?? 1)
+                            ).length;
+
+                            return (
+                              <div
+                                key={idx}
+                                data-testid={`codex-recipe-${idx}`}
+                                className={`rounded-md border px-3 py-2.5 ${
+                                  allCollected
+                                    ? "border-emerald-500/50 bg-emerald-500/5"
+                                    : "border-border bg-card/60"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className={`text-xs font-sans font-bold leading-tight ${allCollected ? "text-emerald-400" : "text-foreground"}`}>
+                                      {recipe.name}
+                                    </p>
+                                    {recipe.description && (
+                                      <p className="text-xs text-muted-foreground font-serif italic mt-0.5 leading-snug">
+                                        {recipe.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <Badge
+                                    data-testid={`codex-progress-${idx}`}
+                                    variant="outline"
+                                    className={`flex-shrink-0 text-[10px] ${
+                                      allCollected
+                                        ? "border-emerald-500/50 text-emerald-400 bg-emerald-500/10"
+                                        : "border-border text-muted-foreground"
+                                    }`}
+                                  >
+                                    {collectedCount}/{recipe.ingredients.length}
+                                  </Badge>
+                                </div>
+
+                                <div className="mt-2 space-y-1">
+                                  {recipe.ingredients.map((ing: any, iIdx: number) => {
+                                    const have = countInInventory(ing.name);
+                                    const need = ing.qty ?? 1;
+                                    const collected = have >= need;
+                                    return (
+                                      <div
+                                        key={iIdx}
+                                        data-testid={`codex-ingredient-${idx}-${iIdx}`}
+                                        className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${
+                                          collected
+                                            ? "bg-emerald-500/10 text-emerald-400"
+                                            : "bg-muted/20 text-muted-foreground"
+                                        }`}
+                                      >
+                                        <span className={`w-3.5 h-3.5 flex items-center justify-center flex-shrink-0 rounded-sm border ${
+                                          collected
+                                            ? "border-emerald-500/50 bg-emerald-500/20 text-emerald-400"
+                                            : "border-border"
+                                        }`}>
+                                          {collected ? "✓" : ""}
+                                        </span>
+                                        <span className={`flex-1 ${collected ? "line-through opacity-70" : ""}`}>
+                                          {need > 1 ? `${need}x ` : ""}{ing.name}
+                                        </span>
+                                        <span className="text-[10px] text-muted-foreground/50">
+                                          {have}/{need}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+
+                                {allCollected && (
+                                  <button
+                                    data-testid={`codex-craft-${idx}`}
+                                    onClick={() => sendAction(`I want to craft/perform the "${recipe.name}" recipe using my collected ingredients.`)}
+                                    className="w-full mt-2 text-xs font-sans font-semibold py-1.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
+                                  >
+                                    Craft / Perform
+                                  </button>
+                                )}
+
+                                <p className="text-[10px] text-muted-foreground/30 mt-1.5">Discovered Turn {recipe.discoveredTurn}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}

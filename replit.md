@@ -54,10 +54,12 @@ Event-sourced: HP, XP, inventory, conditions, abilities all updatable by GM
 ## GM Orchestrator
 - Streams GPT-4o responses as SSE to frontend
 - Builds rich system prompt with character sheets, world state, recent summaries
-- Parses JSON response: `{narrative, dice_requests, proposed_updates, quick_actions, scene}`
+- Parses JSON response: `{narrative, dice_requests, proposed_updates, quick_actions, scene}` — scene includes `{title, location, region, threat}`
 - Applies state changes: HP, XP, items (with equipped status), conditions
 - Item properties: weapons require `damage` (e.g. "1d8"), armor requires `ac`; GM prompt enforces this via Critical Rule #6
 - NPC companions: GM emits `NPC_JOINED_PARTY` with full stat block (level, max_hp, ac, stats, abilities, inventory); handler saves to npc_log; companion cards in Party tab show full character sheet (stats grid, abilities, gear, HP/AC/Level badges)
+- Location naming: GM instructed to give proper fantasy names (not generic descriptions); scene.region groups locations hierarchically
+- Journey Map: locations grouped by region with collapsible sections; fast-travel button on non-current locations sends travel action to GM
 - Auto-summarizes every 10 turns for memory management
 
 ## API Routes

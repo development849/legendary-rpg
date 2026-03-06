@@ -8,10 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown,
+  Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown, ChevronRight,
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
-  Settings
+  Settings, Navigation
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -161,6 +161,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const recognitionRef = useRef<any>(null);
   const [rolledPrompts, setRolledPrompts] = useState<Record<string, boolean>>({});
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
+  const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set());
   const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1525,66 +1526,116 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             No locations discovered yet.
                           </p>
                         </div>
-                      ) : (
-                        <div className="relative">
-                          {/* Vertical connector line */}
-                          {locations.length > 1 && (
-                            <div className="absolute left-[11px] top-6 bottom-6 w-px bg-border/60" />
-                          )}
-                          <div className="space-y-2">
-                            {locations.map((loc: any, i: number) => {
-                              const isCurrent = loc.name === currentLocation;
-                              return (
-                                <div
-                                  key={i}
-                                  data-testid={`map-location-${i}`}
-                                  className={`flex gap-3 items-start relative`}
-                                >
-                                  {/* Node dot */}
-                                  <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 mt-0.5 ${
-                                    isCurrent
-                                      ? "border-primary bg-primary/20"
-                                      : loc.threat
-                                      ? "border-red-500/60 bg-red-500/10"
-                                      : "border-border bg-card"
-                                  }`}>
-                                    {loc.threat ? (
-                                      <Skull className="w-3 h-3 text-red-400" />
-                                    ) : (
-                                      <MapPin className={`w-3 h-3 ${isCurrent ? "text-primary" : "text-muted-foreground/40"}`} />
-                                    )}
-                                  </div>
+                      ) : (() => {
+                        const regionMap: Record<string, any[]> = {};
+                        locations.forEach((loc: any) => {
+                          const r = loc.region || "Unknown Lands";
+                          if (!regionMap[r]) regionMap[r] = [];
+                          regionMap[r].push(loc);
+                        });
+                        const regionNames = Object.keys(regionMap);
+                        const currentRegion = regionNames.find(r => regionMap[r].some((l: any) => l.name === currentLocation));
+                        const autoExpanded = new Set(expandedRegions);
+                        if (currentRegion) autoExpanded.add(currentRegion);
+                        if (regionNames.length === 1) autoExpanded.add(regionNames[0]);
 
-                                  {/* Location card */}
-                                  <div className={`flex-1 min-w-0 rounded-md border px-2.5 py-2 mb-1 ${
-                                    isCurrent
-                                      ? "border-primary/50 bg-primary/5"
-                                      : "border-border bg-card/60"
-                                  }`}>
-                                    <div className="flex items-start justify-between gap-1">
-                                      <p className={`text-xs font-sans font-semibold leading-tight ${isCurrent ? "text-primary" : "text-foreground"}`}>
-                                        {loc.name}
-                                      </p>
-                                      {isCurrent && (
-                                        <span className="text-xs font-sans text-primary/70 flex-shrink-0">here</span>
-                                      )}
+                        return (
+                          <div className="space-y-1.5">
+                            {regionNames.map((regionName) => {
+                              const locs = regionMap[regionName];
+                              const isExpanded = autoExpanded.has(regionName) || expandedRegions.has(regionName);
+                              const hasCurrentLoc = locs.some((l: any) => l.name === currentLocation);
+
+                              return (
+                                <div key={regionName} data-testid={`map-region-${regionName}`}>
+                                  <button
+                                    data-testid={`toggle-region-${regionName}`}
+                                    onClick={() => {
+                                      setExpandedRegions(prev => {
+                                        const next = new Set(prev);
+                                        if (next.has(regionName)) next.delete(regionName);
+                                        else next.add(regionName);
+                                        return next;
+                                      });
+                                    }}
+                                    className={`w-full flex items-center gap-1.5 py-1 px-1 rounded text-left hover:bg-muted/40 transition-colors ${hasCurrentLoc ? "text-primary" : "text-muted-foreground"}`}
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="w-3 h-3 flex-shrink-0" />
+                                    ) : (
+                                      <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                                    )}
+                                    <MapPin className={`w-3 h-3 flex-shrink-0 ${hasCurrentLoc ? "text-primary" : "text-muted-foreground/50"}`} />
+                                    <span className="text-xs font-sans font-semibold tracking-wide uppercase truncate">{regionName}</span>
+                                    <span className="text-xs text-muted-foreground/40 ml-auto flex-shrink-0">{locs.length}</span>
+                                  </button>
+
+                                  {isExpanded && (
+                                    <div className="relative ml-3 pl-3 border-l border-border/40">
+                                      <div className="space-y-1.5 py-1">
+                                        {locs.map((loc: any, i: number) => {
+                                          const isCurrent = loc.name === currentLocation;
+                                          return (
+                                            <div
+                                              key={i}
+                                              data-testid={`map-location-${loc.name}`}
+                                              className={`rounded-md border px-2.5 py-2 ${
+                                                isCurrent
+                                                  ? "border-primary/50 bg-primary/5"
+                                                  : "border-border bg-card/60"
+                                              }`}
+                                            >
+                                              <div className="flex items-start justify-between gap-1">
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                  {loc.threat ? (
+                                                    <Skull className="w-3 h-3 text-red-400 flex-shrink-0" />
+                                                  ) : (
+                                                    <MapPin className={`w-3 h-3 flex-shrink-0 ${isCurrent ? "text-primary" : "text-muted-foreground/40"}`} />
+                                                  )}
+                                                  <p className={`text-xs font-sans font-semibold leading-tight truncate ${isCurrent ? "text-primary" : "text-foreground"}`}>
+                                                    {loc.name}
+                                                  </p>
+                                                </div>
+                                                {isCurrent ? (
+                                                  <span className="text-[10px] font-sans text-primary/70 flex-shrink-0 bg-primary/10 px-1.5 rounded">here</span>
+                                                ) : (
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <button
+                                                        data-testid={`fast-travel-${loc.name}`}
+                                                        onClick={() => {
+                                                          sendAction(`[ACTION] I travel to ${loc.name}.`);
+                                                        }}
+                                                        className="flex-shrink-0 p-0.5 rounded hover:bg-primary/10 text-muted-foreground/50 hover:text-primary transition-colors"
+                                                      >
+                                                        <Navigation className="w-3 h-3" />
+                                                      </button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="left" className="text-xs">Travel to {loc.name}</TooltipContent>
+                                                  </Tooltip>
+                                                )}
+                                              </div>
+                                              {loc.title && loc.title !== loc.name && (
+                                                <p className="text-xs text-muted-foreground font-serif italic mt-0.5 leading-tight ml-[18px]">{loc.title}</p>
+                                              )}
+                                              {loc.threat && (
+                                                <p className="text-xs text-red-400 mt-0.5 flex items-center gap-1 ml-[18px]">
+                                                  <Skull className="w-2.5 h-2.5" /> {loc.threat}
+                                                </p>
+                                              )}
+                                              <p className="text-xs text-muted-foreground/40 mt-1 ml-[18px]">Turn {loc.firstVisitedTurn}</p>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
-                                    {loc.title && loc.title !== loc.name && (
-                                      <p className="text-xs text-muted-foreground font-serif italic mt-0.5 leading-tight">{loc.title}</p>
-                                    )}
-                                    {loc.threat && (
-                                      <p className="text-xs text-red-400 mt-0.5 flex items-center gap-1">
-                                        <Skull className="w-2.5 h-2.5" /> {loc.threat}
-                                      </p>
-                                    )}
-                                    <p className="text-xs text-muted-foreground/40 mt-1">Turn {loc.firstVisitedTurn}</p>
-                                  </div>
+                                  )}
                                 </div>
                               );
                             })}
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   );
                 })()}

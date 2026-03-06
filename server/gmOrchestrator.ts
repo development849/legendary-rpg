@@ -533,6 +533,10 @@ NPCs can join the party or leave based on story events. Use NPC_JOINED_PARTY whe
 CRITICAL: Companions are ADDITIVE. When a new NPC joins the party, ALL existing companions remain unless you EXPLICITLY emit NPC_LEFT_PARTY for one with a narrative reason. Multiple companions can travel with the party at the same time. Never silently drop a companion — if you want one to leave, emit NPC_LEFT_PARTY and narrate their departure. Do NOT re-emit NPC_JOINED_PARTY for companions already listed in ACTIVE NPC COMPANIONS above — they're already in the party.
 CRITICAL: When emitting NPC_JOINED_PARTY, you MUST include full companion stats so they have a proper character sheet. Include: level, max_hp, ac, stats (might/agility/endurance/intellect/will/presence — values from 8–18 appropriate for their role), abilities (1–3 signature abilities fitting their class/role), and inventory (equipped weapon + armor + a few thematic items). Make the companion's stats reflect their narrative role: a warrior should have high might, a scout high agility, a mage high intellect, etc. Set their level to match the average party level. See the NPC_JOINED_PARTY example in RESPONSE FORMAT below.
 
+LOCATION NAMING — CRITICAL:
+Every location MUST have a proper fantasy name. NEVER use generic descriptions like "Cobblestone Road", "Town Gates", "Modest Town Market", "Old Mill by the Creek". Instead, give places evocative names: "The Thornwick Road", "Millhaven Gate", "The Brass Lantern Market", "Grindstone Mill". Name the town, name the road, name the creek, name the tavern — everything gets a proper noun. If a location has been established in previous turns, use its established name consistently.
+The "scene" object MUST include a "region" field. Region is the broader geographical area the location belongs to — a town name, a province, a wilderness area, a dungeon name. Examples: region "Thornwick" contains locations like "The Brass Lantern Market", "Thornwick Backstreets", "Mayor Aldren's Hall". Region "Bleakwood Forest" contains "The Old Druid Circle", "Grindstone Mill", "Ashcreek Ford". This creates a natural hierarchy on the Journey Map. Keep region names short and consistent — reuse the same region string for all locations in the same area.
+
 RESPONSE FORMAT:
 Always respond with valid JSON in this structure:
 {
@@ -556,7 +560,7 @@ Always respond with valid JSON in this structure:
   ],
   "quick_actions": ["Press Jarel for specifics about the active hideouts", "Bluff that you already know which spots are decoys", "Threaten to hand Jarel over to the authorities"],
   "turn_hint": {"character": "Kira", "prompt": "The merchant is staring at you expectantly"},
-  "scene": {"title": "...", "location": "...", "threat": null}
+  "scene": {"title": "...", "location": "...", "region": "...", "threat": null}
 }
 
 TURN ORDER — MULTI-PLAYER PARTIES:
@@ -743,6 +747,7 @@ export async function runGM(
       locations.push({
         name: scene.location,
         title: scene.title ?? scene.location,
+        region: scene.region ?? "Unknown Lands",
         threat: scene.threat ?? null,
         firstVisitedTurn: turnNum,
       });

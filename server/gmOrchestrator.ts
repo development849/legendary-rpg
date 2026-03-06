@@ -32,26 +32,9 @@ export async function generateLocationBackground(
       ? `within the setting: ${campaignSetting.slice(0, 120)}`
       : "in a rich fantasy world";
 
-    const prompt = [
-      `Wide cinematic fantasy environment painting of "${locationName}" — ${sceneTitle} — ${settingContext}.`,
-      `Atmospheric, painterly digital art. Dramatic volumetric lighting and deep shadows. Rich colour palette.`,
-      `Misty atmospheric depth, detailed environment, no people or characters in frame.`,
-      `Landscape orientation, immersive wide shot, fantasy concept art quality.`,
-      `Ultra-detailed, moody, cinematic, luminous painterly style.`,
-    ].join(" ");
+    const prompt = `Wide cinematic fantasy environment painting of "${locationName}" — ${sceneTitle} — ${settingContext}. Environment only, no people or characters in frame. Landscape orientation, immersive wide shot. ${STYLE_PROMPT}`;
 
-    const fs = await import("fs");
-    const path = await import("path");
-    const styleRefPath = path.join(process.cwd(), "attached_assets", "Snip20260221_1_1771705188223.png");
-    const styleRefBase64 = fs.existsSync(styleRefPath)
-      ? fs.readFileSync(styleRefPath).toString("base64")
-      : null;
-
-    const parts: any[] = [];
-    if (styleRefBase64) {
-      parts.push({ text: "Use this image as the visual style reference:" });
-      parts.push({ inlineData: { mimeType: "image/png", data: styleRefBase64 } });
-    }
+    const parts: any[] = await getStyleRefParts();
     parts.push({ text: prompt });
 
     const response = await ai.models.generateContent({
@@ -98,31 +81,9 @@ export async function generateHallBackground(): Promise<void> {
       httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
     });
 
-    const prompt = [
-      "Wide cinematic fantasy painting of a grand Adventurers Guild Hall interior.",
-      "Soaring stone vaulted ceilings with massive carved arches and hanging iron chandeliers ablaze with candlelight.",
-      "Long oak tables where cloaked adventurers gather over maps and steaming tankards.",
-      "Notice boards on rough stone walls covered in rolled parchment scrolls, wanted posters, and expedition notices.",
-      "Trophy weapons, shields, and guild banners mounted between tall narrow windows.",
-      "Multiple roaring fireplaces casting rich amber and gold light across the hall.",
-      "Atmospheric haze of wood smoke and lantern glow. Late afternoon golden light streaming through windows.",
-      "Epic wide establishing shot. Atmospheric painterly digital art. Dramatic volumetric lighting.",
-      "Deep colour palette — amber, ochre, deep crimson, stone grey. Rich fantasy concept art quality.",
-      "Ultra-detailed, cinematic depth, luminous painterly style. No HUD, no text, no UI elements.",
-    ].join(" ");
+    const prompt = `Wide cinematic fantasy painting of a grand Adventurers Guild Hall interior. Soaring stone vaulted ceilings with massive carved arches and hanging iron chandeliers ablaze with candlelight. Long oak tables where cloaked adventurers gather over maps and steaming tankards. Notice boards on rough stone walls covered in rolled parchment scrolls. Trophy weapons, shields, and guild banners mounted between tall narrow windows. Roaring fireplaces casting rich amber and gold light. Atmospheric haze of wood smoke and lantern glow. Epic wide establishing shot. ${STYLE_PROMPT}`;
 
-    const fs = await import("fs");
-    const path = await import("path");
-    const styleRefPath = path.join(process.cwd(), "attached_assets", "Snip20260221_1_1771705188223.png");
-    const styleRefBase64 = fs.existsSync(styleRefPath)
-      ? fs.readFileSync(styleRefPath).toString("base64")
-      : null;
-
-    const parts: any[] = [];
-    if (styleRefBase64) {
-      parts.push({ text: "Use this image as the visual style reference:" });
-      parts.push({ inlineData: { mimeType: "image/png", data: styleRefBase64 } });
-    }
+    const parts: any[] = await getStyleRefParts();
     parts.push({ text: prompt });
 
     const response = await ai.models.generateContent({
@@ -151,6 +112,86 @@ export async function generateHallBackground(): Promise<void> {
   }
 }
 
+const STYLE_PROMPT = "Semi-realistic painterly digital art in the style of modern fantasy concept art and JRPG illustration. Soft diffused volumetric lighting with atmospheric haze, god-rays, and dramatic silhouettes. Rich tonal depth — warm amber/gold highlights against cool blue-grey shadows. Loose, textured brushwork that suggests detail without hard edges. Cinematic composition with depth-of-field blur. Luminous, ethereal atmosphere. High-detail environment but slightly soft and painterly, never photorealistic or cartoony. Moody and evocative. No text, no HUD, no UI overlays.";
+
+async function getStyleRefParts(): Promise<any[]> {
+  const fs = await import("fs");
+  const path = await import("path");
+  const parts: any[] = [];
+  const refs = [
+    "images_(1)_1772806248047.jpeg",
+    "images_(2)_1772806248048.jpeg",
+    "images_1772806248048.jpeg",
+  ];
+  parts.push({ text: "CRITICAL: Match the visual style of these reference images precisely — same painterly brushwork, same atmospheric lighting, same tonal palette, same level of semi-realism:" });
+  for (const ref of refs) {
+    const refPath = path.join(process.cwd(), "attached_assets", ref);
+    if (fs.existsSync(refPath)) {
+      const data = fs.readFileSync(refPath).toString("base64");
+      const ext = ref.endsWith(".jpeg") || ref.endsWith(".jpg") ? "image/jpeg" : "image/png";
+      parts.push({ inlineData: { mimeType: ext, data } });
+    }
+  }
+  return parts;
+}
+
+let _landingBgInFlight = false;
+export async function generateLandingBackground(): Promise<void> {
+  if (_landingBgInFlight) return;
+  const [existing] = await db.select({ id: locationScenes.id })
+    .from(locationScenes)
+    .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "landing_hero")));
+  if (existing) return;
+
+  _landingBgInFlight = true;
+  try {
+    const { GoogleGenAI, Modality } = await import("@google/genai");
+    const ai = new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+      httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+    });
+
+    const scenes = [
+      "A lone cloaked figure standing on a cliff edge overlooking a vast fantasy kingdom at sunset — sprawling medieval city with cathedral spires in the valley below, distant mountains wreathed in clouds, golden god-rays breaking through dramatic cloud formations, birds wheeling in the amber sky.",
+      "An ancient dragon perched atop a crumbling tower silhouetted against a massive full moon — ruined castle sprawling below with glowing windows, a winding river reflecting moonlight through a misty enchanted forest, fireflies and magical motes drifting in the air.",
+      "A massive stone gateway covered in glowing arcane runes opening onto a luminous otherworldly landscape — floating islands and waterfalls in the distance, a single armored figure walking toward the portal, swirling magical energy and aurora-like lights in the sky.",
+      "A fleet of fantasy airships with billowing sails drifting through golden clouds at dawn — a floating citadel in the distance with waterfalls cascading into the void below, tiny figures visible on the ship decks, warm orange light painting everything.",
+      "A dark enchanted forest path lit by bioluminescent mushrooms and floating lanterns — ancient twisted trees forming a natural cathedral arch, mist pooling at ground level, distant warm glow of a hidden village through the trees, mystical and inviting atmosphere.",
+    ];
+
+    const scene = scenes[Math.floor(Math.random() * scenes.length)];
+
+    const prompt = `${scene} ${STYLE_PROMPT} Wide landscape orientation, cinematic establishing shot. This is a hero image for a fantasy RPG — it should feel epic, inviting, and full of wonder.`;
+
+    const parts: any[] = await getStyleRefParts();
+    parts.push({ text: prompt });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-image-preview",
+      contents: [{ role: "user", parts }],
+      config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+    });
+
+    const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+    if (!imagePart?.inlineData?.data) return;
+
+    const mimeType = imagePart.inlineData.mimeType || "image/png";
+    const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+
+    await db.insert(locationScenes).values({
+      partyId: "system",
+      locationName: "landing_hero",
+      imageData: dataUrl,
+    }).onConflictDoNothing();
+
+    console.log("[GM] Landing page background generated and saved.");
+  } catch (e) {
+    console.error("[GM] Landing background generation failed:", e);
+  } finally {
+    _landingBgInFlight = false;
+  }
+}
+
 let _lobbyBgInFlight = false;
 export async function generateLobbyBackground(): Promise<void> {
   if (_lobbyBgInFlight) return;
@@ -167,29 +208,9 @@ export async function generateLobbyBackground(): Promise<void> {
       httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
     });
 
-    const prompt = [
-      "Generate an image that looks EXACTLY like the provided reference painting — same medium, same brushwork, same palette, same level of realism.",
-      "Subject: Interior of a grand medieval stone tavern, crowded with a diverse party of fantasy adventurers celebrating after a quest.",
-      "The crowd MUST include diverse fantasy races and genders: a tall female elf with pointed ears raising a goblet, a stout male dwarf with a braided beard laughing heartily, a green-skinned half-orc woman arm-wrestling at a table, a hooded tiefling man with small horns leaning against a pillar, a halfling woman standing on a bench to reach her drink, a dark-skinned human woman in plate armour clinking tankards with a pale elven man in flowing robes.",
-      "Warm orange-gold light from a massive stone fireplace and iron candle chandeliers hanging from heavy timber beams.",
-      "Heavy oak tables strewn with maps, coins, and platters of roasted game.",
-      "Rough-hewn stone walls hung with old shields, antlers, and faded banners. Barrels and bottles behind a carved wooden bar.",
-      "Thick atmosphere of wood smoke, candle haze, and deep chiaroscuro shadows.",
-      "Cinematic wide composition. No text, no HUD, no UI overlays.",
-    ].join(" ");
+    const prompt = `Interior of a grand medieval stone tavern crowded with diverse fantasy adventurers celebrating after a quest. Tall female elf raising a goblet, stout dwarf with braided beard laughing, hooded tiefling leaning against a pillar. Warm orange-gold light from a massive stone fireplace and iron chandeliers hanging from heavy timber beams. Heavy oak tables strewn with maps, coins, and platters of roasted game. Rough-hewn stone walls hung with old shields and faded banners. Thick atmosphere of wood smoke, candle haze, and chiaroscuro shadows. Cinematic wide composition. ${STYLE_PROMPT}`;
 
-    const fs = await import("fs");
-    const path = await import("path");
-    const styleRefPath = path.join(process.cwd(), "attached_assets", "Snip20260221_1_1771705188223.png");
-    const styleRefBase64 = fs.existsSync(styleRefPath)
-      ? fs.readFileSync(styleRefPath).toString("base64")
-      : null;
-
-    const parts: any[] = [];
-    if (styleRefBase64) {
-      parts.push({ text: "CRITICAL: Match this reference image's EXACT painting style — the same brushwork, colour palette, lighting, and realistic rendering. Do NOT make it cartoony or digitally flat. Copy this style precisely:" });
-      parts.push({ inlineData: { mimeType: "image/png", data: styleRefBase64 } });
-    }
+    const parts: any[] = await getStyleRefParts();
     parts.push({ text: prompt });
 
     const response = await ai.models.generateContent({

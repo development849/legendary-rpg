@@ -1,22 +1,68 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sword, Shield, Scroll, Users, Sparkles, Dices } from "lucide-react";
 import logoPath from "@assets/legendary-logo-transparent.png";
 
+function useLandingBackground() {
+  const [imageData, setImageData] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let retries = 0;
+
+    async function fetchBg() {
+      try {
+        const res = await fetch("/api/system/landing-background");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.imageData) {
+          setImageData(data.imageData);
+        } else if (data.pending && retries < 12) {
+          retries++;
+          setTimeout(fetchBg, 5000);
+        }
+      } catch (_) {}
+    }
+
+    fetchBg();
+    return () => { cancelled = true; };
+  }, []);
+
+  return imageData;
+}
+
 export default function LandingPage() {
+  const bgImage = useLandingBackground();
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Hero */}
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4 text-center">
-        {/* Background gradient orbs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-900/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-900/5 rounded-full blur-3xl" />
-        </div>
+        {/* Background image */}
+        {bgImage && (
+          <div className="absolute inset-0 z-0">
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
+              style={{ backgroundImage: `url(${bgImage})`, opacity: 0.45 }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-background/30" />
+            <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-transparent to-background" />
+          </div>
+        )}
+
+        {/* Fallback gradient orbs when no image */}
+        {!bgImage && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-900/10 rounded-full blur-3xl" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-900/5 rounded-full blur-3xl" />
+          </div>
+        )}
 
         {/* Decorative top border */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent z-10" />
 
         <div className="relative z-10 max-w-4xl mx-auto space-y-8">
           {/* Logo */}
@@ -26,24 +72,24 @@ export default function LandingPage() {
 
           {/* Title */}
           <div className="space-y-3">
-            <h1 className="text-5xl md:text-7xl font-sans font-bold tracking-widest text-foreground glow-gold">
-              LEGENDARY<sup className="text-2xl md:text-3xl align-super ml-1">℠</sup>
+            <h1 className="text-5xl md:text-7xl font-sans font-bold tracking-widest text-foreground glow-gold drop-shadow-lg">
+              LEGENDARY<sup className="text-2xl md:text-3xl align-super ml-1">&#8480;</sup>
             </h1>
-            <p className="text-lg md:text-xl text-primary font-sans tracking-widest uppercase font-light">
+            <p className="text-lg md:text-xl text-primary font-sans tracking-widest uppercase font-light drop-shadow-md">
               The Living Chronicle
             </p>
           </div>
 
           {/* Tagline */}
-          <p className="text-xl md:text-2xl text-muted-foreground font-serif italic leading-relaxed max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-muted-foreground font-serif italic leading-relaxed max-w-2xl mx-auto drop-shadow-md">
             "An AI Game Master weaves your story in real time. Every choice shapes the world. Every action has consequence."
           </p>
 
           {/* Ornate divider */}
           <div className="ornate-divider max-w-xs mx-auto">
-            <span className="text-primary/50 text-lg">⸻</span>
+            <span className="text-primary/50 text-lg">&#11835;</span>
             <Dices className="w-4 h-4 text-primary/50" />
-            <span className="text-primary/50 text-lg">⸻</span>
+            <span className="text-primary/50 text-lg">&#11835;</span>
           </div>
 
           {/* CTA */}
@@ -65,13 +111,13 @@ export default function LandingPage() {
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-muted-foreground/40">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-muted-foreground/40 z-10">
           <div className="w-px h-12 bg-gradient-to-b from-transparent to-primary/30" />
         </div>
       </div>
 
       {/* Features Section */}
-      <div className="px-4 py-24 max-w-6xl mx-auto">
+      <div className="px-4 py-24 max-w-6xl mx-auto relative z-10">
         <div className="text-center mb-16 space-y-3">
           <div className="flex items-center justify-center gap-3">
             <div className="w-16 h-px bg-primary/30" />
@@ -117,7 +163,7 @@ export default function LandingPage() {
           ].map((feature) => (
             <div
               key={feature.title}
-              className="group relative p-6 border border-border bg-card rounded-md hover-elevate transition-all duration-300"
+              className="group relative p-6 border border-border bg-card/80 backdrop-blur-sm rounded-md hover-elevate transition-all duration-300"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/3 rounded-md opacity-0 group-hover:opacity-100 transition-opacity" />
               <feature.icon className="w-6 h-6 text-primary mb-4" />
@@ -133,7 +179,7 @@ export default function LandingPage() {
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         <div className="space-y-6 max-w-xl mx-auto">
           <p className="text-3xl font-sans font-bold tracking-widest">READY, ADVENTURER?</p>
-          <p className="text-muted-foreground font-serif italic">The world of Legendary℠ awaits. Your story is about to begin.</p>
+          <p className="text-muted-foreground font-serif italic">The world of Legendary&#8480; awaits. Your story is about to begin.</p>
           <Link href="/auth">
             <Button
               size="lg"
@@ -149,7 +195,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <div className="text-center py-6 text-muted-foreground/30 text-xs font-sans tracking-widest">
-        LEGENDARY℠ · THE LIVING CHRONICLE · POWERED BY AI
+        LEGENDARY&#8480; &middot; THE LIVING CHRONICLE &middot; POWERED BY AI
       </div>
     </div>
   );

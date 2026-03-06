@@ -12,7 +12,7 @@ import {
   saveChatMessage, getPartyMessages, getWorldState,
 } from "./storage";
 import { rollDice } from "./gameEngine";
-import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground } from "./gmOrchestrator";
+import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground } from "./gmOrchestrator";
 import { db } from "./db";
 import { locationScenes, partyMembers } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -338,6 +338,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const worldSnap = await getWorldState(party.id);
       res.json({ party, members, campaign, worldState: worldSnap });
     } catch (e) { res.status(500).json({ error: "Failed to get party" }); }
+  });
+
+  app.get("/api/system/landing-background", async (_req, res) => {
+    try {
+      const [row] = await db.select({ imageData: locationScenes.imageData })
+        .from(locationScenes)
+        .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "landing_hero")));
+      if (row) {
+        res.set("Cache-Control", "public, max-age=604800, immutable");
+        return res.json({ imageData: row.imageData, pending: false });
+      }
+      generateLandingBackground().catch(console.error);
+      res.json({ imageData: null, pending: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch landing background" });
+    }
   });
 
   app.get("/api/system/hall-background", async (_req, res) => {

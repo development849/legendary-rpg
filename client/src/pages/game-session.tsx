@@ -1360,13 +1360,17 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     }
                   };
 
-                  const getHandSlotHint = (item: any): string | null => {
-                    if (item.type !== "weapon" && !(item.type === "armor" && item.properties?.ac_bonus)) return null;
-                    const isShield = item.type === "armor" && !!item.properties?.ac_bonus;
-                    const isTwoHanded = !!item.properties?.two_handed;
-                    if (isTwoHanded) return "2 hands";
-                    if (isShield) return "off-hand";
-                    return "1 hand";
+                  const getSlotHint = (item: any): string | null => {
+                    if (item.type === "weapon") {
+                      return item.properties?.two_handed ? "2 hands" : "1 hand";
+                    }
+                    if (item.type === "armor") {
+                      const slot = item.properties?.slot;
+                      if (slot) return slot;
+                      if (item.properties?.ac_bonus) return "off-hand";
+                      if (item.properties?.ac) return "body";
+                    }
+                    return null;
                   };
 
                   const formatProps = (item: any) => {
@@ -1385,7 +1389,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     if (p.focus) parts.push(`focus +${p.focus}`);
                     if (p.value) parts.push(`${p.value}gp`);
                     const extra = Object.entries(p)
-                      .filter(([k]) => !["damage","bonus","ac","ac_bonus","range","two_handed","thrown","finesse","heal","focus","value"].includes(k))
+                      .filter(([k]) => !["damage","bonus","ac","ac_bonus","range","two_handed","thrown","finesse","heal","focus","value","slot"].includes(k))
                       .map(([k, v]) => `${k}: ${v}`);
                     parts.push(...extra);
                     return parts.length > 0 ? parts.join(" · ") : null;
@@ -1469,7 +1473,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                         <span className="text-xs font-sans font-bold text-primary">x{item.qty}</span>
                                       )}
                                       {equipable && (() => {
-                                        const slotHint = getHandSlotHint(item);
+                                        const slotHint = getSlotHint(item);
                                         return (
                                           <div className="flex items-center gap-1">
                                             {slotHint && !isEquipped && (
@@ -1943,14 +1947,19 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           epic: "text-purple-400",
                           legendary: "text-amber-400",
                         };
+                        const slotLabels: Record<string, string> = { body: "Body", head: "Head", hands: "Hands", feet: "Feet" };
                         const getSlotLabel = (it: any, allEquipped: any[]) => {
                           if (it.type === "weapon" && it.properties?.two_handed) return "2H";
                           if (it.type === "weapon") {
                             const weaponsBefore = allEquipped.filter((e: any) => e.type === "weapon" && !e.properties?.two_handed);
                             return weaponsBefore.indexOf(it) === 0 ? "MH" : "OH";
                           }
-                          if (it.type === "armor" && it.properties?.ac_bonus) return "OH";
-                          if (it.type === "armor" && it.properties?.ac) return "Body";
+                          if (it.type === "armor") {
+                            const slot = it.properties?.slot;
+                            if (slot && slotLabels[slot]) return slotLabels[slot];
+                            if (it.properties?.ac_bonus && !slot) return "OH";
+                            if (it.properties?.ac) return "Body";
+                          }
                           return "";
                         };
                         return (
@@ -1974,7 +1983,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                   </div>
                                   <span className="text-[10px] text-muted-foreground flex-shrink-0">
                                     {item.type === "weapon" && item.properties?.damage ? `${item.properties.damage}${item.properties.bonus ? ` +${item.properties.bonus}` : ""}` : ""}
-                                    {item.type === "armor" && item.properties?.ac ? `AC ${item.properties.ac}` : ""}
+                                    {item.type === "armor" && item.properties?.ac && !item.properties?.ac_bonus ? `AC ${item.properties.ac}` : ""}
                                     {item.type === "armor" && item.properties?.ac_bonus ? `+${item.properties.ac_bonus} AC` : ""}
                                   </span>
                                 </div>

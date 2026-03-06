@@ -281,13 +281,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ error: "Only weapons and armor can be equipped" });
       }
 
-      if (equipped) {
-        const isBodyArmor = item.type === "armor" && !item.properties?.ac_bonus;
+      if (equipped && item.type === "armor") {
+        const getArmorSlot = (it: any): string | null => {
+          if (it.properties?.slot) return it.properties.slot;
+          if (it.properties?.ac) return "body";
+          if (it.properties?.ac_bonus) return null;
+          return null;
+        };
+        const effectiveSlot = getArmorSlot(item);
 
-        if (isBodyArmor) {
+        if (effectiveSlot) {
           inv.forEach((it: any, idx: number) => {
-            if (idx === itemIndex || !it.equipped) return;
-            if (it.type === "armor" && !it.properties?.ac_bonus) {
+            if (idx === itemIndex || !it.equipped || it.type !== "armor") return;
+            if (getArmorSlot(it) === effectiveSlot) {
               inv[idx] = { ...inv[idx], equipped: false };
             }
           });

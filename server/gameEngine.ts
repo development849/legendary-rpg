@@ -131,27 +131,27 @@ export function getStartingInventory(cls: string): any[] {
     case "fighter":
       return [...common,
         { name: "Longsword", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d8", bonus: 2 } },
-        { name: "Chain Mail", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 14 } },
+        { name: "Chain Mail", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 14, slot: "body" } },
         { name: "Shield", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac_bonus: 2 } },
       ];
     case "rogue":
       return [...common,
         { name: "Short Sword", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d6", bonus: 2 } },
         { name: "Daggers", type: "weapon", qty: 3, rarity: "common", properties: { damage: "1d4", thrown: true } },
-        { name: "Leather Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 11 } },
+        { name: "Leather Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 11, slot: "body" } },
         { name: "Thieves' Tools", type: "tool", qty: 1, properties: {} },
       ];
     case "wizard":
       return [...common,
         { name: "Arcane Staff", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d6" } },
         { name: "Spellbook", type: "tool", qty: 1, properties: {} },
-        { name: "Robes", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 10 } },
+        { name: "Robes", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 10, slot: "body" } },
         { name: "Focus Crystal", type: "misc", qty: 1, properties: { focus: 3 } },
       ];
     case "cleric":
       return [...common,
         { name: "Mace", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d6", bonus: 1 } },
-        { name: "Scale Mail", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 13 } },
+        { name: "Scale Mail", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 13, slot: "body" } },
         { name: "Holy Symbol", type: "misc", qty: 1, properties: {} },
         { name: "Prayer Beads", type: "misc", qty: 1, properties: { focus: 2 } },
       ];
@@ -160,14 +160,14 @@ export function getStartingInventory(cls: string): any[] {
         { name: "Longbow", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d8", range: 150 } },
         { name: "Arrows", type: "consumable", qty: 20, properties: {} },
         { name: "Short Sword", type: "weapon", qty: 1, rarity: "common", properties: { damage: "1d6", bonus: 1 } },
-        { name: "Studded Leather Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 12 } },
+        { name: "Studded Leather Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 12, slot: "body" } },
         { name: "Herbalism Kit", type: "tool", qty: 1, properties: {} },
       ];
     case "paladin":
       return [...common,
         { name: "Longsword", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d8", bonus: 2 } },
         { name: "Shield", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac_bonus: 2 } },
-        { name: "Half-Plate", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 15 } },
+        { name: "Half-Plate", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 15, slot: "body" } },
         { name: "Holy Symbol", type: "misc", qty: 1, properties: { focus: 3 } },
         { name: "Healing Potion", type: "consumable", qty: 1, properties: { heal: "2d4+2" } },
       ];
@@ -175,14 +175,14 @@ export function getStartingInventory(cls: string): any[] {
       return [...common,
         { name: "Greataxe", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d12", bonus: 2, two_handed: true } },
         { name: "Handaxe", type: "weapon", qty: 2, rarity: "common", properties: { damage: "1d6", thrown: true } },
-        { name: "Hide Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 12 } },
+        { name: "Hide Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 12, slot: "body" } },
         { name: "Hunting Trap", type: "tool", qty: 1, properties: {} },
       ];
     case "bard":
       return [...common,
         { name: "Rapier", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d8", bonus: 1, finesse: true } },
         { name: "Lute", type: "misc", qty: 1, properties: { focus: 3 } },
-        { name: "Leather Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 11 } },
+        { name: "Leather Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 11, slot: "body" } },
         { name: "Component Pouch", type: "misc", qty: 1, properties: {} },
         { name: "Disguise Kit", type: "tool", qty: 1, properties: {} },
       ];

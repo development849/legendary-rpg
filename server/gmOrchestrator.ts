@@ -559,7 +559,7 @@ Always respond with valid JSON in this structure:
     {"type": "ITEM_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item": {"name": "Iron Battleaxe", "type": "weapon", "qty": 1, "rarity": "common", "properties": {"damage": "1d10", "bonus": 1, "two_handed": true}}},
     {"type": "ITEM_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item": {"name": "Studded Leather", "type": "armor", "qty": 1, "rarity": "common", "properties": {"ac": 12}}},
     {"type": "GOLD_CHANGED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "delta": -3, "reason": "Bought a roasted chicken for 3gp"},
-    {"type": "NPC_MET", "name": "Marta", "role": "black market fence", "description": "nervous middle-aged woman, quick darting eyes, smells of tallow", "location": "Dockside Tavern back room", "relationship": "neutral", "notes": "Runs stolen goods. Owes money to the Crimson Hand."},
+    {"type": "NPC_MET", "name": "Marta", "role": "black market fence", "description": "nervous middle-aged woman, quick darting eyes, smells of tallow", "location": "Dockside Tavern back room", "relationship": "neutral", "notes": "Runs stolen goods. Owes money to the Crimson Hand.", "replaces": null},
     {"type": "PLOT_FACT_SET", "key": "bandit_hideout", "value": "the old mill on the eastern road, three miles from Thornwick"},
     {"type": "PLOT_FACT_SET", "key": "reward_offered", "value": "200 gold from Mayor Aldren for proof the bandits are stopped"},
     {"type": "SITUATION_UPDATED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "location": "The Dockside Tavern", "situation": "Negotiating with the fence about the stolen ledger. Tension is high.", "active_npcs": [{"name": "Marta", "role": "fence, nervous"}], "companions": ["Other character names sharing this scene"]},
@@ -597,6 +597,7 @@ CRITICAL RULES:
    CRITICAL LOOT DISTRIBUTION RULE: When the party finds loot (a stash, chest, bag of coins, enemy's gold, etc.) and divides it, the player's share is ADDED to their coin pouch — use a POSITIVE delta equal to their share. Example: party finds 100 coins and splits 3 ways → each character gets GOLD_CHANGED with delta: +33. NEVER subtract from a character's existing gold to represent distributing found loot — found loot is new money being added, not old money being taken away.
 3. When granting a purchased item, pair ITEM_GRANTED with GOLD_CHANGED in the same response.
 4. NAMED NPC TRACKING — MANDATORY: Before finalizing your response, list every named NPC that appears in your narrative this turn. Check each one against the KNOWN NPCS list above. If they are NOT in KNOWN NPCS, you MUST emit NPC_MET for them — no exceptions. This includes NPCs who are speaking, being referenced, or acting in the scene. Use relationship: "friendly", "neutral", "hostile", "unknown", or "deceased". Put their most important detail in "notes" (their secret, agenda, or connection to the party). A response where a named NPC appears in the narrative but is absent from KNOWN NPCS, without a corresponding NPC_MET update, is always a mistake.
+   NPC IDENTITY REVEALS — CRITICAL: When an NPC who was previously tracked by a description (e.g. "Mysterious Woman in Crimson Cloak", "Hooded Stranger", "Scarred Bandit Leader") reveals their actual name, you MUST use the "replaces" field on NPC_MET to merge them: {"type": "NPC_MET", "name": "Seraphine", "replaces": "Mysterious Woman in Crimson Cloak", ...}. This updates the existing cast entry instead of creating a duplicate. NEVER create a second NPC entry for the same character — always use "replaces" with the old name/description. Set "replaces" to null when the NPC is genuinely new.
    NPC RELATIONSHIP UPDATES — MANDATORY: NPCs' feelings toward the party change over time based on player actions. Whenever an NPC's disposition shifts (e.g. a neutral NPC becomes friendly after the party helps them, or a friendly NPC turns hostile after being betrayed), you MUST emit NPC_RELATIONSHIP_CHANGED with the NPC's name, their new relationship ("friendly", "neutral", "hostile", "unknown", or "deceased"), and a brief reason. This is how the cast hostility meter stays accurate. Check the [relationship] tag for each KNOWN NPC against how they should feel NOW given recent events. Common triggers: party helped/saved them → friendlier; party threatened/attacked/stole → more hostile; NPC was killed → deceased; significant story reveals → relationship shift. Do NOT leave an NPC as "neutral" forever if the party has had meaningful interactions with them.
 5. Whenever you establish a KEY STORY FACT in your narrative — a specific location for enemies or loot ("bandits are at the old mill"), a named place ("the Thornwick bridge"), a promise or reward ("100gp bounty from the Sheriff"), a plot reveal ("the cult leader is Brother Aldric") — you MUST immediately emit a PLOT_FACT_SET update to lock it into story canon. Use a short snake_case key (e.g. "bandit_hideout", "cult_leader", "active_quest_reward") and a clear descriptive value. Once a fact is set, it appears in ESTABLISHED STORY FACTS and you MUST NEVER contradict it. Check ESTABLISHED STORY FACTS before every narrative you write.
 6. ITEM PROPERTIES & RARITY — MANDATORY: When granting weapons or armor, ALWAYS include "rarity" (one of: "common", "uncommon", "rare", "epic", "legendary") AND "properties". Rarity determines item power:
@@ -615,7 +616,7 @@ CRITICAL RULES:
    XP thresholds: L2=300, L3=900, L4=2700, L5=6500, L6=14000. Check the character's current XP (shown in the character sheet above) and award enough to reflect what they achieved. If a character just finished a quest that should push them close to the next level, be generous. NEVER end a session of meaningful play with zero XP awarded.
 
 MANDATORY PRE-FLIGHT CHECKLIST — run this EVERY turn before writing proposed_updates:
-Step 1 — Named NPCs: Who appears in my narrative this turn by name? List them. Are they in KNOWN NPCS above? If not → NPC_MET required.
+Step 1 — Named NPCs: Who appears in my narrative this turn by name? List them. Are they in KNOWN NPCS above? If not → NPC_MET required. If an NPC who was previously tracked by description now reveals their real name → use "replaces" field to merge, do NOT create a duplicate.
 Step 2 — NPC Relationships: For each NPC in this scene who IS already in KNOWN NPCS, check their [relationship] tag. Has the player's action this turn made that NPC feel differently about the party? Helped them → friendlier. Threatened them → more hostile. Killed → deceased. If any relationship should change → NPC_RELATIONSHIP_CHANGED required.
 Step 3 — Gold: Did any gold/coins/money change hands in any way — found, looted, picked up, earned, received, paid, spent, gambled, stolen? If the narrative mentions coins, a coin pouch, a bag of gold, a reward, or any currency amount → GOLD_CHANGED is MANDATORY with the correct positive or negative delta. Finding a "bag of coins" without a GOLD_CHANGED update is ALWAYS a bug. The character's coin pouch will NOT update unless you emit this.
 Step 4 — Items: Did anyone gain an item? → ITEM_GRANTED required (+ GOLD_CHANGED if purchased).
@@ -1030,12 +1031,27 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
         case "NPC_MET": {
           const name = (update.name ?? "").trim();
           if (!name) break;
-          // Check if NPC already exists (to know if portrait generation is needed)
+          const replacesName = (update.replaces ?? "").trim();
+
           const [existingNpc] = await db.select({ id: npcLog.id, portrait: npcLog.portrait })
             .from(npcLog)
             .where(and(eq(npcLog.partyId, partyId), eq(npcLog.name, name)));
-          const isNew = !existingNpc;
-          const needsPortrait = isNew || !existingNpc?.portrait;
+
+          let oldEntry: { id: string; portrait: string | null; notes: string; isPartyMember: boolean; partyJoinedAt: Date | null; level: number; maxHp: number; currentHp: number; ac: number; stats: any; abilities: any; inventory: any } | null = null;
+          if (replacesName) {
+            const [found] = await db.select({
+              id: npcLog.id, portrait: npcLog.portrait, notes: npcLog.notes,
+              isPartyMember: npcLog.isPartyMember, partyJoinedAt: npcLog.partyJoinedAt,
+              level: npcLog.level, maxHp: npcLog.maxHp, currentHp: npcLog.currentHp,
+              ac: npcLog.ac, stats: npcLog.stats, abilities: npcLog.abilities, inventory: npcLog.inventory,
+            })
+              .from(npcLog)
+              .where(and(eq(npcLog.partyId, partyId), eq(npcLog.name, replacesName)));
+            if (found) {
+              oldEntry = found;
+              console.log(`[GM] NPC identity reveal: "${replacesName}" → "${name}" (merging entries)`);
+            }
+          }
 
           const npcData = {
             role: update.role ?? "",
@@ -1046,7 +1062,35 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
           };
 
           let npcId: string;
-          if (isNew) {
+          if (oldEntry) {
+            const mergedNotes = oldEntry.notes
+              ? `${oldEntry.notes}. [Formerly known as "${replacesName}"] ${npcData.notes}`
+              : `[Formerly known as "${replacesName}"] ${npcData.notes}`;
+            await db.update(npcLog).set({
+              name,
+              ...npcData,
+              notes: mergedNotes,
+              portrait: oldEntry.portrait,
+              isPartyMember: oldEntry.isPartyMember,
+              partyJoinedAt: oldEntry.partyJoinedAt,
+              level: oldEntry.level,
+              maxHp: oldEntry.maxHp,
+              currentHp: oldEntry.currentHp,
+              ac: oldEntry.ac,
+              stats: oldEntry.stats,
+              abilities: oldEntry.abilities,
+              inventory: oldEntry.inventory,
+              updatedAt: new Date(),
+            }).where(eq(npcLog.id, oldEntry.id));
+            npcId = oldEntry.id;
+            if (existingNpc && existingNpc.id !== oldEntry.id) {
+              await db.delete(npcLog).where(eq(npcLog.id, existingNpc.id));
+            }
+          } else if (existingNpc) {
+            await db.update(npcLog).set({ ...npcData, updatedAt: new Date() })
+              .where(and(eq(npcLog.partyId, partyId), eq(npcLog.name, name)));
+            npcId = existingNpc.id;
+          } else {
             const [inserted] = await db.insert(npcLog).values({
               partyId,
               name,
@@ -1055,12 +1099,9 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
               updatedAt: new Date(),
             }).returning({ id: npcLog.id });
             npcId = inserted.id;
-          } else {
-            await db.update(npcLog).set({ ...npcData, updatedAt: new Date() })
-              .where(and(eq(npcLog.partyId, partyId), eq(npcLog.name, name)));
-            npcId = existingNpc.id;
           }
 
+          const needsPortrait = oldEntry ? !oldEntry.portrait : !existingNpc?.portrait;
           if (needsPortrait) {
             generateNpcPortrait(npcId, { name, ...npcData }).catch(console.error);
           }

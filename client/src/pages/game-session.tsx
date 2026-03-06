@@ -2306,7 +2306,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               return;
             }
             toast({ title: `Bought ${shopItem.name} for ${shopItem.price}gp` });
-            queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+            await queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
           } catch {
             toast({ title: "Purchase failed", variant: "destructive" });
           } finally {
@@ -2322,7 +2322,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             const resp = await fetch(`/api/parties/${partyId}/shop/sell`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ characterId: char.id, itemIndex, sellPrice: price }),
+              body: JSON.stringify({ characterId: char.id, itemIndex, sellPrice: price, itemName: item.name }),
             });
             const data = await resp.json();
             if (!resp.ok) {
@@ -2330,7 +2330,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               return;
             }
             toast({ title: `Sold ${item.name} for ${price}gp` });
-            queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+            await queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
           } catch {
             toast({ title: "Sale failed", variant: "destructive" });
           } finally {

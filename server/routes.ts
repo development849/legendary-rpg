@@ -525,6 +525,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const newItem = { qty: item.qty ?? 1, name: item.name, type: item.type ?? "misc", rarity: item.rarity ?? "common", equipped: false, properties: item.properties ?? {} };
       inv.push(newItem);
       inv = sortInventory(inv);
+      console.log(`[Shop Buy] Adding "${newItem.name}" to char ${characterId}. Inventory: ${inv.length} items. Gold remaining: ${newGold}gp`);
       await db.update(charsTable).set({ inventory: inv }).where(eq(charsTable.id, characterId));
       broadcastToParty(partyId, { type: "STATE_UPDATE", updates: [{ type: "SHOP_BUY" }] });
       res.json({ ok: true, gold: newGold, item: newItem });
@@ -535,7 +536,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userId = req.user!.id;
       const partyId = req.params.id;
-      const { characterId, itemIndex, sellPrice } = req.body;
+      const { characterId, itemIndex, sellPrice, itemName } = req.body;
       if (!characterId || typeof itemIndex !== "number" || typeof sellPrice !== "number")
         return res.status(400).json({ error: "Missing characterId, itemIndex, or sellPrice" });
       const [char] = await db.select().from(charsTable).where(eq(charsTable.id, characterId));
@@ -543,6 +544,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let inv = [...(char.inventory as any[])];
       if (itemIndex < 0 || itemIndex >= inv.length) return res.status(400).json({ error: "Invalid item index" });
       const soldItem = inv[itemIndex];
+      if (itemName && soldItem.name !== itemName) {
+        console.log(`[Shop Sell] INDEX MISMATCH: expected "${itemName}" at idx=${itemIndex}, found "${soldItem.name}". Searching by name.`);
+        const nameIdx = inv.findIndex((i: any) => i.name === itemName && !i.equipped);
+        if (nameIdx < 0) return res.status(400).json({ error: "Item not found in inventory" });
+        const actual = inv[nameIdx];
+        const currentQty = actual.qty ?? 1;
+        if (currentQty <= 1) inv.splice(nameIdx, 1);
+        else inv[nameIdx] = { ...actual, qty: currentQty - 1 };
+        inv = consolidateCoins(inv);
+        if (sellPrice > 0) {
+          const pouchIdx = inv.findIndex((i: any) => isCoinItem(i));
+          if (pouchIdx >= 0) {
+            const newGold = (inv[pouchIdx].properties?.value ?? 0) + sellPrice;
+            inv[pouchIdx] = { ...inv[pouchIdx], name: `Coin Pouch (${newGold}gp)`, properties: { ...inv[pouchIdx].properties, value: newGold } };
+          } else {
+            inv.push({ qty: 1, name: `Coin Pouch (${sellPrice}gp)`, type: "treasure", properties: { value: sellPrice } });
+          }
+        }
+        inv = sortInventory(inv);
+        console.log(`[Shop Sell] Fallback: Removed "${itemName}" (found at idx=${nameIdx}). Inventory: ${inv.length} items remaining.`);
+        await db.update(charsTable).set({ inventory: inv }).where(eq(charsTable.id, characterId));
+        broadcastToParty(partyId, { type: "STATE_UPDATE", updates: [{ type: "SHOP_SELL" }] });
+        return res.json({ ok: true, soldItem: itemName, sellPrice });
+      }
       if (soldItem.equipped) return res.status(400).json({ error: "Unequip item before selling" });
       const currentQty = soldItem.qty ?? 1;
       if (currentQty <= 1) inv.splice(itemIndex, 1);
@@ -558,6 +583,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
       inv = sortInventory(inv);
+      console.log(`[Shop Sell] Removing "${soldItem.name}" (idx=${itemIndex}) from char ${characterId}. Inventory: ${inv.length} items remaining. Gold added: ${sellPrice}gp`);
       await db.update(charsTable).set({ inventory: inv }).where(eq(charsTable.id, characterId));
       broadcastToParty(partyId, { type: "STATE_UPDATE", updates: [{ type: "SHOP_SELL" }] });
       res.json({ ok: true, soldItem: soldItem.name, sellPrice });

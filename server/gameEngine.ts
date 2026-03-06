@@ -398,3 +398,25 @@ export function xpToLevel(xp: number): number {
   }
   return 1;
 }
+
+export function enforceHandLimits(inv: any[], protectedIdx?: number): any[] {
+  const result = [...inv];
+  const handItems: { idx: number; hands: number }[] = [];
+  result.forEach((it: any, idx: number) => {
+    if (!it.equipped) return;
+    const isW = it.type === "weapon";
+    const isS = it.type === "armor" && !!it.properties?.ac_bonus;
+    if (isW || isS) {
+      handItems.push({ idx, hands: it.properties?.two_handed ? 2 : 1 });
+    }
+  });
+  let handsUsed = handItems.reduce((sum: number, h: { hands: number }) => sum + h.hands, 0);
+  const unprotected = handItems.filter(h => h.idx !== protectedIdx);
+  let i = 0;
+  while (handsUsed > 2 && i < unprotected.length) {
+    result[unprotected[i].idx] = { ...result[unprotected[i].idx], equipped: false };
+    handsUsed -= unprotected[i].hands;
+    i++;
+  }
+  return result;
+}

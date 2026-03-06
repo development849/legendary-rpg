@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import { db } from "./db";
 import { chatMessages, gameEvents, worldState, sceneSummaries, characters, parties, campaigns, partyMembers, arcs, locationScenes, characterSituations, npcLog } from "@shared/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
-import { rollDice } from "./gameEngine";
+import { rollDice, enforceHandLimits } from "./gameEngine";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -386,15 +386,28 @@ Character: ${c.name} (${c.race} ${c.class}, Level ${c.level})
 CHARACTER_ID: ${c.id}
 HP: ${c.currentHp}/${c.maxHp} | XP: ${c.xp}
 Stats: ${JSON.stringify(c.stats)}
-Inventory: ${(c.inventory as any[]).map((i: any) => {
-  const parts = [`${i.name} x${i.qty}`];
-  if (i.rarity && i.rarity !== "common") parts.push(`[${i.rarity.toUpperCase()}]`);
-  if (i.equipped) parts.push("[EQUIPPED]");
-  if (i.properties?.damage) parts.push(`(${i.properties.damage}${i.properties.bonus ? ` +${i.properties.bonus}` : ""} dmg)`);
-  if (i.properties?.ac) parts.push(`(AC ${i.properties.ac})`);
-  if (i.properties?.ac_bonus) parts.push(`(+${i.properties.ac_bonus} AC)`);
-  return parts.join(" ");
-}).join(", ")}
+Inventory: ${(() => {
+  const inv = c.inventory as any[];
+  const equippedWeapons = inv.filter((i: any) => i.type === "weapon" && i.equipped);
+  const isDualWielding = equippedWeapons.length >= 2 && equippedWeapons.every((w: any) => !w.properties?.two_handed);
+  return inv.map((i: any, idx: number) => {
+    const parts = [`${i.name} x${i.qty}`];
+    if (i.rarity && i.rarity !== "common") parts.push(`[${i.rarity.toUpperCase()}]`);
+    if (i.equipped && i.type === "weapon") {
+      if (i.properties?.two_handed) parts.push("[EQUIPPED 2H]");
+      else if (isDualWielding) parts.push(idx === inv.indexOf(equippedWeapons[0]) ? "[EQUIPPED MAIN-HAND]" : "[EQUIPPED OFF-HAND]");
+      else parts.push("[EQUIPPED MAIN-HAND]");
+    } else if (i.equipped && i.type === "armor" && i.properties?.ac_bonus) {
+      parts.push("[EQUIPPED OFF-HAND]");
+    } else if (i.equipped) {
+      parts.push("[EQUIPPED]");
+    }
+    if (i.properties?.damage) parts.push(`(${i.properties.damage}${i.properties.bonus ? ` +${i.properties.bonus}` : ""} dmg)`);
+    if (i.properties?.ac) parts.push(`(AC ${i.properties.ac})`);
+    if (i.properties?.ac_bonus) parts.push(`(+${i.properties.ac_bonus} AC)`);
+    return parts.join(" ");
+  }).join(", ");
+})()}
 Conditions: ${((c.conditions as any[]) || []).join(", ") || "none"}
 Abilities: ${(c.abilities as any[]).map((a: any) => a.name).join(", ")}${c.backstory ? `\nBackstory: ${c.backstory}` : ""}
 `.trim()).join("\n\n");
@@ -543,6 +556,15 @@ When a player speaks aloud to an NPC or the room, respond IN CHARACTER as the NP
 
 HANDLING ROLL RESULTS (messages starting with [ROLL RESULT]):
 A player just rolled dice for a check you requested. The message tells you the character, what they rolled for, the total, and whether it was a SUCCESS or FAILURE vs the DC. Narrate the outcome based on the result — describe exactly what happens as a consequence of that roll. Be specific: a great roll should feel awesome, a failure should sting and create complications. Don't repeat back the numbers — just narrate the in-world result. Then continue the scene. Do NOT ask for another roll for the same action.
+IMPORTANT — DAMAGE ROLLS: When an attack roll SUCCEEDS, you MUST immediately request a DAMAGE ROLL in the same response. Use the weapon's damage die from the character sheet (e.g. if they have a Longsword equipped with 1d8 dmg and +2 bonus, request: {"character": "Name", "die": "1d8", "modifier": 2, "advantage": "normal", "purpose": "Longsword damage"}). When the damage roll result comes back, apply the HP_CHANGED update to the target using the rolled total as negative delta.
+When a DAMAGE ROLL result comes back (purpose contains "damage"), narrate the hit's impact and emit HP_CHANGED for the target. Do NOT ask for another attack roll — the attack is resolved. Move on to the next combatant's turn.
+
+COMBAT RULES — CRITICAL:
+- ATTACK ROLLS: Always d20 + the weapon's bonus (from properties.bonus). Compare vs target's AC.
+- DAMAGE ROLLS: On a hit, ALWAYS request a damage roll using the weapon's damage die + bonus. Never skip this step or auto-calculate damage.
+- DUAL WIELDING: When a character has TWO one-handed weapons equipped (look for two [EQUIPPED] weapons without two_handed), they are dual wielding. On their turn in combat, after resolving their main attack (attack roll → damage roll), offer a BONUS ATTACK with their off-hand weapon. The off-hand attack uses d20 + weapon bonus for the attack roll, and the weapon's damage die for damage but with NO ability modifier added (just the weapon bonus if any). Example: character has Longsword [EQUIPPED] and Dagger [EQUIPPED] → main attack with Longsword, then bonus attack with Dagger.
+- TWO-HANDED WEAPONS: A character with a two_handed weapon gets one attack per turn but with the larger damage die.
+- COMPANION ATTACKS: In combat, companions attack on their own initiative. Roll their attacks and damage yourself (narrate it) — don't ask the player to roll for NPCs.
 
 NPC COMPANION MECHANICS:
 NPCs can join the party or leave based on story events. Use NPC_JOINED_PARTY when an NPC decides to travel with, help, or fight alongside the party (e.g., they strike a deal, swear an oath, are rescued and pledge aid, or choose to join of their own accord). Use NPC_LEFT_PARTY when a companion departs — they've fulfilled their purpose, been killed, betrayed the party, or gone their own way. Active companions listed in ACTIVE NPC COMPANIONS above travel with the party. Include them naturally in scenes: they react, comment, assist in combat, and interact with the world. They are NOT player-controlled — you speak for them. When a companion acts meaningfully, briefly narrate their action alongside the main narrative. Companions can have their own agendas, secrets, and moments — use them for drama and flavor. If a companion joins or leaves, emit the appropriate update AND weave their departure/arrival into the narrative naturally.
@@ -964,6 +986,7 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
             }
             let inv = [...existing, item];
             inv = consolidateCoins(inv);
+            inv = enforceHandLimits(inv);
             inv = sortInventory(inv);
             await db.update(characters).set({ inventory: inv }).where(eq(characters.id, char.id));
             await db.insert(gameEvents).values({

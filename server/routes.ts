@@ -11,10 +11,10 @@ import {
   joinParty, getPartyMembers, setMemberReady,
   saveChatMessage, getPartyMessages, getWorldState,
 } from "./storage";
-import { rollDice } from "./gameEngine";
+import { rollDice, enforceHandLimits } from "./gameEngine";
 import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground } from "./gmOrchestrator";
 import { db } from "./db";
-import { locationScenes, partyMembers } from "@shared/schema";
+import { characters as charsTable, locationScenes, partyMembers } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 // WebSocket connections per party
@@ -282,31 +282,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       if (equipped) {
-        const isWeapon = item.type === "weapon";
-        const isShield = item.type === "armor" && !!item.properties?.ac_bonus;
         const isBodyArmor = item.type === "armor" && !item.properties?.ac_bonus;
-        const isTwoHanded = !!item.properties?.two_handed;
-        const handsNeeded = (isWeapon || isShield) ? (isTwoHanded ? 2 : 1) : 0;
-
-        if (handsNeeded > 0) {
-          const handItems: { idx: number; hands: number }[] = [];
-          inv.forEach((it: any, idx: number) => {
-            if (idx === itemIndex || !it.equipped) return;
-            const isW = it.type === "weapon";
-            const isS = it.type === "armor" && !!it.properties?.ac_bonus;
-            if (isW || isS) {
-              handItems.push({ idx, hands: it.properties?.two_handed ? 2 : 1 });
-            }
-          });
-
-          let handsUsed = handItems.reduce((sum, h) => sum + h.hands, 0);
-          let i = 0;
-          while (handsUsed + handsNeeded > 2 && i < handItems.length) {
-            inv[handItems[i].idx] = { ...inv[handItems[i].idx], equipped: false };
-            handsUsed -= handItems[i].hands;
-            i++;
-          }
-        }
 
         if (isBodyArmor) {
           inv.forEach((it: any, idx: number) => {
@@ -319,6 +295,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       inv[itemIndex] = { ...item, equipped };
+
+      const enforced = enforceHandLimits(inv, equipped ? itemIndex : undefined);
+      for (let j = 0; j < inv.length; j++) inv[j] = enforced[j];
       const updated = await updateCharacter(req.params.id, { inventory: inv } as any);
       res.json(updated);
     } catch (e) {
@@ -371,6 +350,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const party = await getParty(req.params.id);
       if (!party) return res.status(404).json({ error: "Not found" });
       const members = await getPartyMembers(party.id);
+      for (const m of members) {
+        if (m.character?.inventory) {
+          const inv = m.character.inventory as any[];
+          const fixed = enforceHandLimits(inv);
+          const changed = inv.some((it: any, idx: number) => it.equipped !== fixed[idx].equipped);
+          if (changed) {
+            await db.update(charsTable).set({ inventory: fixed }).where(eq(charsTable.id, m.character.id));
+            (m.character as any).inventory = fixed;
+          }
+        }
+      }
       const campaign = await getCampaign(party.campaignId);
       const worldSnap = await getWorldState(party.id);
       res.json({ party, members, campaign, worldState: worldSnap });

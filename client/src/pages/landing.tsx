@@ -46,10 +46,10 @@ export default function LandingPage() {
           <div className="absolute inset-0 z-0">
             <div
               className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
-              style={{ backgroundImage: `url(${bgImage})`, opacity: 0.45 }}
+              style={{ backgroundImage: `url(${bgImage})`, opacity: 0.55 }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-background/30" />
-            <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-transparent to-background" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-background/20" />
+            <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background" />
           </div>
         )}
 

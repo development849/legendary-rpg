@@ -136,8 +136,11 @@ async function getStyleRefParts(): Promise<any[]> {
 }
 
 let _landingBgInFlight = false;
+let _landingBgCooldownUntil = 0;
+let _landingBgRetryDelay = 15000;
 export async function generateLandingBackground(): Promise<void> {
   if (_landingBgInFlight) return;
+  if (Date.now() < _landingBgCooldownUntil) return;
   const [existing] = await db.select({ id: locationScenes.id })
     .from(locationScenes)
     .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "landing_hero")));
@@ -145,12 +148,6 @@ export async function generateLandingBackground(): Promise<void> {
 
   _landingBgInFlight = true;
   try {
-    const { GoogleGenAI, Modality } = await import("@google/genai");
-    const ai = new GoogleGenAI({
-      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-      httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
-    });
-
     const scenes = [
       "A lone cloaked figure standing on a cliff edge overlooking a vast fantasy kingdom at sunset — sprawling medieval city with cathedral spires in the valley below, distant mountains wreathed in clouds, golden god-rays breaking through dramatic cloud formations, birds wheeling in the amber sky.",
       "An ancient dragon perched atop a crumbling tower silhouetted against a massive full moon — ruined castle sprawling below with glowing windows, a winding river reflecting moonlight through a misty enchanted forest, fireflies and magical motes drifting in the air.",
@@ -160,33 +157,69 @@ export async function generateLandingBackground(): Promise<void> {
     ];
 
     const scene = scenes[Math.floor(Math.random() * scenes.length)];
+    let imageData: string | null = null;
 
-    const prompt = `${scene} ${STYLE_PROMPT} Wide landscape orientation, cinematic establishing shot. This is a hero image for a fantasy RPG — it should feel epic, inviting, and full of wonder.`;
+    try {
+      const { GoogleGenAI, Modality } = await import("@google/genai");
+      const ai = new GoogleGenAI({
+        apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+        httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+      });
 
-    const parts: any[] = await getStyleRefParts();
-    parts.push({ text: prompt });
+      const prompt = `${scene} ${STYLE_PROMPT} Wide landscape orientation, cinematic establishing shot. This is a hero image for a fantasy RPG — it should feel epic, inviting, and full of wonder.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
-      contents: [{ role: "user", parts }],
-      config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
-    });
+      const parts: any[] = await getStyleRefParts();
+      parts.push({ text: prompt });
 
-    const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
-    if (!imagePart?.inlineData?.data) return;
+      const response = await ai.models.generateContent({
+        model: "gemini-3-pro-image-preview",
+        contents: [{ role: "user", parts }],
+        config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+      });
 
-    const mimeType = imagePart.inlineData.mimeType || "image/png";
-    const dataUrl = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+      const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+      if (imagePart?.inlineData?.data) {
+        const mimeType = imagePart.inlineData.mimeType || "image/png";
+        imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+      }
+    } catch (geminiErr: any) {
+      if (geminiErr?.status === 429) {
+        console.log("[GM] Landing bg: Gemini rate-limited, retrying without style refs...");
+        const { GoogleGenAI, Modality } = await import("@google/genai");
+        const ai2 = new GoogleGenAI({
+          apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+          httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+        });
+        const simplePrompt = `${scene} Painterly fantasy concept art, atmospheric volumetric lighting, cinematic wide shot, landscape orientation. No text, no UI.`;
+        const response = await ai2.models.generateContent({
+          model: "gemini-3-pro-image-preview",
+          contents: [{ role: "user", parts: [{ text: simplePrompt }] }],
+          config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+        });
+        const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+        if (imagePart?.inlineData?.data) {
+          const mimeType = imagePart.inlineData.mimeType || "image/png";
+          imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+        }
+      } else {
+        throw geminiErr;
+      }
+    }
+
+    if (!imageData) return;
 
     await db.insert(locationScenes).values({
       partyId: "system",
       locationName: "landing_hero",
-      imageData: dataUrl,
+      imageData,
     }).onConflictDoNothing();
 
     console.log("[GM] Landing page background generated and saved.");
-  } catch (e) {
-    console.error("[GM] Landing background generation failed:", e);
+    _landingBgRetryDelay = 15000;
+  } catch (e: any) {
+    console.error("[GM] Landing background generation failed:", e?.message ?? e);
+    _landingBgCooldownUntil = Date.now() + _landingBgRetryDelay;
+    _landingBgRetryDelay = Math.min(_landingBgRetryDelay * 2, 120000);
   } finally {
     _landingBgInFlight = false;
   }

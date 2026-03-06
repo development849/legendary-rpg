@@ -19,9 +19,10 @@ function useLandingBackground() {
         if (cancelled) return;
         if (data.imageData) {
           setImageData(data.imageData);
-        } else if (data.pending && retries < 12) {
+        } else if (data.pending && retries < 24) {
           retries++;
-          setTimeout(fetchBg, 5000);
+          const delay = Math.min(5000 + retries * 2000, 20000);
+          setTimeout(fetchBg, delay);
         }
       } catch (_) {}
     }

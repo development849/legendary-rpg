@@ -587,6 +587,7 @@ Always respond with valid JSON in this structure:
     {"type": "XP_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "amount": 100, "reason": "Defeated the bandits"},
     {"type": "ITEM_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item": {"name": "Iron Battleaxe", "type": "weapon", "qty": 1, "rarity": "common", "properties": {"damage": "1d10", "bonus": 1, "two_handed": true}}},
     {"type": "ITEM_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item": {"name": "Studded Leather", "type": "armor", "qty": 1, "rarity": "common", "properties": {"ac": 12}}},
+    {"type": "ITEM_REMOVED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item_name": "Rusty Dagger", "qty": 1, "reason": "Sold to blacksmith"},
     {"type": "GOLD_CHANGED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "delta": -3, "reason": "Bought a roasted chicken for 3gp"},
     {"type": "NPC_MET", "name": "Marta", "role": "black market fence", "description": "nervous middle-aged woman, quick darting eyes, smells of tallow", "location": "Dockside Tavern back room", "relationship": "neutral", "notes": "Runs stolen goods. Owes money to the Crimson Hand.", "replaces": null},
     {"type": "PLOT_FACT_SET", "key": "bandit_hideout", "value": "the old mill on the eastern road, three miles from Thornwick"},
@@ -625,6 +626,7 @@ CRITICAL RULES:
 2. Whenever gold or coin changes hands — buying, selling, paying, finding, earning, gambling — you MUST emit a GOLD_CHANGED update. Use a negative delta for spending (e.g. -3 for spending 3gp) and positive for earning (+5 for finding 5gp). Never describe a purchase without emitting GOLD_CHANGED. The character's coin pouch is tracked in their inventory and will NOT update unless you emit this.
    CRITICAL LOOT DISTRIBUTION RULE: When the party finds loot (a stash, chest, bag of coins, enemy's gold, etc.) and divides it, the player's share is ADDED to their coin pouch — use a POSITIVE delta equal to their share. Example: party finds 100 coins and splits 3 ways → each character gets GOLD_CHANGED with delta: +33. NEVER subtract from a character's existing gold to represent distributing found loot — found loot is new money being added, not old money being taken away.
 3. When granting a purchased item, pair ITEM_GRANTED with GOLD_CHANGED in the same response.
+   SELLING / LOSING / CONSUMING ITEMS — CRITICAL: Whenever a character sells, trades away, uses up, discards, or loses an item, you MUST emit ITEM_REMOVED with the exact item_name as it appears in their inventory, the qty to remove, and a reason. Pair it with GOLD_CHANGED when selling (positive delta for coins received). Without ITEM_REMOVED, the item stays in inventory forever — GOLD_CHANGED alone does NOT remove it. When selling multiple items, emit a separate ITEM_REMOVED for each one. Check the character's inventory in the CHARACTER SHEET above to get the exact name.
 4. NAMED NPC TRACKING — MANDATORY: Before finalizing your response, list every named NPC that appears in your narrative this turn. Check each one against the KNOWN NPCS list above. If they are NOT in KNOWN NPCS, you MUST emit NPC_MET for them — no exceptions. This includes NPCs who are speaking, being referenced, or acting in the scene. Use relationship: "friendly", "neutral", "hostile", "unknown", or "deceased". The "notes" field should be ONE concise sentence capturing their most important trait, secret, or agenda (max ~30 words). Do NOT repeat the relationship tag or stack multiple [neutral]/[friendly] annotations — the relationship field handles that separately. A response where a named NPC appears in the narrative but is absent from KNOWN NPCS, without a corresponding NPC_MET update, is always a mistake.
    NPC IDENTITY REVEALS — CRITICAL: When an NPC who was previously tracked by a description (e.g. "Mysterious Woman in Crimson Cloak", "Hooded Stranger", "Scarred Bandit Leader") reveals their actual name, you MUST use the "replaces" field on NPC_MET to merge them: {"type": "NPC_MET", "name": "Seraphine", "replaces": "Mysterious Woman in Crimson Cloak", ...}. This updates the existing cast entry instead of creating a duplicate. NEVER create a second NPC entry for the same character — always use "replaces" with the old name/description. Set "replaces" to null when the NPC is genuinely new.
    NPC RELATIONSHIP UPDATES — MANDATORY: NPCs' feelings toward the party change over time based on player actions. Whenever an NPC's disposition shifts (e.g. a neutral NPC becomes friendly after the party helps them, or a friendly NPC turns hostile after being betrayed), you MUST emit NPC_RELATIONSHIP_CHANGED with the NPC's name, their new relationship ("friendly", "neutral", "hostile", "unknown", or "deceased"), and a brief reason. This is how the cast hostility meter stays accurate. Check the [relationship] tag for each KNOWN NPC against how they should feel NOW given recent events. Common triggers: party helped/saved them → friendlier; party threatened/attacked/stole → more hostile; NPC was killed → deceased; significant story reveals → relationship shift. Do NOT leave an NPC as "neutral" forever if the party has had meaningful interactions with them.
@@ -649,7 +651,7 @@ MANDATORY PRE-FLIGHT CHECKLIST — run this EVERY turn before writing proposed_u
 Step 1 — Named NPCs: Who appears in my narrative this turn by name? List them. Are they in KNOWN NPCS above? If not → NPC_MET required. If an NPC who was previously tracked by description now reveals their real name → use "replaces" field to merge, do NOT create a duplicate.
 Step 2 — NPC Relationships: For each NPC in this scene who IS already in KNOWN NPCS, check their [relationship] tag. Has the player's action this turn made that NPC feel differently about the party? Helped them → friendlier. Threatened them → more hostile. Killed → deceased. If any relationship should change → NPC_RELATIONSHIP_CHANGED required.
 Step 3 — Gold: Did any gold/coins/money change hands in any way — found, looted, picked up, earned, received, paid, spent, gambled, stolen? If the narrative mentions coins, a coin pouch, a bag of gold, a reward, or any currency amount → GOLD_CHANGED is MANDATORY with the correct positive or negative delta. Finding a "bag of coins" without a GOLD_CHANGED update is ALWAYS a bug. The character's coin pouch will NOT update unless you emit this.
-Step 4 — Items: Did anyone gain an item? → ITEM_GRANTED required (+ GOLD_CHANGED if purchased).
+Step 4 — Items: Did anyone gain an item? → ITEM_GRANTED required (+ GOLD_CHANGED if purchased). Did anyone sell, trade, use up, discard, or lose an item? → ITEM_REMOVED required for EACH item lost (+ GOLD_CHANGED if sold). GOLD_CHANGED alone does NOT remove items from inventory.
 Step 5 — Story facts: Did I state a location, reward, name, or key plot detail? → PLOT_FACT_SET required.
 Step 6 — Situations: Did any character's location or circumstances change? → SITUATION_UPDATED required.
 Step 7 — Companions: Did an NPC join the party this turn? → NPC_JOINED_PARTY required. Did an NPC leave? → NPC_LEFT_PARTY required.
@@ -1000,7 +1002,19 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
         case "ITEM_REMOVED": {
           const char = await resolveCharacter(update.character_id, partyId);
           if (char) {
-            const inv = (char.inventory as any[]).filter((i: any) => i.name !== update.item_name);
+            let inv = [...(char.inventory as any[])];
+            let qtyToRemove = update.qty ?? 1;
+            const idx = inv.findIndex((i: any) => i.name === update.item_name);
+            if (idx >= 0) {
+              const item = inv[idx];
+              const currentQty = item.qty ?? 1;
+              if (currentQty <= qtyToRemove) {
+                inv.splice(idx, 1);
+              } else {
+                inv[idx] = { ...item, qty: currentQty - qtyToRemove };
+              }
+            }
+            inv = sortInventory(inv);
             await db.update(characters).set({ inventory: inv }).where(eq(characters.id, char.id));
           }
           break;

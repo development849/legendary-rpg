@@ -948,8 +948,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           <div className="w-72 flex-shrink-0 border-l border-border bg-card/50 flex flex-col overflow-hidden">
             {/* Panel header with tabs */}
             <div className="flex-shrink-0 border-b border-border">
-              <div className="flex items-center justify-between px-3 pt-2.5 pb-0">
-                <div className="flex">
+              <div className="flex items-center px-1 pt-2.5 pb-0">
+                <div className="flex flex-1 min-w-0">
                   {([
                     { id: "party", icon: Users, label: "Party" },
                     { id: "sheet", icon: BookOpen, label: "Sheet" },
@@ -964,22 +964,22 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         <button
                           onClick={() => setSidebarTab(tab.id)}
                           data-testid={`button-sidebar-tab-${tab.id}`}
-                          className={`flex flex-col items-center gap-0.5 px-2 py-2 text-[10px] font-sans tracking-wide transition-colors border-b-2 ${
+                          className={`flex flex-col items-center gap-0.5 px-1.5 py-1.5 text-[9px] font-sans tracking-wide transition-colors border-b-2 flex-1 min-w-0 ${
                             sidebarTab === tab.id
                               ? "text-primary border-primary"
                               : "text-muted-foreground border-transparent hover:text-foreground"
                           }`}
                         >
-                          <tab.icon className="w-4 h-4" />
-                          <span>{tab.label}</span>
+                          <tab.icon className="w-3.5 h-3.5" />
+                          <span className="truncate w-full text-center">{tab.label}</span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">{tab.label}</TooltipContent>
                     </Tooltip>
                   ))}
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 mb-1" onClick={() => setShowCharacters(false)}>
-                  <ChevronDown className="w-4 h-4 rotate-90" />
+                <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0 ml-0.5" onClick={() => setShowCharacters(false)}>
+                  <ChevronDown className="w-3.5 h-3.5 rotate-90" />
                 </Button>
               </div>
             </div>

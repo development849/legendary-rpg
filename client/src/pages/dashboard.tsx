@@ -59,9 +59,21 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      {hallBg && (
+        <div
+          className="fixed inset-0 z-0"
+          style={{
+            backgroundImage: `url(${hallBg})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center 30%",
+            transition: "opacity 1s ease-in-out",
+          }}
+        />
+      )}
+      <div className="fixed inset-0 z-0 bg-gradient-to-t from-background via-background/90 to-background/40" />
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      <header className="relative z-10 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <img src={logoPath} alt="Legendary" className="w-7 h-7 rounded-sm object-contain" />
@@ -83,28 +95,13 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-10 space-y-10">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 py-10 space-y-10">
         {/* Welcome Banner */}
         <div
-          className="relative rounded-md border border-primary/20 overflow-hidden"
+          className="relative rounded-md border border-primary/20 overflow-hidden bg-card/30 backdrop-blur-sm"
           style={{ minHeight: "180px" }}
           data-testid="banner-hall"
         >
-          {/* Background image layer */}
-          {hallBg && (
-            <div
-              className="absolute inset-0 z-0"
-              style={{
-                backgroundImage: `url(${hallBg})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center 30%",
-                transition: "opacity 1s ease-in-out",
-              }}
-            />
-          )}
-          {/* Gradient overlay — darkens bottom for text legibility */}
-          <div className="absolute inset-0 z-10 bg-gradient-to-t from-background via-background/80 to-background/20" />
-          {/* Content */}
           <div className="relative z-20 p-8 space-y-2">
             <p className="text-primary font-sans tracking-widest text-xs uppercase">Chronicle · Session Dashboard</p>
             <h1 className="text-3xl font-sans font-bold tracking-wider drop-shadow-sm">

@@ -2341,7 +2341,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" data-testid="shop-overlay">
             <div className="bg-card border border-border rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <Store className="w-5 h-5 text-primary" />
                   <div>
@@ -2360,7 +2360,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 </div>
               </div>
 
-              <div className="flex border-b border-border">
+              <div className="flex border-b border-border flex-shrink-0">
                 <button
                   onClick={() => setShopTab("buy")}
                   data-testid="button-shop-tab-buy"
@@ -2377,7 +2377,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 </button>
               </div>
 
-              <ScrollArea className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="p-3 space-y-1.5">
                   {shopTab === "buy" ? (
                     shopData.inventory.length === 0 ? (
@@ -2458,9 +2458,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     )
                   )}
                 </div>
-              </ScrollArea>
+              </div>
 
-              <div className="px-4 py-2.5 border-t border-border">
+              <div className="px-4 py-2.5 border-t border-border flex-shrink-0">
                 <p className="text-[10px] text-muted-foreground text-center font-serif italic">Sell prices are roughly 25-50% of item value. Equipped items must be unequipped first.</p>
               </div>
             </div>

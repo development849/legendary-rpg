@@ -1044,6 +1044,9 @@ export default function CreateCharacterPage() {
                     <img src={portraitUrl} alt={name} className="w-full h-full object-cover" data-testid="img-portrait-preview" />
                   </div>
                   <div className="flex gap-3 justify-center">
+                    <Button variant="outline" onClick={() => setStep("confirm")} data-testid="button-back-confirm-from-portrait">
+                      <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                    </Button>
                     <Button variant="outline" onClick={handleGeneratePortrait} disabled={generatingPortrait} data-testid="button-regenerate-portrait">
                       {generatingPortrait ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Regenerating...</> : <><RotateCcw className="w-4 h-4 mr-2" /> Regenerate</>}
                     </Button>
@@ -1073,6 +1076,9 @@ export default function CreateCharacterPage() {
                     )}
                   </div>
                   <div className="flex gap-3 justify-center">
+                    <Button variant="outline" onClick={() => setStep("confirm")} disabled={generatingPortrait} data-testid="button-back-confirm-from-portrait">
+                      <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                    </Button>
                     <Button variant="outline" onClick={() => navigate("/dashboard")} data-testid="button-skip-portrait">
                       Skip for Now
                     </Button>

@@ -12,7 +12,8 @@ import {
   Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown, ChevronRight,
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
-  Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy
+  Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy,
+  Download, Share2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -2680,10 +2681,57 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               data-testid="img-expanded-portrait"
             />
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent rounded-b-lg px-4 py-3">
-              <p className="text-lg font-bold text-white font-sans tracking-wide">{expandedPortrait.name}</p>
-              {expandedPortrait.role && (
-                <p className="text-sm text-white/70 italic">{expandedPortrait.role}</p>
-              )}
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <p className="text-lg font-bold text-white font-sans tracking-wide">{expandedPortrait.name}</p>
+                  {expandedPortrait.role && (
+                    <p className="text-sm text-white/70 italic">{expandedPortrait.role}</p>
+                  )}
+                </div>
+                <div className="flex gap-1.5 mb-0.5">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(expandedPortrait.url);
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `${expandedPortrait.name.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        const a = document.createElement("a");
+                        a.href = expandedPortrait.url;
+                        a.download = `${expandedPortrait.name.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
+                        a.click();
+                      }
+                    }}
+                    className="w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                    data-testid="button-download-portrait"
+                    title="Save image"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                  {typeof navigator.share === "function" && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(expandedPortrait.url);
+                          const blob = await res.blob();
+                          const file = new File([blob], `${expandedPortrait.name}.png`, { type: "image/png" });
+                          await navigator.share({ title: expandedPortrait.name, files: [file] });
+                        } catch {}
+                      }}
+                      className="w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                      data-testid="button-share-portrait"
+                      title="Share image"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
             <button
               onClick={() => setExpandedPortrait(null)}

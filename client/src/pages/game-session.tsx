@@ -2456,16 +2456,49 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <span className={`text-xs font-sans font-bold ${isEquipped ? "text-muted-foreground" : "text-emerald-400"}`}>+{price}gp</span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={shopBusy || isEquipped}
-                                onClick={() => handleSell(idx, item)}
-                                className="h-7 px-2.5 text-[10px]"
-                                data-testid={`button-sell-${idx}`}
-                              >
-                                {isEquipped ? "Unequip" : "Sell"}
-                              </Button>
+                              {isEquipped ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={shopBusy}
+                                  onClick={async () => {
+                                    setShopBusy(true);
+                                    try {
+                                      const resp = await fetch(`/api/characters/${char.id}/equip`, {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ itemIndex: idx, equipped: false }),
+                                      });
+                                      if (!resp.ok) {
+                                        const err = await resp.json().catch(() => null);
+                                        toast({ title: err?.error ?? "Failed to unequip", variant: "destructive" });
+                                      } else {
+                                        toast({ title: `Unequipped ${item.name}` });
+                                        await queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+                                      }
+                                    } catch {
+                                      toast({ title: "Failed to unequip", variant: "destructive" });
+                                    } finally {
+                                      setShopBusy(false);
+                                    }
+                                  }}
+                                  className="h-7 px-2.5 text-[10px]"
+                                  data-testid={`button-unequip-${idx}`}
+                                >
+                                  Unequip
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={shopBusy}
+                                  onClick={() => handleSell(idx, item)}
+                                  className="h-7 px-2.5 text-[10px]"
+                                  data-testid={`button-sell-${idx}`}
+                                >
+                                  Sell
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );

@@ -14,10 +14,9 @@ interface LobbyPageProps {
 }
 
 const CONTENT_RATINGS = [
-  { id: "pg", label: "PG", desc: "Family-friendly, mild conflict" },
-  { id: "pg13", label: "PG-13", desc: "Fantasy violence, mild peril" },
-  { id: "r", label: "Mature (R)", desc: "Blood, darker themes, strong language" },
-  { id: "adult", label: "Adult (18+)", desc: "Unrestricted content" },
+  { id: "pg", label: "PG", desc: "Family-friendly, no blood or real danger" },
+  { id: "pg13", label: "PG-13", desc: "Fantasy combat and peril, no gore" },
+  { id: "r", label: "Mature", desc: "Blood, strong language, dark themes" },
 ];
 
 const GM_MODES = [
@@ -259,7 +258,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
                 <p className="text-xs font-sans tracking-widest text-muted-foreground/60 uppercase flex items-center gap-1.5">
                   <Shield className="w-3 h-3" /> Content Rating
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {CONTENT_RATINGS.map(r => (
                     <button
                       key={r.id}

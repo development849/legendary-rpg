@@ -15,10 +15,9 @@ const GM_MODES = [
 ];
 
 const CONTENT_RATINGS = [
-  { id: "pg", label: "PG", desc: "Family-friendly. Mild conflict, no real violence or peril.", icon: "🌿" },
-  { id: "pg13", label: "PG-13", desc: "Fantasy violence, mild peril. No explicit content.", icon: "🛡️" },
-  { id: "r", label: "Mature (R)", desc: "Blood, darker themes, strong language, intense violence.", icon: "⚔️" },
-  { id: "adult", label: "Adult (18+)", desc: "Unrestricted. Graphic violence, explicit content, dark themes.", icon: "🔞" },
+  { id: "pg", label: "PG", desc: "Family-friendly. Mild conflict, no blood or real danger. Clean language.", icon: "🌿" },
+  { id: "pg13", label: "PG-13", desc: "Classic fantasy adventure. Combat and peril, but no gore or explicit content.", icon: "🛡️" },
+  { id: "r", label: "Mature", desc: "Blood, graphic violence, strong language, dark and morally grey themes.", icon: "⚔️" },
 ];
 
 const THEME_OPTIONS = [
@@ -223,7 +222,7 @@ export default function CreateCampaignPage() {
               <Shield className="w-3.5 h-3.5 text-primary" /> Content Rating
             </label>
             <p className="text-xs text-muted-foreground font-serif -mt-1">Controls the maturity level of language, violence, and themes.</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {CONTENT_RATINGS.map(r => (
                 <button
                   key={r.id}

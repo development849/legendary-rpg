@@ -183,6 +183,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [expandedPortrait, setExpandedPortrait] = useState<{ name: string; url: string; role?: string } | null>(null);
   const [shopTab, setShopTab] = useState<"buy" | "sell">("buy");
   const [shopBusy, setShopBusy] = useState(false);
+  const [levelUpData, setLevelUpData] = useState<{ characterId: string; characterName: string; newLevel: number; hpGain: number } | null>(null);
+  const [statPoints, setStatPoints] = useState<Record<string, number>>({ might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 });
+  const [levelUpBusy, setLevelUpBusy] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);

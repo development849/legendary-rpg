@@ -259,6 +259,41 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.patch("/api/characters/:id/level-up", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const char = await getCharacter(req.params.id);
+      if (!char) return res.status(404).json({ error: "Not found" });
+      if (char.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+
+      const { statAllocations } = req.body;
+      if (!statAllocations || typeof statAllocations !== "object") {
+        return res.status(400).json({ error: "statAllocations required" });
+      }
+
+      const stats = { ...(char.stats as Record<string, number>) };
+      const totalPoints = Object.values(statAllocations as Record<string, number>).reduce((sum: number, v: number) => sum + v, 0);
+      if (totalPoints !== 2) {
+        return res.status(400).json({ error: "Must allocate exactly 2 stat points" });
+      }
+
+      for (const [key, amount] of Object.entries(statAllocations as Record<string, number>)) {
+        if (!["might", "agility", "endurance", "intellect", "will", "presence"].includes(key)) {
+          return res.status(400).json({ error: `Invalid stat: ${key}` });
+        }
+        if (typeof amount !== "number" || amount < 0 || amount > 2) {
+          return res.status(400).json({ error: `Invalid allocation for ${key}` });
+        }
+        stats[key] = (stats[key] ?? 10) + amount;
+      }
+
+      const updated = await updateCharacter(req.params.id, { stats } as any);
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to apply level-up" });
+    }
+  });
+
   app.patch("/api/characters/:id/equip", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
@@ -719,13 +754,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           gmFullText += chunk;
           res.write(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`);
         },
-        async (fullText, updates, diceRequests, quickActions, turnHint) => {
+        async (fullText, updates, diceRequests, quickActions, turnHint, levelUps) => {
           const gmMsg = await saveChatMessage({
             partyId,
             userId: undefined,
             role: "gm",
             content: fullText,
-            metadata: { updates, diceRequests, quickActions, turnHint },
+            metadata: { updates, diceRequests, quickActions, turnHint, levelUps },
           });
 
           broadcastToParty(partyId, { type: "MESSAGE", message: gmMsg });
@@ -735,8 +770,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           if (turnHint) {
             broadcastToParty(partyId, { type: "TURN_HINT", turnHint });
           }
+          if (levelUps && levelUps.length > 0) {
+            broadcastToParty(partyId, { type: "LEVEL_UP", levelUps });
+          }
 
-          res.write(`data: ${JSON.stringify({ type: "done", message: gmMsg, updates, diceRequests, quickActions, turnHint })}\n\n`);
+          res.write(`data: ${JSON.stringify({ type: "done", message: gmMsg, updates, diceRequests, quickActions, turnHint, levelUps })}\n\n`);
           res.end();
         },
       );

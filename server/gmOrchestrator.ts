@@ -551,8 +551,12 @@ ${companionBlock}
 KNOWN NPCS (named characters the party has encountered — use these for narrative continuity):
 ${npcRegister}
 
+CURRENT LOCATION: ${(worldSnap?.state as any)?.currentLocation ?? "Unknown"}
+
 WORLD STATE (locations visited and scene data):
 ${worldData}
+
+LOCATION CONSISTENCY — CRITICAL: The party is currently at the CURRENT LOCATION shown above. ALL NPCs, merchants, and shops you reference MUST exist at the current location. Do NOT bring in NPCs or merchants from other towns the party visited previously. If a player asks to visit a shop, it must be a shop that exists in the CURRENT location. Check the KNOWN NPCS list — each NPC has a "Last seen" annotation showing where they were encountered. Only NPCs last seen at or near the current location should appear in scenes. If you need a new merchant or NPC at the current location, create a new one with NPC_MET rather than teleporting one from another town.
 
 RECENT STORY SUMMARIES:
 ${recentSummaries || "This is the beginning of the adventure."}

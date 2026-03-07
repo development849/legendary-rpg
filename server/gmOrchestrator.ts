@@ -695,6 +695,14 @@ LOCATION NAMING — CRITICAL:
 Every location MUST have a proper fantasy name. NEVER use generic descriptions like "Cobblestone Road", "Town Gates", "Modest Town Market", "Old Mill by the Creek". Instead, give places evocative names: "The Thornwick Road", "Millhaven Gate", "The Brass Lantern Market", "Grindstone Mill". Name the town, name the road, name the creek, name the tavern — everything gets a proper noun. If a location has been established in previous turns, use its established name consistently.
 The "scene" object MUST include a "region" field — EVERY SINGLE TURN, including the very first turn of a campaign. Region is the broader geographical area the location belongs to — a planet name, a continent, a town name, a province, a wilderness area, a dungeon name. Examples: region "Thornwick" contains locations like "The Brass Lantern Market", "Thornwick Backstreets", "Mayor Aldren's Hall". Region "Bleakwood Forest" contains "The Old Druid Circle", "Grindstone Mill", "Ashcreek Ford". Region "Zarkonnis" contains "Docking Bay 7", "The Neon Bazaar", "Orbital Command". This creates a natural hierarchy on the Journey Map. Keep region names short and consistent — reuse the same region string for all locations in the same area. NEVER leave region empty or null — if unsure, use the name of the nearest town, planet, or landmark.
 
+SCENE LOCATION MUST MATCH THE NARRATIVE — CRITICAL:
+The scene.location field controls the background image the player sees. It MUST always reflect WHERE THE PARTY ACTUALLY IS at the end of your narrative. If the party moves during your response — boards a ship, enters a vehicle, flies away, teleports, walks to a new area, enters a building, leaves a building, goes to a different room — the scene.location MUST be the NEW location, not where they started. Examples:
+- Party boards a ship and takes off → scene.location = "Aboard the [Ship Name]" or "The [Ship Name] — Open Space", NOT the dock they left from
+- Party enters a cave → scene.location = "The [Cave Name]", NOT the forest outside
+- Party flees a building → scene.location = wherever they fled TO
+- Party travels to a new town → scene.location = the new town/area
+The background image is generated from the scene.location + scene.title. If you don't update the location, the player will see the OLD background even though the story has moved on. Check the CURRENT LOCATION shown above — if your narrative ends somewhere different, the scene.location MUST be different.
+
 RESPONSE FORMAT:
 Always respond with valid JSON in this structure:
 {

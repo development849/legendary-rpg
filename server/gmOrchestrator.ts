@@ -682,7 +682,7 @@ CRITICAL: When emitting NPC_JOINED_PARTY, you MUST include full companion stats 
 
 LOCATION NAMING — CRITICAL:
 Every location MUST have a proper fantasy name. NEVER use generic descriptions like "Cobblestone Road", "Town Gates", "Modest Town Market", "Old Mill by the Creek". Instead, give places evocative names: "The Thornwick Road", "Millhaven Gate", "The Brass Lantern Market", "Grindstone Mill". Name the town, name the road, name the creek, name the tavern — everything gets a proper noun. If a location has been established in previous turns, use its established name consistently.
-The "scene" object MUST include a "region" field. Region is the broader geographical area the location belongs to — a town name, a province, a wilderness area, a dungeon name. Examples: region "Thornwick" contains locations like "The Brass Lantern Market", "Thornwick Backstreets", "Mayor Aldren's Hall". Region "Bleakwood Forest" contains "The Old Druid Circle", "Grindstone Mill", "Ashcreek Ford". This creates a natural hierarchy on the Journey Map. Keep region names short and consistent — reuse the same region string for all locations in the same area.
+The "scene" object MUST include a "region" field — EVERY SINGLE TURN, including the very first turn of a campaign. Region is the broader geographical area the location belongs to — a planet name, a continent, a town name, a province, a wilderness area, a dungeon name. Examples: region "Thornwick" contains locations like "The Brass Lantern Market", "Thornwick Backstreets", "Mayor Aldren's Hall". Region "Bleakwood Forest" contains "The Old Druid Circle", "Grindstone Mill", "Ashcreek Ford". Region "Zarkonnis" contains "Docking Bay 7", "The Neon Bazaar", "Orbital Command". This creates a natural hierarchy on the Journey Map. Keep region names short and consistent — reuse the same region string for all locations in the same area. NEVER leave region empty or null — if unsure, use the name of the nearest town, planet, or landmark.
 
 RESPONSE FORMAT:
 Always respond with valid JSON in this structure:
@@ -935,7 +935,7 @@ export async function runGM(
       locations.push({
         name: scene.location,
         title: sceneTitle,
-        region: scene.region ?? "Unknown Lands",
+        region: scene.region || (prevState.locations?.length > 0 ? prevState.locations[prevState.locations.length - 1].region : null) || campaign?.setting?.split(/[,.\-—]/)?.[0]?.trim() || "Unknown Lands",
         threat: scene.threat ?? null,
         firstVisitedTurn: turnNum,
       });
@@ -949,6 +949,9 @@ export async function runGM(
       const titleChanged = existing.title !== sceneTitle;
       existing.title = sceneTitle;
       existing.threat = scene.threat ?? null;
+      if (existing.region === "Unknown Lands" && scene.region) {
+        existing.region = scene.region;
+      }
       if (titleChanged) {
         generateLocationBackground(
           ctx.partyId,
@@ -956,6 +959,13 @@ export async function runGM(
           sceneTitle,
           (campaign?.setting ?? "") + " " + (campaign?.description ?? ""),
         ).catch(console.error);
+      }
+    }
+    if (scene.region && locations.some((l: any) => l.region === "Unknown Lands")) {
+      for (const loc of locations) {
+        if (loc.region === "Unknown Lands") {
+          loc.region = scene.region;
+        }
       }
     }
     nextState = { ...prevState, locations, currentLocation: scene.location, currentSceneTitle: sceneTitle };

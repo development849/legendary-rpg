@@ -6,7 +6,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Scroll, Target, Star, Flame, Music } from "lucide-react";
+import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Scroll, Target, Star, Flame, Music, Trash2 } from "lucide-react";
 import type { Character } from "@shared/schema";
 import logoPath from "@assets/legendary-logo-transparent.png";
 
@@ -25,6 +25,8 @@ function useHallBackground() {
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const { imageData: hallBg } = useHallBackground();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: characters = [], isLoading: charsLoading } = useQuery<Character[]>({
     queryKey: ["/api/characters"],
@@ -33,6 +35,32 @@ export default function DashboardPage() {
   const { data: parties = [], isLoading: partiesLoading } = useQuery<any[]>({
     queryKey: ["/api/parties"],
   });
+
+  const [confirmDelete, setConfirmDelete] = useState<{ type: "character" | "campaign"; id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      const endpoint = confirmDelete.type === "character"
+        ? `/api/characters/${confirmDelete.id}`
+        : `/api/campaigns/${confirmDelete.id}`;
+      const res = await fetch(endpoint, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Failed" }));
+        throw new Error(data.error);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/characters"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/parties"] });
+      toast({ title: `${confirmDelete.type === "character" ? "Character" : "Campaign"} deleted`, description: `"${confirmDelete.name}" has been removed.` });
+      setConfirmDelete(null);
+    } catch (e: any) {
+      toast({ title: "Delete failed", description: e.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const displayName = user?.firstName || user?.email?.split("@")[0] || "Adventurer";
 
@@ -195,7 +223,18 @@ export default function DashboardPage() {
                             <span className="text-xs text-muted-foreground">{char.currentHp}/{char.maxHp} HP</span>
                           </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors flex-shrink-0" />
+                        <button
+                          className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground/30 hover:text-destructive transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                          data-testid={`button-delete-character-${char.id}`}
+                          title="Delete character"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setConfirmDelete({ type: "character", id: char.id, name: char.name });
+                          }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </Link>
                   );
@@ -268,7 +307,18 @@ export default function DashboardPage() {
                           {party.campaign?.name ?? "Campaign"} · Code: {party.inviteCode}
                         </p>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors flex-shrink-0" />
+                      <button
+                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground/30 hover:text-destructive transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                        data-testid={`button-delete-campaign-${party.id}`}
+                        title="Delete campaign"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setConfirmDelete({ type: "campaign", id: party.campaign?.id ?? party.campaignId, name: party.campaign?.name ?? party.name });
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </Link>
                 ))}
@@ -280,6 +330,30 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={() => !deleting && setConfirmDelete(null)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-sm mx-4 space-y-4 shadow-xl" onClick={e => e.stopPropagation()} data-testid="modal-confirm-delete">
+            <div className="space-y-2">
+              <h3 className="font-sans font-bold tracking-wide text-lg">Delete {confirmDelete.type === "character" ? "Character" : "Campaign"}?</h3>
+              <p className="text-sm text-muted-foreground font-serif">
+                {confirmDelete.type === "character"
+                  ? `"${confirmDelete.name}" will be permanently removed along with their party memberships. This cannot be undone.`
+                  : `"${confirmDelete.name}" and all its parties, messages, NPCs, and story progress will be permanently deleted. This cannot be undone.`
+                }
+              </p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setConfirmDelete(null)} disabled={deleting} data-testid="button-cancel-delete">
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={deleting} data-testid="button-confirm-delete">
+                {deleting ? "Deleting..." : "Delete Forever"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -76,9 +76,11 @@ Event-sourced: HP, MP, XP, inventory, conditions, achievements, abilities all up
 GET  /api/characters           — Get user's characters
 POST /api/characters           — Create character
 GET  /api/characters/:id       — Get character sheet
+DELETE /api/characters/:id     — Delete character (owner only, cascades party memberships)
 
 POST /api/campaigns            — Create campaign + auto-party
 GET  /api/campaigns/:id        — Get campaign + parties
+DELETE /api/campaigns/:id      — Delete campaign + all related data (owner only)
 
 GET  /api/parties              — Get user's parties
 GET  /api/parties/:id          — Get party + members + campaign

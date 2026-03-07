@@ -14,7 +14,7 @@ import {
 import { rollDice, enforceHandLimits } from "./gameEngine";
 import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
 import { db } from "./db";
-import { characters as charsTable, locationScenes, partyMembers } from "@shared/schema";
+import { characters, characters as charsTable, locationScenes, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 // WebSocket connections per party
@@ -125,6 +125,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!char) return res.status(404).json({ error: "Not found" });
       res.json(char);
     } catch (e) { res.status(500).json({ error: "Failed to get character" }); }
+  });
+
+  app.delete("/api/characters/:id", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const char = await getCharacter(req.params.id);
+      if (!char) return res.status(404).json({ error: "Character not found" });
+      if (char.userId !== userId) return res.status(403).json({ error: "Not your character" });
+      await db.delete(partyMembers).where(eq(partyMembers.characterId, char.id));
+      await db.delete(characterSituations).where(eq(characterSituations.characterId, char.id));
+      await db.delete(characters).where(eq(characters.id, char.id));
+      res.json({ success: true });
+    } catch (e) {
+      console.error("Delete character error:", e);
+      res.status(500).json({ error: "Failed to delete character" });
+    }
   });
 
   app.post("/api/characters/:id/generate-portrait", requireAuth, async (req: any, res) => {
@@ -404,6 +420,39 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const partyList = await getCampaignParties(campaign.id);
       res.json({ campaign, parties: partyList });
     } catch (e) { res.status(500).json({ error: "Failed to get campaign" }); }
+  });
+
+  app.delete("/api/campaigns/:id", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const campaign = await getCampaign(req.params.id);
+      if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+      if (campaign.ownerId !== userId) return res.status(403).json({ error: "Not your campaign" });
+
+      const campaignParties = await getCampaignParties(campaign.id);
+      const partyIds = campaignParties.map(p => p.id);
+
+      for (const pid of partyIds) {
+        await db.delete(chatMessages).where(eq(chatMessages.partyId, pid));
+        await db.delete(gameEvents).where(eq(gameEvents.partyId, pid));
+        await db.delete(worldState).where(eq(worldState.partyId, pid));
+        await db.delete(sceneSummaries).where(eq(sceneSummaries.partyId, pid));
+        await db.delete(locationScenes).where(eq(locationScenes.partyId, pid));
+        await db.delete(npcLog).where(eq(npcLog.partyId, pid));
+        await db.delete(characterSituations).where(eq(characterSituations.partyId, pid));
+        await db.delete(partyMembers).where(eq(partyMembers.partyId, pid));
+      }
+      await db.delete(arcs).where(eq(arcs.campaignId, campaign.id));
+      for (const pid of partyIds) {
+        await db.delete(parties).where(eq(parties.id, pid));
+      }
+      await db.delete(campaigns).where(eq(campaigns.id, campaign.id));
+
+      res.json({ success: true });
+    } catch (e) {
+      console.error("Delete campaign error:", e);
+      res.status(500).json({ error: "Failed to delete campaign" });
+    }
   });
 
   // ── Parties ─────────────────────────────────────────────────────────────────

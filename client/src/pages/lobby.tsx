@@ -5,13 +5,25 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowLeft, Copy, Users, CheckCircle, Clock, Sword, Play } from "lucide-react";
+import { ArrowLeft, Copy, Users, CheckCircle, Clock, Sword, Play, Shield, Sparkles, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 interface LobbyPageProps {
   partyId: string;
 }
+
+const CONTENT_RATINGS = [
+  { id: "pg13", label: "PG-13", desc: "Fantasy violence, mild peril" },
+  { id: "r", label: "Mature (R)", desc: "Blood, darker themes, strong language" },
+  { id: "adult", label: "Adult (18+)", desc: "Unrestricted content" },
+];
+
+const GM_MODES = [
+  { id: "fast", label: "Fast", desc: "Brisk pacing, action-forward" },
+  { id: "balanced", label: "Balanced", desc: "Narrative depth + action" },
+  { id: "cinematic", label: "Cinematic", desc: "Rich detail, immersive" },
+];
 
 export default function LobbyPage({ partyId }: LobbyPageProps) {
   const [, navigate] = useLocation();
@@ -70,6 +82,51 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
   const myMember = members.find((m: any) => m.userId === user?.id);
   const isReady = myMember?.isReady ?? false;
   const allReady = members.length > 0 && members.every((m: any) => m.isReady);
+  const isOwner = campaign?.ownerId === user?.id;
+
+  const [editRating, setEditRating] = useState<string | null>(null);
+  const [editGmMode, setEditGmMode] = useState<string | null>(null);
+  const [editNoRomance, setEditNoRomance] = useState<boolean | null>(null);
+  const [editNoHorror, setEditNoHorror] = useState<boolean | null>(null);
+  const [editFadeToBlack, setEditFadeToBlack] = useState<boolean | null>(null);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
+  useEffect(() => {
+    if (campaign) {
+      setEditRating(campaign.contentRating ?? "pg13");
+      setEditGmMode(campaign.gmMode ?? "balanced");
+      setEditNoRomance(campaign.noRomance ?? false);
+      setEditNoHorror(campaign.noHorror ?? false);
+      setEditFadeToBlack(campaign.fadeToBlack ?? true);
+    }
+  }, [campaign?.id]);
+
+  const settingsDirty = campaign && (
+    editRating !== campaign.contentRating ||
+    editGmMode !== campaign.gmMode ||
+    editNoRomance !== campaign.noRomance ||
+    editNoHorror !== campaign.noHorror ||
+    editFadeToBlack !== campaign.fadeToBlack
+  );
+
+  async function saveSettings() {
+    if (!campaign) return;
+    setSettingsSaving(true);
+    try {
+      const res = await fetch(`/api/campaigns/${campaign.id}/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentRating: editRating, gmMode: editGmMode, noRomance: editNoRomance, noHorror: editNoHorror, fadeToBlack: editFadeToBlack }),
+      });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+      toast({ title: "Settings saved", description: "Campaign settings updated.", variant: "success" as any });
+    } catch {
+      toast({ title: "Failed to save", variant: "destructive" });
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
 
   function copyInviteCode() {
     if (!party) return;
@@ -186,6 +243,95 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
             </CardContent>
           </Card>
         </div>
+
+        {/* Campaign Settings — owner only */}
+        {isOwner && editRating !== null && (
+          <Card className={`backdrop-blur-sm ${lobbyBg ? "bg-black/30 border-white/10" : "bg-card/80"}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-sans tracking-widest uppercase text-muted-foreground flex items-center gap-2">
+                <Settings className="w-3.5 h-3.5 text-primary" /> Campaign Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* Content Rating */}
+              <div className="space-y-2">
+                <p className="text-xs font-sans tracking-widest text-muted-foreground/60 uppercase flex items-center gap-1.5">
+                  <Shield className="w-3 h-3" /> Content Rating
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {CONTENT_RATINGS.map(r => (
+                    <button
+                      key={r.id}
+                      onClick={() => setEditRating(r.id)}
+                      data-testid={`button-rating-${r.id}`}
+                      className={`p-3 rounded-md border text-left transition-all ${
+                        editRating === r.id ? "border-primary bg-primary/10" : `border-border ${lobbyBg ? "bg-black/20 hover:bg-black/30" : "bg-secondary/30 hover:bg-secondary/50"}`
+                      }`}
+                    >
+                      <p className={`font-sans font-semibold text-xs tracking-wide ${editRating === r.id ? "text-primary" : ""}`}>{r.label}</p>
+                      <p className="text-muted-foreground text-[10px] font-serif mt-0.5 leading-snug">{r.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* GM Pacing Mode */}
+              <div className="space-y-2">
+                <p className="text-xs font-sans tracking-widest text-muted-foreground/60 uppercase flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3" /> GM Pacing
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {GM_MODES.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => setEditGmMode(m.id)}
+                      data-testid={`button-gm-mode-${m.id}`}
+                      className={`p-3 rounded-md border text-left transition-all ${
+                        editGmMode === m.id ? "border-primary bg-primary/10" : `border-border ${lobbyBg ? "bg-black/20 hover:bg-black/30" : "bg-secondary/30 hover:bg-secondary/50"}`
+                      }`}
+                    >
+                      <p className={`font-sans font-semibold text-xs tracking-wide ${editGmMode === m.id ? "text-primary" : ""}`}>{m.label}</p>
+                      <p className="text-muted-foreground text-[10px] font-serif mt-0.5 leading-snug">{m.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="space-y-2">
+                <p className="text-xs font-sans tracking-widest text-muted-foreground/60 uppercase">Content Preferences</p>
+                <div className="space-y-2">
+                  {[
+                    { key: "noRomance", label: "No Romance", desc: "Exclude romantic subplots", value: editNoRomance, set: setEditNoRomance },
+                    { key: "noHorror", label: "No Horror", desc: "Avoid disturbing content", value: editNoHorror, set: setEditNoHorror },
+                    { key: "fadeToBlack", label: "Fade to Black", desc: "Cut away at explicit moments", value: editFadeToBlack, set: setEditFadeToBlack },
+                  ].map(t => (
+                    <label key={t.key} className="flex items-center gap-3 cursor-pointer py-1">
+                      <div
+                        onClick={() => t.set(!t.value)}
+                        data-testid={`toggle-${t.key}`}
+                        className={`relative w-9 h-[18px] rounded-full transition-colors cursor-pointer flex-shrink-0 ${t.value ? "bg-primary" : "bg-secondary"}`}
+                      >
+                        <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-transform ${t.value ? "translate-x-[18px]" : "translate-x-[2px]"}`} />
+                      </div>
+                      <div>
+                        <span className="text-sm font-sans font-medium">{t.label}</span>
+                        <span className="text-xs text-muted-foreground font-serif ml-2">{t.desc}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Save button */}
+              {settingsDirty && (
+                <Button size="sm" onClick={saveSettings} disabled={settingsSaving} data-testid="button-save-settings">
+                  {settingsSaving ? "Saving..." : "Save Settings"}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Actions */}
         <div className={`rounded-lg p-4 flex items-center justify-between ${lobbyBg ? "backdrop-blur-md bg-black/50 border border-white/10" : "border-t border-border pt-4"}`}>

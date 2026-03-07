@@ -475,7 +475,8 @@ Inventory: ${(() => {
 })()}
 Conditions: ${((c.conditions as any[]) || []).join(", ") || "none"}
 Abilities: ${(c.abilities as any[]).map((a: any) => a.name).join(", ")}
-Skills: ${((c.skills as any[]) || []).map((s: any) => `${s.name} (${s.mechanicalEffect})`).join(", ") || "none"}${c.backstory ? `\nBackstory: ${c.backstory}` : ""}
+Skills: ${((c.skills as any[]) || []).map((s: any) => `${s.name} (${s.mechanicalEffect})`).join(", ") || "none"}
+Achievements: ${((c.achievements as any[]) || []).map((a: any) => `${a.title} [${a.category}]`).join(", ") || "none"}${c.backstory ? `\nBackstory: ${c.backstory}` : ""}
 `.trim()).join("\n\n");
 
   const recentSummaries = summaries.slice(-3).map(s => s.summary).join("\n---\n");
@@ -705,6 +706,7 @@ Always respond with valid JSON in this structure:
     {"type": "NPC_RELATIONSHIP_CHANGED", "name": "Marta", "relationship": "friendly", "reason": "The party saved her from the thieves"},
     {"type": "NPC_JOINED_PARTY", "name": "Marta", "reason": "She agreed to guide the party through the sewers in exchange for protection.", "level": 2, "max_hp": 16, "ac": 13, "stats": {"might": 10, "agility": 14, "endurance": 12, "intellect": 10, "will": 10, "presence": 12}, "abilities": [{"id": "sneak_attack", "name": "Sneak Attack", "description": "Extra 1d6 damage when attacking with advantage"}], "inventory": [{"name": "Short Sword", "type": "weapon", "qty": 1, "rarity": "common", "equipped": true, "properties": {"damage": "1d6", "bonus": 0}}, {"name": "Leather Armor", "type": "armor", "qty": 1, "rarity": "common", "equipped": true, "properties": {"ac": 11}}]},
     {"type": "NPC_LEFT_PARTY", "name": "Marta", "reason": "She slipped away in the night, leaving only a note and the party's coin purse slightly lighter."},
+    {"type": "ACHIEVEMENT_EARNED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "title": "Member of the Gildhaven Merchants Guild", "category": "guild", "description": "Registered as an official member of the prestigious Merchants Guild of Gildhaven"},
     {"type": "RECIPE_DISCOVERED", "name": "Flame Enchantment", "description": "Enchant a weapon with fire damage, adding +1d4 fire to each hit", "ingredients": [{"name": "Fire Opal", "qty": 1}, {"name": "Boar Tusk", "qty": 2}, {"name": "Arcane Dust", "qty": 1}]},
     {"type": "SHOP_OPENED", "merchant_name": "Bjorn the Blacksmith", "shop_flavor": "A soot-stained forge with weapons hanging from iron hooks", "inventory": [{"name": "Iron Longsword", "type": "weapon", "rarity": "common", "price": 15, "description": "A reliable blade forged from local iron ore", "properties": {"damage": "1d8"}}, {"name": "Steel Battleaxe", "type": "weapon", "rarity": "common", "price": 18, "description": "A heavy two-handed axe that cleaves through armor", "properties": {"damage": "1d10", "two_handed": true}}, {"name": "Hunting Shortbow", "type": "weapon", "rarity": "common", "price": 12, "description": "Light and accurate, favored by scouts and rangers", "properties": {"damage": "1d6", "range": 80}}, {"name": "Chain Mail", "type": "armor", "rarity": "common", "price": 20, "description": "Interlocking steel rings providing solid protection", "properties": {"ac": 14, "slot": "body"}}, {"name": "Iron Helm", "type": "armor", "rarity": "common", "price": 8, "description": "A simple helm that protects against head blows", "properties": {"ac_bonus": 1, "slot": "head"}}, {"name": "Steel Shield", "type": "armor", "rarity": "common", "price": 10, "description": "A sturdy round shield for blocking attacks", "properties": {"ac_bonus": 2}}, {"name": "Runed Amulet", "type": "accessory", "rarity": "uncommon", "price": 45, "description": "Faintly glowing runes grant +1 to Will saving throws", "properties": {"will_bonus": 1}}, {"name": "Whetstone", "type": "tool", "rarity": "common", "price": 2, "description": "Sharpens blades before battle, granting +1 damage on next hit", "properties": {}}]}
   ],
@@ -769,6 +771,7 @@ Step 6 — Situations: Did any character's location or circumstances change? →
 Step 7 — Companions: Did an NPC join the party this turn? → NPC_JOINED_PARTY required. Did an NPC leave? → NPC_LEFT_PARTY required.
 Step 8 — XP: Did the party defeat an enemy, complete an objective, finish a quest, or accomplish something meaningful? → XP_GRANTED required for each participating character. This is mandatory — no meaningful accomplishment goes unrewarded.
 Step 8b — MP: Did any character cast a spell this turn? → MP_CHANGED required with a NEGATIVE delta matching the spell tier cost. Did a character rest, drink a mana potion, or otherwise recover MP? → MP_CHANGED required with a POSITIVE delta. Did a character use a scroll? → NO MP cost, but ITEM_REMOVED required for the scroll.
+Step 8c — Achievements: Did a character join a guild, earn an honorary title, complete a major quest milestone, accomplish a notable combat feat, discover something significant, or receive formal recognition? → ACHIEVEMENT_EARNED required. Categories: "guild" (guild memberships/ranks), "title" (honorary titles, knighthoods, formal recognition), "quest" (major quest completions, story milestones), "combat" (notable combat feats — first boss kill, survived impossible odds), "exploration" (discovered hidden places, mapped unknown territory), "social" (earned trust of a faction, brokered peace, formed alliances). Example: {"type": "ACHIEVEMENT_EARNED", "character_id": "USE_THE_CHARACTER_ID", "title": "Member of the Gildhaven Merchants Guild", "category": "guild", "description": "Registered as an official member of the prestigious Merchants Guild of Gildhaven"}. Check the character's Achievements list — do NOT duplicate existing entries.
 Step 9 — Recipes: Did the player learn a spell, enchantment, potion recipe, or crafting formula with specific ingredients? → RECIPE_DISCOVERED required. Include a clear name, description of the result, and a list of ingredients with quantities. The player can track these in their Codex and see which ingredients they've collected. Give each ingredient a specific, findable name. Recipes should have 2–5 ingredients that feel thematic and achievable through gameplay (e.g. "Boar Tusk", "Fire Opal", "Moonpetal Flower", "Arcane Dust", "Troll Blood").
 Step 10 — Shopping: Did the player ask (via action OR dialogue) to browse, see, buy, trade, look at wares, or shop from a merchant/vendor/shopkeeper? → SHOP_OPENED required. Generate a thematic inventory of 6–12 items the merchant would realistically stock, with appropriate prices in gp. CRITICAL: Every weapon and armor piece you mention or describe in the narrative MUST appear in the SHOP_OPENED inventory array — do NOT describe items in dialogue that aren't purchasable. A blacksmith should stock mostly weapons and armor; an alchemist should stock potions and reagents; a general merchant should have a broad mix. Every item MUST include a "description" field — a brief 1-sentence flavor text explaining what it does or its magical effect. For weapons/armor this can be short ("A sturdy steel blade"), but for accessories, tools, and magical items the description is ESSENTIAL (e.g. "Grants +1 to all perception checks", "Can hold 500 lbs of items while weighing only 5 lbs"). Include full item properties (damage for weapons, ac/ac_bonus+slot for armor, heal for potions, etc). Set prices based on rarity: common 5–25gp, uncommon 25–100gp, rare 100–500gp, epic 500–2000gp. The player's client will open an interactive shop menu — do NOT handle individual buy/sell transactions in the narrative. Just describe the shop scene and emit SHOP_OPENED. The player will buy/sell through the shop UI.
 SHOP TRANSACTIONS ARE HANDLED BY THE CLIENT — NEVER emit ITEM_GRANTED, ITEM_REMOVED, or GOLD_CHANGED for shop purchases or sales. The shop UI manages inventory and gold automatically. If a player says "I buy the sword" while a shop is open, respond with flavor text only (e.g. the merchant handing over the item) — do NOT emit any inventory or gold updates. Only emit SHOP_OPENED to open/refresh the shop.
@@ -1415,6 +1418,31 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
               payload: { name, reason: update.reason ?? "" },
             });
             console.log(`[GM] NPC left party: "${name}"`);
+          }
+          break;
+        }
+        case "ACHIEVEMENT_EARNED": {
+          const char = await resolveCharacter(update.character_id, partyId);
+          if (char) {
+            const title = (update.title ?? "").trim();
+            const validCategories = ["guild", "title", "quest", "combat", "exploration", "social"];
+            const category = validCategories.includes(update.category) ? update.category : "quest";
+            const description = (update.description ?? "").trim();
+            if (!title) break;
+            const existing = (char.achievements as any[]) ?? [];
+            const alreadyHas = existing.some((a: any) => a.title.toLowerCase() === title.toLowerCase());
+            if (alreadyHas) {
+              console.log(`[GM] Achievement "${title}" already earned by ${char.name} — skipping duplicate`);
+              break;
+            }
+            const achievement = { title, category, description, earnedAt: new Date().toISOString() };
+            const updated = [...existing, achievement];
+            await db.update(characters).set({ achievements: updated }).where(eq(characters.id, char.id));
+            await db.insert(gameEvents).values({
+              partyId, campaignId, eventType: "ACHIEVEMENT_EARNED", actorId: "gm",
+              payload: { character_id: char.id, title, category, description },
+            });
+            console.log(`[GM] Achievement earned: "${title}" (${category}) for ${char.name}`);
           }
           break;
         }

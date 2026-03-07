@@ -43,7 +43,8 @@ Random Hero: "Random Hero" button on class step generates a fully randomized cha
 Stat customization: Point-envelope system in character creation step 3 "Allocate Attributes" — player redistributes class stat budget (min 8, max 16 per stat); racial bonuses shown separately; total envelope fixed per class
 Background abilities: 12 background-specific abilities (Battle-Hardened, Street Network, Pathfinder, etc.) granted at creation alongside class abilities; displayed separately on character sheet with visual distinction
 MP (Magic Points): Caster classes have MP for spellcasting — Wizard 20 base (+5/level), Cleric/Bard 15 base (+4/level), Paladin/Ranger 8 base (+2/level), Fighter/Rogue/Barbarian 0. Spell tiers cost 0-10 MP. Scrolls are single-use consumables that cost no MP and can be used by any class. MP recovers on rest (25% short, 100% long) or via mana potions.
-Event-sourced: HP, MP, XP, inventory, conditions, abilities all updatable by GM
+Achievements: JSONB array on characters — `{title, category, description, earnedAt}`; categories: guild, title, quest, combat, exploration, social; GM emits `ACHIEVEMENT_EARNED` for guild memberships, honorary titles, major quest milestones, combat feats, discoveries, faction recognition; displayed in character sheet with color-coded category badges
+Event-sourced: HP, MP, XP, inventory, conditions, achievements, abilities all updatable by GM
 
 ### Campaigns → Parties
 - Campaign: settings, GM mode (fast/balanced/cinematic), content filters

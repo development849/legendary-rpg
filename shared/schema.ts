@@ -29,6 +29,7 @@ export const characters = pgTable("characters", {
   abilities: jsonb("abilities").notNull().default(sql`'[]'::jsonb`),
   inventory: jsonb("inventory").notNull().default(sql`'[]'::jsonb`),
   conditions: jsonb("conditions").notNull().default(sql`'[]'::jsonb`),
+  achievements: jsonb("achievements").notNull().default(sql`'[]'::jsonb`),
   isRetired: boolean("is_retired").notNull().default(false),
   createdAt: timestamp("created_at").default(sql`NOW()`).notNull(),
 });

@@ -12,7 +12,7 @@ import {
   Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown, ChevronRight,
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
-  Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft
+  Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -2155,6 +2155,40 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                 <p className="text-[10px] text-violet-400/80 font-sans font-semibold mt-0.5">{sk.mechanicalEffect}</p>
                               </div>
                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Achievements */}
+                      {((char.achievements as any[]) ?? []).length > 0 && (
+                        <div className="rounded-md border border-border bg-card p-3 space-y-2">
+                          <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                            <Trophy className="w-3 h-3 text-amber-400" /> Achievements ({(char.achievements as any[]).length})
+                          </p>
+                          <div className="space-y-1.5">
+                            {(char.achievements as any[]).map((ach: any, i: number) => {
+                              const catColors: Record<string, string> = {
+                                guild: "text-blue-400 border-blue-500/20 bg-blue-500/10",
+                                title: "text-amber-400 border-amber-500/20 bg-amber-500/10",
+                                quest: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10",
+                                combat: "text-red-400 border-red-500/20 bg-red-500/10",
+                                exploration: "text-cyan-400 border-cyan-500/20 bg-cyan-500/10",
+                                social: "text-rose-400 border-rose-500/20 bg-rose-500/10",
+                              };
+                              const colorCls = catColors[ach.category] ?? catColors.quest;
+                              return (
+                                <div key={i} className={`rounded-md border px-2.5 py-2 ${colorCls}`} data-testid={`sheet-achievement-${i}`}>
+                                  <div className="flex items-center gap-1.5">
+                                    <Trophy className="w-3 h-3 flex-shrink-0" />
+                                    <p className="text-sm font-sans font-semibold">{ach.title}</p>
+                                  </div>
+                                  {ach.description && (
+                                    <p className="text-xs text-foreground/60 font-serif mt-0.5">{ach.description}</p>
+                                  )}
+                                  <p className="text-[10px] opacity-60 font-sans capitalize mt-0.5">{ach.category}</p>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

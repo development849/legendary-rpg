@@ -1322,7 +1322,10 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
           break;
         }
         case "SHOP_OPENED": {
-          console.log(`[GM] Shop opened: "${update.merchant_name}" with ${(update.inventory ?? []).length} items`);
+          const shopInv = update.inventory ?? [];
+          const withDesc = shopInv.filter((i: any) => i.description);
+          console.log(`[GM] Shop opened: "${update.merchant_name}" with ${shopInv.length} items (${withDesc.length} have descriptions)`);
+          if (shopInv.length > 0) console.log(`[GM] Shop sample item:`, JSON.stringify(shopInv[0]));
           break;
         }
         case "RECIPE_DISCOVERED": {

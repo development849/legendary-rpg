@@ -33,6 +33,7 @@ interface ShopItem {
   type: string;
   rarity: string;
   price: number;
+  description?: string;
   properties: Record<string, any>;
   qty?: number;
 }
@@ -2280,6 +2281,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           if (p.two_handed) parts.push("2H");
           if (p.thrown) parts.push("thrown");
           if (p.finesse) parts.push("finesse");
+          if (p.range) parts.push(`${p.range}ft`);
+          if (p.focus) parts.push(`focus +${p.focus}`);
+          const extra = Object.entries(p)
+            .filter(([k]) => !["damage","bonus","ac","ac_bonus","range","two_handed","thrown","finesse","heal","focus","value","slot"].includes(k))
+            .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`);
+          parts.push(...extra);
           return parts.length > 0 ? parts.join(" · ") : null;
         };
 

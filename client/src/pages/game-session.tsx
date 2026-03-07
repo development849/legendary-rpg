@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { getAvailableSkills, SKILL_MILESTONE_LEVELS, type SkillOption } from "@shared/skillTrees";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -186,6 +187,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [levelUpData, setLevelUpData] = useState<{ characterId: string; characterName: string; newLevel: number; hpGain: number } | null>(null);
   const [statPoints, setStatPoints] = useState<Record<string, number>>({ might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 });
   const [levelUpBusy, setLevelUpBusy] = useState(false);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -322,6 +324,15 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
         } else if (msg.type === "TURN_HINT" && msg.turnHint) {
           setTurnHint(msg.turnHint);
+        } else if (msg.type === "LEVEL_UP" && msg.levelUps) {
+          const myLevelUp = msg.levelUps.find((lu: any) => {
+            const myChar = members.find((m: any) => m.userId === user?.id)?.character;
+            return myChar && lu.characterId === myChar.id;
+          });
+          if (myLevelUp) {
+            setLevelUpData(myLevelUp);
+            setStatPoints({ might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 });
+          }
         }
       };
 
@@ -482,6 +493,15 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               if (shopUpdate) {
                 setShopData({ merchant_name: shopUpdate.merchant_name, shop_flavor: shopUpdate.shop_flavor ?? "", inventory: shopUpdate.inventory ?? [] });
                 setShopTab("buy");
+              }
+              const evtLevelUps = evt.levelUps ?? evt.message?.metadata?.levelUps ?? [];
+              if (evtLevelUps.length > 0) {
+                const myChar = members.find((m: any) => m.userId === user?.id)?.character;
+                const myLU = evtLevelUps.find((lu: any) => myChar && lu.characterId === myChar.id);
+                if (myLU) {
+                  setLevelUpData(myLU);
+                  setStatPoints({ might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 });
+                }
               }
             }
           } catch (_) {}
@@ -2074,6 +2094,23 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         </div>
                       )}
 
+                      {((char.skills as any[]) ?? []).length > 0 && (
+                        <div className="rounded-md border border-border bg-card p-3 space-y-2">
+                          <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                            <Star className="w-3 h-3 text-violet-400" /> Learned Skills
+                          </p>
+                          <div className="space-y-1.5">
+                            {(char.skills as any[]).map((sk: any, i: number) => (
+                              <div key={i} className="rounded-md bg-violet-500/10 border border-violet-500/20 px-2.5 py-2" data-testid={`sheet-skill-${i}`}>
+                                <p className="text-sm font-sans font-semibold text-foreground">{sk.name}</p>
+                                <p className="text-xs text-foreground/60 font-serif mt-0.5">{sk.description}</p>
+                                <p className="text-[10px] text-violet-400/80 font-sans font-semibold mt-0.5">{sk.mechanicalEffect}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Backstory */}
                       {char.backstory && (
                         <div className="rounded-md border border-border bg-card p-3 space-y-2">
@@ -2558,6 +2595,203 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           </div>
         </div>
       )}
+
+      {levelUpData && (() => {
+        const myChar = members.find((m: any) => m.userId === user?.id)?.character;
+        const charClass = myChar?.class ?? "";
+        const charRace = myChar?.race ?? "";
+        const existingSkillIds = ((myChar?.skills as any[]) ?? []).map((s: any) => s.id);
+        const { classSkills, racialSkill } = getAvailableSkills(charClass, charRace, levelUpData.newLevel, existingSkillIds);
+        const isMilestone = SKILL_MILESTONE_LEVELS.includes(levelUpData.newLevel);
+        const totalStatAllocated = Object.values(statPoints).reduce((s, v) => s + v, 0);
+        const needsSkillPick = isMilestone && classSkills;
+        const requiredPicks = classSkills?.pick ?? 0;
+        const canConfirm = totalStatAllocated === 2 && (!needsSkillPick || selectedSkillIds.length === requiredPicks);
+        const currentStats = (myChar?.stats as Record<string, number>) ?? {};
+
+        async function confirmLevelUp() {
+          if (!canConfirm || levelUpBusy) return;
+          setLevelUpBusy(true);
+          try {
+            const skillsToSend: SkillOption[] = [];
+            if (classSkills) {
+              for (const id of selectedSkillIds) {
+                const found = classSkills.choices.find(c => c.id === id);
+                if (found) skillsToSend.push(found);
+              }
+            }
+            if (racialSkill) {
+              skillsToSend.push(racialSkill);
+            }
+            const resp = await fetch(`/api/characters/${levelUpData.characterId}/level-up`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                statAllocations: statPoints,
+                selectedSkills: skillsToSend.length > 0 ? skillsToSend : undefined,
+              }),
+            });
+            if (!resp.ok) throw new Error("Failed");
+            await queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+            toast({ title: `${levelUpData.characterName} reached Level ${levelUpData.newLevel}!` });
+            setLevelUpData(null);
+            setSelectedSkillIds([]);
+          } catch {
+            toast({ title: "Failed to apply level-up", variant: "destructive" });
+          } finally {
+            setLevelUpBusy(false);
+          }
+        }
+
+        return (
+          <div className="fixed inset-0 z-[110] bg-black/85 flex items-center justify-center p-4" data-testid="overlay-level-up">
+            <div className="relative max-w-lg w-full bg-background border border-primary/40 rounded-xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 px-6 py-5 text-center border-b border-primary/30">
+                <div className="text-3xl mb-1">
+                  <Star className="w-8 h-8 text-yellow-400 mx-auto mb-1 animate-pulse" />
+                </div>
+                <h2 className="text-2xl font-bold font-serif text-primary tracking-wide" data-testid="text-level-up-title">
+                  Level Up!
+                </h2>
+                <p className="text-sm text-foreground/70 font-serif mt-1">
+                  {levelUpData.characterName} reached <span className="text-primary font-bold">Level {levelUpData.newLevel}</span>
+                </p>
+                <div className="flex items-center justify-center gap-4 mt-3">
+                  <Badge variant="outline" className="border-red-500/40 text-red-400 font-sans text-xs">
+                    <Heart className="w-3 h-3 mr-1" /> +{levelUpData.hpGain} HP
+                  </Badge>
+                  {isMilestone && (
+                    <Badge variant="outline" className="border-violet-500/40 text-violet-400 font-sans text-xs">
+                      <Zap className="w-3 h-3 mr-1" /> New Skill!
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <ScrollArea className="max-h-[60vh]">
+                <div className="px-6 py-4 space-y-5">
+                  <div>
+                    <h3 className="text-sm font-bold font-sans text-foreground/80 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-primary" />
+                      Allocate Stat Points
+                      <span className="text-xs text-muted-foreground font-normal ml-auto">{totalStatAllocated}/2 assigned</span>
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["might", "agility", "endurance", "intellect", "will", "presence"] as const).map(stat => {
+                        const base = currentStats[stat] ?? 10;
+                        const added = statPoints[stat] ?? 0;
+                        return (
+                          <div key={stat} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2 border border-border/50" data-testid={`stat-row-${stat}`}>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs font-sans font-bold capitalize text-foreground/80">{stat}</span>
+                              <span className="text-xs text-muted-foreground ml-1.5">{base}{added > 0 ? ` → ${base + added}` : ""}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  if (added > 0) setStatPoints(prev => ({ ...prev, [stat]: prev[stat] - 1 }));
+                                }}
+                                disabled={added === 0}
+                                className="w-6 h-6 rounded bg-background border border-border text-xs font-bold text-foreground/60 hover:text-foreground disabled:opacity-30 transition-colors"
+                                data-testid={`button-stat-minus-${stat}`}
+                              >
+                                -
+                              </button>
+                              <span className={`w-5 text-center text-sm font-bold ${added > 0 ? "text-primary" : "text-muted-foreground/50"}`}>{added}</span>
+                              <button
+                                onClick={() => {
+                                  if (totalStatAllocated < 2) setStatPoints(prev => ({ ...prev, [stat]: prev[stat] + 1 }));
+                                }}
+                                disabled={totalStatAllocated >= 2}
+                                className="w-6 h-6 rounded bg-background border border-border text-xs font-bold text-foreground/60 hover:text-foreground disabled:opacity-30 transition-colors"
+                                data-testid={`button-stat-plus-${stat}`}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {isMilestone && classSkills && (
+                    <div>
+                      <h3 className="text-sm font-bold font-sans text-foreground/80 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-violet-400" />
+                        Choose a New Skill
+                        <span className="text-xs text-muted-foreground font-normal ml-auto capitalize">{charClass} — Level {levelUpData.newLevel}</span>
+                      </h3>
+                      <div className="space-y-2">
+                        {classSkills.choices.map(skill => {
+                          const isSelected = selectedSkillIds.includes(skill.id);
+                          return (
+                            <button
+                              key={skill.id}
+                              onClick={() => {
+                                if (isSelected) {
+                                  setSelectedSkillIds(prev => prev.filter(id => id !== skill.id));
+                                } else if (selectedSkillIds.length < requiredPicks) {
+                                  setSelectedSkillIds(prev => [...prev, skill.id]);
+                                }
+                              }}
+                              className={`w-full text-left rounded-lg border p-3 transition-all ${
+                                isSelected
+                                  ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                                  : "border-border/60 bg-muted/30 hover:border-primary/40 hover:bg-muted/50"
+                              }`}
+                              data-testid={`button-skill-${skill.id}`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                                  isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"
+                                }`}>
+                                  {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold font-sans text-foreground">{skill.name}</p>
+                                  <p className="text-xs text-foreground/60 font-serif mt-0.5">{skill.description}</p>
+                                  <p className="text-[10px] text-primary/80 font-sans font-semibold mt-1">{skill.mechanicalEffect}</p>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {isMilestone && racialSkill && (
+                    <div>
+                      <h3 className="text-sm font-bold font-sans text-foreground/80 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <Gem className="w-4 h-4 text-amber-400" />
+                        Racial Skill Unlocked
+                        <span className="text-xs text-muted-foreground font-normal ml-auto">{charRace}</span>
+                      </h3>
+                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                        <p className="text-sm font-bold font-sans text-foreground">{racialSkill.name}</p>
+                        <p className="text-xs text-foreground/60 font-serif mt-0.5">{racialSkill.description}</p>
+                        <p className="text-[10px] text-amber-400/80 font-sans font-semibold mt-1">{racialSkill.mechanicalEffect}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              <div className="px-6 py-4 border-t border-border flex-shrink-0">
+                <Button
+                  onClick={confirmLevelUp}
+                  disabled={!canConfirm || levelUpBusy}
+                  className="w-full"
+                  data-testid="button-confirm-level-up"
+                >
+                  {levelUpBusy ? "Applying..." : canConfirm ? "Confirm Level Up" : `Assign ${2 - totalStatAllocated} more stat point${2 - totalStatAllocated !== 1 ? "s" : ""}${needsSkillPick && selectedSkillIds.length < requiredPicks ? " & pick a skill" : ""}`}
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

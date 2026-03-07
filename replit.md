@@ -59,6 +59,8 @@ Event-sourced: HP, XP, inventory, conditions, abilities all updatable by GM
 - Item properties: weapons require `damage` (e.g. "1d8"), armor requires `ac`; GM prompt enforces this via Critical Rule #6
 - NPC companions: GM emits `NPC_JOINED_PARTY` with full stat block (level, max_hp, ac, stats, abilities, inventory); handler saves to npc_log; companion cards in Party tab show full character sheet (stats grid, abilities, gear, HP/AC/Level/XP badges)
 - Companion leveling: `npc_log` has `xp` column; when any player character earns XP via `XP_GRANTED`, all active companions (`isPartyMember=true`) receive the same XP amount; companions use the same XP threshold table as players; on level-up they gain +5–8 HP per level gained
+- Level-up system: When a character levels up via XP, server broadcasts `LEVEL_UP` event via WebSocket; client shows a celebration modal with: HP gain display, 2 stat points to allocate (+/- buttons per stat), and at milestone levels (5, 10, 15, 20) a class-specific skill choice and racial skill unlock; confirmed via `PATCH /api/characters/:id/level-up`
+- Skill trees: `shared/skillTrees.ts` defines `CLASS_SKILL_TREES` (3 choices per tier for all 8 classes at levels 5/10/15/20) and `RACE_BONUS_SKILLS` (1 racial skill per race, unlocked at level 5); skills stored in character's `skills` jsonb array; GM prompt includes learned skills with mechanical effects
 - Location naming: GM instructed to give proper fantasy names (not generic descriptions); scene.region groups locations hierarchically
 - Journey Map: locations grouped by region with collapsible sections; fast-travel button on non-current locations sends travel action to GM
 - Codex system: GM emits `RECIPE_DISCOVERED` when player learns crafting recipes/spells/enchantments; stored in world state `recipes` array; Codex sidebar tab shows recipes with ingredient checklists cross-referenced against inventory; "Craft/Perform" button when all ingredients collected
@@ -83,6 +85,7 @@ POST /api/parties/:id/ready    — Toggle ready state
 GET  /api/parties/:id/messages — Get chat history
 POST /api/parties/:id/action   — Player action → streaming GM response
 
+PATCH /api/characters/:id/level-up — Apply level-up: stat allocation + skill selection
 PATCH /api/characters/:id/equip — Equip/unequip weapon or armor
 POST /api/dice/roll            — Standalone dice roller
 WS   /ws                       — Party WebSocket room

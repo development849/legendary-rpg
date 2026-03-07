@@ -471,7 +471,8 @@ Inventory: ${(() => {
   }).join(", ");
 })()}
 Conditions: ${((c.conditions as any[]) || []).join(", ") || "none"}
-Abilities: ${(c.abilities as any[]).map((a: any) => a.name).join(", ")}${c.backstory ? `\nBackstory: ${c.backstory}` : ""}
+Abilities: ${(c.abilities as any[]).map((a: any) => a.name).join(", ")}
+Skills: ${((c.skills as any[]) || []).map((s: any) => `${s.name} (${s.mechanicalEffect})`).join(", ") || "none"}${c.backstory ? `\nBackstory: ${c.backstory}` : ""}
 `.trim()).join("\n\n");
 
   const recentSummaries = summaries.slice(-3).map(s => s.summary).join("\n---\n");

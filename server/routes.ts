@@ -266,7 +266,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!char) return res.status(404).json({ error: "Not found" });
       if (char.userId !== userId) return res.status(403).json({ error: "Forbidden" });
 
-      const { statAllocations } = req.body;
+      const { statAllocations, selectedSkills } = req.body;
       if (!statAllocations || typeof statAllocations !== "object") {
         return res.status(400).json({ error: "statAllocations required" });
       }
@@ -287,7 +287,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         stats[key] = (stats[key] ?? 10) + amount;
       }
 
-      const updated = await updateCharacter(req.params.id, { stats } as any);
+      const existingSkills = (char.skills as any[]) ?? [];
+      const existingIds = existingSkills.map((s: any) => s.id);
+      let validatedSkills: any[] = [];
+      if (selectedSkills && Array.isArray(selectedSkills)) {
+        for (const sk of selectedSkills) {
+          if (!sk.id || !sk.name || existingIds.includes(sk.id)) continue;
+          validatedSkills.push({ id: sk.id, name: sk.name, description: sk.description ?? "", mechanicalEffect: sk.mechanicalEffect ?? "" });
+        }
+      }
+      const newSkills = [...existingSkills, ...validatedSkills];
+
+      const updated = await updateCharacter(req.params.id, { stats, skills: newSkills } as any);
+
+      if (validatedSkills.length > 0) {
+        const partyMember = await db.select().from(partyMembers)
+          .where(eq(partyMembers.characterId, char.id));
+        if (partyMember.length > 0) {
+          broadcastToParty(partyMember[0].partyId, {
+            type: "STATE_UPDATE",
+            updates: [{ type: "SKILL_LEARNED", characterId: char.id, skills: validatedSkills }],
+          });
+        }
+      }
+
       res.json(updated);
     } catch (e) {
       res.status(500).json({ error: "Failed to apply level-up" });

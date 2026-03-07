@@ -1375,13 +1375,13 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     <p className="text-xs text-muted-foreground text-center py-8 font-serif italic">No character found.</p>
                   );
                   const items = (char.inventory as any[]) ?? [];
-                  const typeOrder = ["weapon", "armor", "consumable", "tool", "treasure", "other"];
+                  const typeOrder = ["weapon", "armor", "jewelry", "consumable", "tool", "treasure", "other"];
                   const typeIcons: Record<string, any> = {
-                    weapon: Sword, armor: Shield, consumable: Coffee,
-                    tool: Wrench, treasure: Gem, other: Package,
+                    weapon: Sword, armor: Shield, jewelry: Gem, consumable: Coffee,
+                    tool: Wrench, treasure: Coins, other: Package,
                   };
                   const typeLabels: Record<string, string> = {
-                    weapon: "Weapons", armor: "Armor", consumable: "Consumables",
+                    weapon: "Weapons", armor: "Armor", jewelry: "Jewelry", consumable: "Consumables",
                     tool: "Tools", treasure: "Valuables", other: "Misc",
                   };
                   const grouped: Record<string, { item: any; originalIndex: number }[]> = {};
@@ -1444,7 +1444,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     return parts.length > 0 ? parts.join(" · ") : null;
                   };
 
-                  const canEquip = (item: any) => item.type === "weapon" || item.type === "armor";
+                  const canEquip = (item: any) => item.type === "weapon" || item.type === "armor" || item.type === "jewelry";
 
                   const rarityColors: Record<string, string> = {
                     common: "text-zinc-400 border-zinc-500/30 bg-zinc-500/10",
@@ -2022,7 +2022,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           epic: "text-purple-400",
                           legendary: "text-amber-400",
                         };
-                        const slotLabels: Record<string, string> = { body: "Body", head: "Head", hands: "Hands", feet: "Feet" };
+                        const slotLabels: Record<string, string> = { body: "Body", head: "Head", hands: "Hands", feet: "Feet", ring: "Ring", necklace: "Neck" };
                         const getSlotLabel = (it: any, allEquipped: any[]) => {
                           if (it.type === "weapon" && it.properties?.two_handed) return "2H";
                           if (it.type === "weapon") {
@@ -2034,6 +2034,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             if (slot && slotLabels[slot]) return slotLabels[slot];
                             if (it.properties?.ac_bonus && !slot) return "OH";
                             if (it.properties?.ac) return "Body";
+                          }
+                          if (it.type === "jewelry") {
+                            const slot = it.properties?.slot;
+                            if (slot && slotLabels[slot]) return slotLabels[slot];
+                            return "Ring";
                           }
                           return "";
                         };
@@ -2060,6 +2065,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                     {item.type === "weapon" && item.properties?.damage ? `${item.properties.damage}${item.properties.bonus ? ` +${item.properties.bonus}` : ""}` : ""}
                                     {item.type === "armor" && item.properties?.ac && !item.properties?.ac_bonus ? `AC ${item.properties.ac}` : ""}
                                     {item.type === "armor" && item.properties?.ac_bonus ? `+${item.properties.ac_bonus} AC` : ""}
+                                    {item.type === "jewelry" && item.properties?.effect ? item.properties.effect : ""}
                                   </span>
                                 </div>
                               );
@@ -2352,7 +2358,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           if (typeof val === "number") return Math.max(1, Math.floor(val * 0.5));
           if (typeof item.price === "number" && item.price > 0) return Math.max(1, Math.floor(item.price * 0.25));
           const rarityBase: Record<string, number> = { common: 5, uncommon: 25, rare: 100, epic: 400, legendary: 1000 };
-          const typeBonus: Record<string, number> = { weapon: 1.2, armor: 1.3, accessory: 1.0, consumable: 0.6, tool: 0.5, document: 0.3, misc: 0.3, item: 0.3 };
+          const typeBonus: Record<string, number> = { weapon: 1.2, armor: 1.3, jewelry: 1.1, accessory: 1.0, consumable: 0.6, tool: 0.5, document: 0.3, misc: 0.3, item: 0.3 };
           const base = rarityBase[item.rarity ?? "common"] ?? 5;
           const tMult = typeBonus[item.type] ?? 0.5;
           const bonus = item.properties?.bonus ?? 0;

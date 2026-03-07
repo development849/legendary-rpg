@@ -461,12 +461,15 @@ Inventory: ${(() => {
       parts.push("[EQUIPPED OFF-HAND]");
     } else if (i.equipped && i.type === "armor" && i.properties?.slot) {
       parts.push(`[EQUIPPED ${(i.properties.slot as string).toUpperCase()}]`);
+    } else if (i.equipped && i.type === "jewelry") {
+      parts.push(`[EQUIPPED ${((i.properties?.slot as string) ?? "ring").toUpperCase()}]`);
     } else if (i.equipped) {
       parts.push("[EQUIPPED]");
     }
     if (i.properties?.damage) parts.push(`(${i.properties.damage}${i.properties.bonus ? ` +${i.properties.bonus}` : ""} dmg)`);
     if (i.properties?.ac) parts.push(`(AC ${i.properties.ac})`);
     if (i.properties?.ac_bonus) parts.push(`(+${i.properties.ac_bonus} AC)`);
+    if (i.properties?.effect) parts.push(`(${i.properties.effect})`);
     return parts.join(" ");
   }).join(", ");
 })()}
@@ -746,6 +749,7 @@ CRITICAL RULES:
    - legendary: +4 or higher, world-shaping artifacts, campaign-defining
    For weapons: "properties" MUST include "damage" (e.g. "1d8", "2d6"). Include "bonus" for magic weapons, "two_handed"/"thrown"/"finesse"/"range" as applicable.
    For armor: include "slot" (one of: "body", "head", "hands", "feet") — only one armor per slot. Body armor uses "ac" (base AC number). Head/hands/feet armor uses "ac_bonus" (+1 or +2 bonus to AC). Examples: {"name":"Chain Mail","type":"armor","rarity":"common","properties":{"ac":14,"slot":"body"}}, {"name":"Iron Helm","type":"armor","rarity":"common","properties":{"ac_bonus":1,"slot":"head"}}, {"name":"Gauntlets of Strength","type":"armor","rarity":"rare","properties":{"ac_bonus":1,"slot":"hands","bonus":1}}, {"name":"Leather Boots","type":"armor","rarity":"common","properties":{"ac_bonus":1,"slot":"feet"}}. For shields: include "ac_bonus" only (no slot — shields use a hand). Items without properties or rarity are broken — never emit a weapon without damage or armor without ac/ac_bonus+slot.
+   For jewelry: use type "jewelry" with "slot" of either "ring" or "necklace". A character can equip up to 2 rings and 1 necklace simultaneously. Jewelry grants passive magical effects via the "effect" property (a short text shown in the equipped gear panel). Examples: {"name":"Ring of Fire Resistance","type":"jewelry","rarity":"rare","description":"A ruby-set band that glows faintly with inner warmth","properties":{"slot":"ring","effect":"+2 fire resist"}}, {"name":"Amulet of Vitality","type":"jewelry","rarity":"uncommon","description":"A jade pendant on a silver chain that pulses with life energy","properties":{"slot":"necklace","effect":"+5 max HP"}}, {"name":"Band of Arcane Focus","type":"jewelry","rarity":"rare","description":"A platinum ring etched with arcane runes","properties":{"slot":"ring","effect":"+1 spell attacks"}}. Jewelry MUST always have type "jewelry", a "slot" (ring or necklace), an "effect" string, and a rarity. When a character enchants, crafts, or finds a ring or necklace, emit it as type "jewelry" — never as "armor" or "accessory".
 7. LOOT VARIETY & RESTRAINT — CRITICAL: Do NOT fall into a pattern of every defeated enemy carrying a map, note, or document that leads to the next location. Most common enemies carry mundane gear: a weapon, a few coins, maybe rations or a trinket. Breadcrumb items (maps, letters, encoded notes, directions) should be RARE — only plant one when there is a specific narrative reason AND it has been multiple encounters since the last one. Vary loot realistically: a bandit might have a dagger and 5gp; a guard might have a key to THIS room but not a map to the next dungeon; a beast has nothing. Let the story advance through NPC dialogue, player investigation, and world exploration — not through a chain of conveniently planted documents on every body. When you DO grant loot, vary the types: sometimes it's just coins, sometimes a weapon upgrade, sometimes a useful tool, sometimes nothing at all.
 8. XP AWARDS — MANDATORY: You MUST award XP whenever characters accomplish something meaningful. XP is the ONLY way characters advance — if you forget it, they never level up. Award XP using XP_GRANTED for each participating character. Guidelines:
    - Defeated a minor enemy or obstacle: 50–100 XP each
@@ -1012,7 +1016,7 @@ export function consolidateCoins(inv: any[]): any[] {
 }
 
 export function sortInventory(inv: any[]): any[] {
-  const typeOrder: Record<string, number> = { weapon: 0, armor: 1, consumable: 2, tool: 3, misc: 4, treasure: 5 };
+  const typeOrder: Record<string, number> = { weapon: 0, armor: 1, jewelry: 2, consumable: 3, tool: 4, misc: 5, treasure: 6 };
   return [...inv].sort((a, b) => {
     const ea = a.equipped ? 0 : 1;
     const eb = b.equipped ? 0 : 1;

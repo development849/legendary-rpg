@@ -335,23 +335,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const item = inv[itemIndex];
-      if (item.type !== "weapon" && item.type !== "armor") {
-        return res.status(400).json({ error: "Only weapons and armor can be equipped" });
+      if (item.type !== "weapon" && item.type !== "armor" && item.type !== "jewelry") {
+        return res.status(400).json({ error: "Only weapons, armor, and jewelry can be equipped" });
       }
 
-      if (equipped && item.type === "armor") {
-        const getArmorSlot = (it: any): string | null => {
+      if (equipped && (item.type === "armor" || item.type === "jewelry")) {
+        const getEquipSlot = (it: any): string | null => {
           if (it.properties?.slot) return it.properties.slot;
-          if (it.properties?.ac) return "body";
-          if (it.properties?.ac_bonus) return null;
+          if (it.type === "armor" && it.properties?.ac) return "body";
+          if (it.type === "armor" && it.properties?.ac_bonus) return null;
           return null;
         };
-        const effectiveSlot = getArmorSlot(item);
+        const effectiveSlot = getEquipSlot(item);
 
-        if (effectiveSlot) {
+        if (effectiveSlot === "ring") {
+          const equippedRings = inv.filter((it: any, idx: number) => idx !== itemIndex && it.equipped && it.type === "jewelry" && it.properties?.slot === "ring");
+          if (equippedRings.length >= 2) {
+            const oldestRingIdx = inv.findIndex((it: any) => it.equipped && it.type === "jewelry" && it.properties?.slot === "ring");
+            if (oldestRingIdx >= 0) inv[oldestRingIdx] = { ...inv[oldestRingIdx], equipped: false };
+          }
+        } else if (effectiveSlot) {
           inv.forEach((it: any, idx: number) => {
-            if (idx === itemIndex || !it.equipped || it.type !== "armor") return;
-            if (getArmorSlot(it) === effectiveSlot) {
+            if (idx === itemIndex || !it.equipped) return;
+            if (it.type !== "armor" && it.type !== "jewelry") return;
+            if (getEquipSlot(it) === effectiveSlot) {
               inv[idx] = { ...inv[idx], equipped: false };
             }
           });

@@ -1419,6 +1419,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                       if (item.properties?.ac_bonus) return "off-hand";
                       if (item.properties?.ac) return "body";
                     }
+                    if (item.type === "jewelry") {
+                      return item.properties?.slot === "necklace" ? "necklace" : "ring";
+                    }
                     return null;
                   };
 

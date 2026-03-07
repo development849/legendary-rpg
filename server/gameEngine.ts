@@ -415,8 +415,9 @@ export function enforceHandLimits(inv: any[], protectedIdx?: number): any[] {
   const handItems: { idx: number; hands: number }[] = [];
   result.forEach((it: any, idx: number) => {
     if (!it.equipped) return;
+    if (it.type === "jewelry") return;
     const isW = it.type === "weapon";
-    const isS = it.type === "armor" && !!it.properties?.ac_bonus;
+    const isS = it.type === "armor" && !!it.properties?.ac_bonus && !it.properties?.slot;
     if (isW || isS) {
       handItems.push({ idx, hands: it.properties?.two_handed ? 2 : 1 });
     }

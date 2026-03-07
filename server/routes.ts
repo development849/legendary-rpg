@@ -522,7 +522,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (newGold === 0) inv.splice(pouchIdx, 1);
         else inv[pouchIdx] = { ...inv[pouchIdx], name: `Coin Pouch (${newGold}gp)`, properties: { ...inv[pouchIdx].properties, value: newGold } };
       }
-      const newItem = { qty: item.qty ?? 1, name: item.name, type: item.type ?? "misc", rarity: item.rarity ?? "common", equipped: false, properties: item.properties ?? {} };
+      const newItem: any = { qty: item.qty ?? 1, name: item.name, type: item.type ?? "misc", rarity: item.rarity ?? "common", equipped: false, properties: item.properties ?? {} };
+      if (item.description) newItem.description = item.description;
       inv.push(newItem);
       inv = sortInventory(inv);
       console.log(`[Shop Buy] Adding "${newItem.name}" to char ${characterId}. Inventory: ${inv.length} items. Gold remaining: ${newGold}gp`);

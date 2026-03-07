@@ -1464,6 +1464,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                           <Badge variant="default" className="text-[10px] px-1 py-0 h-4 bg-primary/80" data-testid={`badge-equipped-${originalIndex}`}>E</Badge>
                                         )}
                                       </div>
+                                      {item.description && (
+                                        <p className="text-[10px] text-muted-foreground/70 italic mt-0.5 leading-snug break-words">{item.description}</p>
+                                      )}
                                       {props && (
                                         <p className="text-xs text-muted-foreground mt-0.5 break-words">{props}</p>
                                       )}
@@ -2398,6 +2401,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                   <span className={`text-[8px] font-sans font-bold uppercase ${rColor}`}>{item.rarity}</span>
                                 )}
                               </div>
+                              {item.description && <p className="text-[10px] text-muted-foreground/80 italic leading-snug">{item.description}</p>}
                               {props && <p className="text-[10px] text-muted-foreground">{props}</p>}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
@@ -2439,6 +2443,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                   <span className={`text-[8px] font-sans font-bold uppercase ${rColor}`}>{item.rarity}</span>
                                 )}
                               </div>
+                              {item.description && <p className="text-[10px] text-muted-foreground/80 italic leading-snug">{item.description}</p>}
                               {props && <p className="text-[10px] text-muted-foreground">{props}</p>}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">

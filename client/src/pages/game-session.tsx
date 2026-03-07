@@ -2258,14 +2258,15 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           .filter(({ item }) => !(["treasure", "currency"].includes(item.type) && /coin|gold|pouch/i.test(item.name || "")));
 
         const getSellPrice = (item: any): number => {
-          const rarityMultiplier: Record<string, number> = { common: 0.25, uncommon: 0.4, rare: 0.5, epic: 0.5, legendary: 0.6 };
-          const baseValues: Record<string, number> = { weapon: 8, armor: 10, consumable: 3, tool: 2, document: 1, misc: 1, item: 1 };
-          const base = baseValues[item.type] ?? 2;
-          const mult = rarityMultiplier[item.rarity ?? "common"] ?? 0.25;
-          const bonus = item.properties?.bonus ?? 0;
           const val = item.properties?.value;
           if (typeof val === "number") return Math.max(1, Math.floor(val * 0.5));
-          return Math.max(1, Math.floor((base + bonus * 10) * mult * (item.qty ?? 1)));
+          if (typeof item.price === "number" && item.price > 0) return Math.max(1, Math.floor(item.price * 0.25));
+          const rarityBase: Record<string, number> = { common: 5, uncommon: 25, rare: 100, epic: 400, legendary: 1000 };
+          const typeBonus: Record<string, number> = { weapon: 1.2, armor: 1.3, accessory: 1.0, consumable: 0.6, tool: 0.5, document: 0.3, misc: 0.3, item: 0.3 };
+          const base = rarityBase[item.rarity ?? "common"] ?? 5;
+          const tMult = typeBonus[item.type] ?? 0.5;
+          const bonus = item.properties?.bonus ?? 0;
+          return Math.max(1, Math.floor((base * tMult + bonus * 15) * 0.25 * (item.qty ?? 1)));
         };
 
         const formatItemProps = (p: any) => {

@@ -180,6 +180,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set());
   const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
   const [shopData, setShopData] = useState<ShopData | null>(null);
+  const [expandedPortrait, setExpandedPortrait] = useState<{ name: string; url: string; role?: string } | null>(null);
   const [shopTab, setShopTab] = useState<"buy" | "sell">("buy");
   const [shopBusy, setShopBusy] = useState(false);
 
@@ -1203,7 +1204,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                   data-testid={`button-expand-companion-${npc.id}`}
                                 >
                                   {npc.hasPortrait ? (
-                                    <img src={`/api/npcs/${npc.id}/portrait`} alt={npc.name} className="w-8 h-8 rounded object-cover object-top flex-shrink-0 border border-amber-700/30" />
+                                    <img
+                                      src={`/api/npcs/${npc.id}/portrait`}
+                                      alt={npc.name}
+                                      className="w-8 h-8 rounded object-cover object-top flex-shrink-0 border border-amber-700/30 cursor-pointer hover:ring-1 hover:ring-amber-500/50 transition-all"
+                                      onClick={(e) => { e.stopPropagation(); setExpandedPortrait({ name: npc.name, url: `/api/npcs/${npc.id}/portrait`, role: npc.role }); }}
+                                    />
                                   ) : (
                                     <div className="w-8 h-8 rounded bg-amber-950/40 border border-amber-700/30 flex items-center justify-center flex-shrink-0">
                                       <Users className="w-3.5 h-3.5 text-amber-500/60" />
@@ -2141,8 +2147,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                               <img
                                 src={`/api/npcs/${npc.id}/portrait`}
                                 alt={npc.name}
-                                className={`${compact ? "w-10 h-10" : "w-12 h-12"} rounded object-cover object-top border border-current/20`}
+                                className={`${compact ? "w-10 h-10" : "w-12 h-12"} rounded object-cover object-top border border-current/20 cursor-pointer hover:ring-1 hover:ring-primary/50 transition-all`}
                                 data-testid={`img-npc-portrait-${npc.id}`}
+                                onClick={() => setExpandedPortrait({ name: npc.name, url: `/api/npcs/${npc.id}/portrait`, role: npc.role })}
                               />
                             ) : (
                               <div className={`${compact ? "w-10 h-10" : "w-12 h-12"} rounded bg-muted/50 border border-current/20 animate-pulse flex items-center justify-center`}>
@@ -2518,6 +2525,36 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           </div>
         );
       })()}
+
+      {expandedPortrait && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-8 cursor-pointer"
+          onClick={() => setExpandedPortrait(null)}
+          data-testid="overlay-portrait"
+        >
+          <div className="relative max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={expandedPortrait.url}
+              alt={expandedPortrait.name}
+              className="w-full rounded-lg object-cover border-2 border-border shadow-2xl"
+              data-testid="img-expanded-portrait"
+            />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent rounded-b-lg px-4 py-3">
+              <p className="text-lg font-bold text-white font-sans tracking-wide">{expandedPortrait.name}</p>
+              {expandedPortrait.role && (
+                <p className="text-sm text-white/70 italic">{expandedPortrait.role}</p>
+              )}
+            </div>
+            <button
+              onClick={() => setExpandedPortrait(null)}
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+              data-testid="button-close-portrait"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

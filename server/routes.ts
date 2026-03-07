@@ -6,7 +6,7 @@ import { setupLocalAuth, registerLocalAuthRoutes } from "./localAuth";
 import { requireAuth, getUserId, getCurrentUser } from "./authMiddleware";
 import {
   createCharacter, getUserCharacters, getCharacter, updateCharacter,
-  createCampaign, getCampaign, getUserCampaigns,
+  createCampaign, getCampaign, getUserCampaigns, updateCampaign,
   createParty, getParty, getPartyByInviteCode, getCampaignParties, getUserParties,
   joinParty, getPartyMembers, setMemberReady,
   saveChatMessage, getPartyMessages, getWorldState,
@@ -469,6 +469,29 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) {
       console.error("Delete campaign error:", e);
       res.status(500).json({ error: "Failed to delete campaign" });
+    }
+  });
+
+  app.patch("/api/campaigns/:id/settings", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const campaign = await getCampaign(req.params.id);
+      if (!campaign) return res.status(404).json({ error: "Not found" });
+      if (campaign.ownerId !== userId) return res.status(403).json({ error: "Forbidden" });
+
+      const { contentRating, noRomance, noHorror, fadeToBlack, gmMode, themes } = req.body;
+      const updates: any = {};
+      if (contentRating !== undefined) updates.contentRating = contentRating;
+      if (noRomance !== undefined) updates.noRomance = noRomance;
+      if (noHorror !== undefined) updates.noHorror = noHorror;
+      if (fadeToBlack !== undefined) updates.fadeToBlack = fadeToBlack;
+      if (gmMode !== undefined) updates.gmMode = gmMode;
+      if (themes !== undefined) updates.themes = themes;
+
+      const updated = await updateCampaign(req.params.id, updates);
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to update campaign settings" });
     }
   });
 

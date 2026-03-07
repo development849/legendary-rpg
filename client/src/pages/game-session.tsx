@@ -154,6 +154,96 @@ function DiceRoller() {
   );
 }
 
+const CONTENT_RATINGS = [
+  { id: "pg13", label: "PG-13", desc: "Fantasy violence, mild peril. No explicit content." },
+  { id: "r", label: "Mature (R)", desc: "Blood, darker themes, strong language, intense violence." },
+  { id: "adult", label: "Adult (18+)", desc: "Unrestricted. Graphic violence, explicit content, dark themes." },
+];
+
+function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; onClose: () => void; onSaved: () => void }) {
+  const { toast } = useToast();
+  const [rating, setRating] = useState(campaign.contentRating ?? "pg13");
+  const [noRomance, setNoRomance] = useState(campaign.noRomance ?? false);
+  const [noHorror, setNoHorror] = useState(campaign.noHorror ?? false);
+  const [fadeToBlack, setFadeToBlack] = useState(campaign.fadeToBlack ?? true);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/campaigns/${campaign.id}/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentRating: rating, noRomance, noHorror, fadeToBlack }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      toast({ title: "Settings updated", description: "Content settings will apply from the next GM response.", variant: "success" as any });
+      onSaved();
+    } catch {
+      toast({ title: "Save failed", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const toggles = [
+    { key: "noRomance", label: "No Romance", desc: "Exclude romantic subplots", value: noRomance, set: setNoRomance },
+    { key: "noHorror", label: "No Horror", desc: "Avoid disturbing content", value: noHorror, set: setNoHorror },
+    { key: "fadeToBlack", label: "Fade to Black", desc: "Cut away at explicit moments", value: fadeToBlack, set: setFadeToBlack },
+  ];
+
+  return (
+    <div className="border-b border-border bg-card/95 backdrop-blur-sm px-4 py-4 space-y-4 z-30 relative">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+          <Shield className="w-3.5 h-3.5 text-primary" /> Content Settings
+        </p>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose} data-testid="button-close-settings">
+          <X className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {CONTENT_RATINGS.map(r => (
+          <button
+            key={r.id}
+            onClick={() => setRating(r.id)}
+            data-testid={`button-rating-${r.id}`}
+            className={`p-3 rounded-md border text-left transition-all ${
+              rating === r.id ? "border-primary bg-primary/10" : "border-border bg-secondary/30 hover:bg-secondary/50"
+            }`}
+          >
+            <p className={`font-sans font-semibold text-xs tracking-wide ${rating === r.id ? "text-primary" : ""}`}>{r.label}</p>
+            <p className="text-muted-foreground text-[10px] font-serif mt-0.5 leading-snug">{r.desc}</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        {toggles.map(t => (
+          <label key={t.key} className="flex items-center gap-2 cursor-pointer">
+            <div
+              onClick={() => t.set(!t.value)}
+              data-testid={`toggle-${t.key}`}
+              className={`relative w-8 h-4 rounded-full transition-colors cursor-pointer ${t.value ? "bg-primary" : "bg-secondary"}`}
+            >
+              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${t.value ? "translate-x-4" : "translate-x-0.5"}`} />
+            </div>
+            <div>
+              <span className="text-xs font-sans font-medium">{t.label}</span>
+              <span className="text-[10px] text-muted-foreground font-serif ml-1">{t.desc}</span>
+            </div>
+          </label>
+        ))}
+      </div>
+
+      <Button size="sm" onClick={save} disabled={saving} data-testid="button-save-settings">
+        {saving ? "Saving..." : "Save Settings"}
+      </Button>
+    </div>
+  );
+}
+
 export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [, navigate] = useLocation();
   const { user } = useAuth();
@@ -189,6 +279,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [statPoints, setStatPoints] = useState<Record<string, number>>({ might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 });
   const [levelUpBusy, setLevelUpBusy] = useState(false);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -768,12 +859,28 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 </TooltipContent>
               </Tooltip>
             ))}
+            {campaign?.ownerId === user?.id && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowSettings(p => !p)} data-testid="button-settings">
+                <Settings className="w-4 h-4" />
+              </Button>
+            )}
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowCharacters(p => !p)} data-testid="button-toggle-chars">
               <Users className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </header>
+
+      {showSettings && campaign && (
+        <ContentSettingsPanel
+          campaign={campaign}
+          onClose={() => setShowSettings(false)}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+            setShowSettings(false);
+          }}
+        />
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main Chat Area */}

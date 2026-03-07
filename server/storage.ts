@@ -101,6 +101,11 @@ export async function getCampaign(id: string): Promise<Campaign | undefined> {
   return campaign;
 }
 
+export async function updateCampaign(id: string, data: Partial<{ contentRating: string; noRomance: boolean; noHorror: boolean; fadeToBlack: boolean; gmMode: string; themes: string[] }>): Promise<Campaign | undefined> {
+  const [updated] = await db.update(campaigns).set(data).where(eq(campaigns.id, id)).returning();
+  return updated;
+}
+
 export async function getUserCampaigns(userId: string): Promise<Campaign[]> {
   return db.select().from(campaigns)
     .where(eq(campaigns.ownerId, userId))

@@ -14,6 +14,12 @@ const GM_MODES = [
   { id: "cinematic", label: "Cinematic", desc: "Rich detail. Deep narrative. Immersive." },
 ];
 
+const CONTENT_RATINGS = [
+  { id: "pg13", label: "PG-13", desc: "Fantasy violence, mild peril. No explicit content.", icon: "🛡️" },
+  { id: "r", label: "Mature (R)", desc: "Blood, darker themes, strong language, intense violence.", icon: "⚔️" },
+  { id: "adult", label: "Adult (18+)", desc: "Unrestricted. Graphic violence, explicit content, dark themes.", icon: "🔞" },
+];
+
 const THEME_OPTIONS = [
   { id: "mystery",    label: "Mystery",         desc: "Secrets, clues, and hidden truths to uncover",           icon: "🔍" },
   { id: "horror",     label: "Horror & Dread",  desc: "Dark atmosphere, tension, and unsettling encounters",     icon: "💀" },
@@ -37,8 +43,10 @@ export default function CreateCampaignPage() {
   const [setting, setSetting] = useState("");
   const [gmMode, setGmMode] = useState("balanced");
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
+  const [contentRating, setContentRating] = useState("pg13");
   const [noRomance, setNoRomance] = useState(false);
   const [noHorror, setNoHorror] = useState(false);
+  const [fadeToBlack, setFadeToBlack] = useState(true);
   const [selectedCharId, setSelectedCharId] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -75,7 +83,7 @@ export default function CreateCampaignPage() {
       const res = await fetch("/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description, setting, themes: selectedThemes, gmMode, noRomance, noHorror, fadeToBlack: true }),
+        body: JSON.stringify({ name: name.trim(), description, setting, themes: selectedThemes, gmMode, contentRating, noRomance, noHorror, fadeToBlack }),
       });
       if (!res.ok) throw new Error(await res.text());
       const { campaign, party } = await res.json();
@@ -208,16 +216,43 @@ export default function CreateCampaignPage() {
             </div>
           </div>
 
+          {/* Content Rating */}
+          <div className="space-y-3">
+            <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-primary" /> Content Rating
+            </label>
+            <p className="text-xs text-muted-foreground font-serif -mt-1">Controls the maturity level of language, violence, and themes.</p>
+            <div className="grid grid-cols-3 gap-3">
+              {CONTENT_RATINGS.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => setContentRating(r.id)}
+                  data-testid={`button-rating-${r.id}`}
+                  className={`p-4 rounded-md border text-left transition-all hover-elevate ${
+                    contentRating === r.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card"
+                  }`}
+                >
+                  <p className="text-base leading-none mb-1">{r.icon}</p>
+                  <p className={`font-sans font-semibold text-xs tracking-wide ${contentRating === r.id ? "text-primary" : ""}`}>{r.label}</p>
+                  <p className="text-muted-foreground text-xs font-serif mt-0.5 leading-snug">{r.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Content Exclusions */}
           <div className="space-y-3">
             <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-2">
-              <Shield className="w-3.5 h-3.5 text-primary" /> Content Exclusions
+              <Shield className="w-3.5 h-3.5 text-primary" /> Content Preferences
             </label>
             <Card>
               <CardContent className="p-4 space-y-3">
                 {[
                   { key: "noRomance", label: "No Romance", desc: "Exclude romantic subplots and scenes", value: noRomance, set: setNoRomance },
                   { key: "noHorror", label: "No Horror", desc: "Avoid disturbing or horrific content", value: noHorror, set: setNoHorror },
+                  { key: "fadeToBlack", label: "Fade to Black", desc: "Skip explicit scenes — cut away at suggestive moments", value: fadeToBlack, set: setFadeToBlack },
                 ].map(item => (
                   <label key={item.key} className="flex items-center gap-4 cursor-pointer py-1">
                     <div

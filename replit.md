@@ -47,7 +47,7 @@ Achievements: JSONB array on characters — `{title, category, description, earn
 Event-sourced: HP, MP, XP, inventory, conditions, achievements, abilities all updatable by GM
 
 ### Campaigns → Parties
-- Campaign: settings, GM mode (fast/balanced/cinematic), content filters
+- Campaign: settings, GM mode (fast/balanced/cinematic), content rating (pg13/r/adult), content preferences (noRomance, noHorror, fadeToBlack); changeable mid-campaign via settings gear icon in game session header (owner only) or at creation; GM prompt includes rating-specific behavioral instructions
 - Party: invite code for multiplayer, ready states, world state snapshots
 - Chat messages: player/gm roles, metadata for character names
 - Scene summaries: auto-generated every 10 turns via gpt-4o-mini
@@ -81,6 +81,7 @@ DELETE /api/characters/:id     — Delete character (owner only, cascades party 
 POST /api/campaigns            — Create campaign + auto-party
 GET  /api/campaigns/:id        — Get campaign + parties
 DELETE /api/campaigns/:id      — Delete campaign + all related data (owner only)
+PATCH /api/campaigns/:id/settings — Update content rating, preferences (owner only)
 
 GET  /api/parties              — Get user's parties
 GET  /api/parties/:id          — Get party + members + campaign

@@ -190,6 +190,7 @@ export const npcLog = pgTable("npc_log", {
   isPartyMember: boolean("is_party_member").notNull().default(false),
   partyJoinedAt: timestamp("party_joined_at"),
   level: integer("level").notNull().default(1),
+  xp: integer("xp").notNull().default(0),
   maxHp: integer("max_hp").notNull().default(10),
   currentHp: integer("current_hp").notNull().default(10),
   ac: integer("ac").notNull().default(10),

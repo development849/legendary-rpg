@@ -57,7 +57,8 @@ Event-sourced: HP, XP, inventory, conditions, abilities all updatable by GM
 - Parses JSON response: `{narrative, dice_requests, proposed_updates, quick_actions, scene}` — scene includes `{title, location, region, threat}`
 - Applies state changes: HP, XP, items (with equipped status), conditions
 - Item properties: weapons require `damage` (e.g. "1d8"), armor requires `ac`; GM prompt enforces this via Critical Rule #6
-- NPC companions: GM emits `NPC_JOINED_PARTY` with full stat block (level, max_hp, ac, stats, abilities, inventory); handler saves to npc_log; companion cards in Party tab show full character sheet (stats grid, abilities, gear, HP/AC/Level badges)
+- NPC companions: GM emits `NPC_JOINED_PARTY` with full stat block (level, max_hp, ac, stats, abilities, inventory); handler saves to npc_log; companion cards in Party tab show full character sheet (stats grid, abilities, gear, HP/AC/Level/XP badges)
+- Companion leveling: `npc_log` has `xp` column; when any player character earns XP via `XP_GRANTED`, all active companions (`isPartyMember=true`) receive the same XP amount; companions use the same XP threshold table as players; on level-up they gain +5–8 HP per level gained
 - Location naming: GM instructed to give proper fantasy names (not generic descriptions); scene.region groups locations hierarchically
 - Journey Map: locations grouped by region with collapsible sections; fast-travel button on non-current locations sends travel action to GM
 - Codex system: GM emits `RECIPE_DISCOVERED` when player learns crafting recipes/spells/enchantments; stored in world state `recipes` array; Codex sidebar tab shows recipes with ingredient checklists cross-referenced against inventory; "Craft/Perform" button when all ingredients collected

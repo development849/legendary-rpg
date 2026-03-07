@@ -1231,6 +1231,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                       <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-amber-900/40 border border-amber-700/30 text-amber-300" data-testid={`text-npc-level-${npc.id}`}>
                                         Lv {npc.level ?? 1}
                                       </span>
+                                      <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-yellow-900/30 border border-yellow-700/30 text-yellow-300" data-testid={`text-npc-xp-${npc.id}`}>
+                                        XP {npc.xp ?? 0}
+                                      </span>
                                       <span className="text-[10px] font-sans px-1.5 py-0.5 rounded bg-red-900/30 border border-red-700/30 text-red-300" data-testid={`text-npc-hp-${npc.id}`}>
                                         HP {npc.currentHp ?? npc.maxHp ?? 10}/{npc.maxHp ?? 10}
                                       </span>

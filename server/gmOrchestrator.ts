@@ -999,6 +999,7 @@ async function resolveCharacter(characterIdOrName: string, partyId: string) {
 }
 
 async function processUpdates(updates: any[], partyId: string, campaignId: string): Promise<void> {
+  let companionXpAwarded = false;
   for (const update of updates) {
     try {
       switch (update.type) {
@@ -1015,9 +1016,9 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
           break;
         }
         case "XP_GRANTED": {
+          const XP_THRESHOLDS = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000];
           const char = await resolveCharacter(update.character_id, partyId);
           if (char) {
-            const XP_THRESHOLDS = [0, 0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000];
             const newXp = char.xp + (update.amount ?? 0);
             let newLevel = char.level;
             while (newLevel < XP_THRESHOLDS.length - 1 && newXp >= XP_THRESHOLDS[newLevel + 1]) {
@@ -1029,6 +1030,30 @@ async function processUpdates(updates: any[], partyId: string, campaignId: strin
               partyId, campaignId, eventType: "XP_GRANTED", actorId: "gm",
               payload: { character_id: char.id, amount: update.amount, reason: update.reason, newXp, newLevel, leveledUp },
             });
+          }
+          if (!companionXpAwarded) {
+            companionXpAwarded = true;
+            const companions = await db.select().from(npcLog)
+              .where(and(eq(npcLog.partyId, partyId), eq(npcLog.isPartyMember, true)));
+            const xpAmount = update.amount ?? 0;
+            for (const comp of companions) {
+              const npcXp = (comp.xp ?? 0) + xpAmount;
+              let npcLevel = comp.level ?? 1;
+              while (npcLevel < XP_THRESHOLDS.length - 1 && npcXp >= XP_THRESHOLDS[npcLevel + 1]) {
+                npcLevel++;
+              }
+              const npcLeveledUp = npcLevel > (comp.level ?? 1);
+              const hpGain = npcLeveledUp ? (npcLevel - (comp.level ?? 1)) * (5 + Math.floor(Math.random() * 4)) : 0;
+              await db.update(npcLog).set({
+                xp: npcXp,
+                level: npcLevel,
+                ...(npcLeveledUp ? { maxHp: (comp.maxHp ?? 10) + hpGain, currentHp: (comp.currentHp ?? 10) + hpGain } : {}),
+                updatedAt: new Date(),
+              }).where(eq(npcLog.id, comp.id));
+              if (npcLeveledUp) {
+                console.log(`[GM] Companion "${comp.name}" leveled up to ${npcLevel}! HP +${hpGain}`);
+              }
+            }
           }
           break;
         }

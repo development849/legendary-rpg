@@ -1947,8 +1947,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             <img
                               src={char.profilePicture}
                               alt={char.name}
-                              className="w-14 h-14 rounded-md object-cover flex-shrink-0 border border-border"
+                              className="w-14 h-14 rounded-md object-cover flex-shrink-0 border border-border cursor-pointer hover:ring-1 hover:ring-primary/50 transition-all"
                               data-testid="sheet-portrait"
+                              onClick={() => setExpandedPortrait({ name: char.name, url: char.profilePicture!, role: `${char.race} ${char.class}` })}
                             />
                           ) : (
                             <div className="w-14 h-14 rounded-md bg-secondary flex items-center justify-center flex-shrink-0 border border-border">

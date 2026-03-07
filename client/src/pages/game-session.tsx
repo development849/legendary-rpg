@@ -155,6 +155,7 @@ function DiceRoller() {
 }
 
 const CONTENT_RATINGS = [
+  { id: "pg", label: "PG", desc: "Family-friendly. Mild conflict, no real violence or peril." },
   { id: "pg13", label: "PG-13", desc: "Fantasy violence, mild peril. No explicit content." },
   { id: "r", label: "Mature (R)", desc: "Blood, darker themes, strong language, intense violence." },
   { id: "adult", label: "Adult (18+)", desc: "Unrestricted. Graphic violence, explicit content, dark themes." },
@@ -203,7 +204,7 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {CONTENT_RATINGS.map(r => (
           <button
             key={r.id}

@@ -1014,7 +1014,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             </div>
 
             <ScrollArea className="flex-1 w-full">
-              <div className="p-3 space-y-3 overflow-hidden break-words">
+              <div className="p-3 space-y-3 min-w-0 break-words">
 
                 {/* PARTY TAB */}
                 {sidebarTab === "party" && (() => {

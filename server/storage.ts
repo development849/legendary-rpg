@@ -10,7 +10,7 @@ import {
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import { getDefaultStats, getStartingInventory, getStartingAbilities, getBackgroundAbility, CLASS_BASE_HP, getRaceBonuses } from "./gameEngine";
+import { getDefaultStats, getStartingInventory, getStartingAbilities, getBackgroundAbility, CLASS_BASE_HP, CLASS_BASE_MP, getRaceBonuses } from "./gameEngine";
 
 // ─── Character Storage ─────────────────────────────────────────────────────────
 
@@ -20,6 +20,7 @@ export async function createCharacter(userId: string, data: {
 }): Promise<Character> {
   const cls = data.class;
   const baseHp = CLASS_BASE_HP[cls] ?? 10;
+  const baseMp = CLASS_BASE_MP[cls] ?? 0;
   const baseStats = data.customBaseStats ?? getDefaultStats(cls);
   const raceBonuses = getRaceBonuses(data.race);
   const stats = Object.fromEntries(
@@ -43,6 +44,8 @@ export async function createCharacter(userId: string, data: {
     xp: 0,
     maxHp: baseHp,
     currentHp: baseHp,
+    maxMp: baseMp,
+    currentMp: baseMp,
     stats,
     skills: [],
     abilities,

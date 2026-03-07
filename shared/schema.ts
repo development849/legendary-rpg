@@ -22,6 +22,8 @@ export const characters = pgTable("characters", {
   xp: integer("xp").notNull().default(0),
   maxHp: integer("max_hp").notNull().default(10),
   currentHp: integer("current_hp").notNull().default(10),
+  maxMp: integer("max_mp").notNull().default(0),
+  currentMp: integer("current_mp").notNull().default(0),
   stats: jsonb("stats").notNull().default(sql`'{}'::jsonb`), // might, agility, endurance, intellect, will, presence
   skills: jsonb("skills").notNull().default(sql`'[]'::jsonb`),
   abilities: jsonb("abilities").notNull().default(sql`'[]'::jsonb`),

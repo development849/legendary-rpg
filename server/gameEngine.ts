@@ -95,6 +95,17 @@ export const CLASS_BASE_HP: Record<string, number> = {
   bard: 8,
 };
 
+export const CLASS_BASE_MP: Record<string, number> = {
+  wizard: 20,
+  cleric: 15,
+  bard: 15,
+  paladin: 8,
+  ranger: 8,
+  fighter: 0,
+  rogue: 0,
+  barbarian: 0,
+};
+
 // Default stats by class
 export function getDefaultStats(cls: string): Record<string, number> {
   const base = { might: 10, agility: 10, endurance: 10, intellect: 10, will: 10, presence: 10 };

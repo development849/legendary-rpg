@@ -184,7 +184,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [expandedPortrait, setExpandedPortrait] = useState<{ name: string; url: string; role?: string } | null>(null);
   const [shopTab, setShopTab] = useState<"buy" | "sell">("buy");
   const [shopBusy, setShopBusy] = useState(false);
-  const [levelUpData, setLevelUpData] = useState<{ characterId: string; characterName: string; newLevel: number; hpGain: number } | null>(null);
+  const [levelUpData, setLevelUpData] = useState<{ characterId: string; characterName: string; newLevel: number; hpGain: number; mpGain?: number } | null>(null);
   const [statPoints, setStatPoints] = useState<Record<string, number>>({ might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 });
   const [levelUpBusy, setLevelUpBusy] = useState(false);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
@@ -751,7 +751,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {m.character?.name} · {m.character?.currentHp}/{m.character?.maxHp} HP
+                  {m.character?.name} · {m.character?.currentHp}/{m.character?.maxHp} HP{m.character?.maxMp > 0 ? ` · ${m.character?.currentMp}/${m.character?.maxMp} MP` : ""}
                 </TooltipContent>
               </Tooltip>
             ))}
@@ -1096,6 +1096,22 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                 />
                               </div>
                             </div>
+                            {(char.maxMp ?? 0) > 0 && (
+                              <div className="space-y-1">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Zap className="w-3 h-3 text-blue-400" /> MP
+                                  </span>
+                                  <span className="text-xs font-sans font-bold" data-testid={`mp-${char.id}`}>{char.currentMp ?? 0}/{char.maxMp}</span>
+                                </div>
+                                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all bg-blue-500`}
+                                    style={{ width: `${Math.round(((char.currentMp ?? 0) / char.maxMp) * 100)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                             <div className="grid grid-cols-3 gap-1">
                               {[["MGT", "might"], ["AGI", "agility"], ["INT", "intellect"]].map(([label, key]) => {
                                 const val = stats[key] ?? 10;
@@ -1955,6 +1971,29 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           </div>
                         </div>
 
+                        {/* MP Bar — only for casters */}
+                        {(char.maxMp ?? 0) > 0 && (() => {
+                          const mpPct = Math.max(0, Math.min(100, Math.round((char.currentMp / char.maxMp) * 100)));
+                          return (
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-muted-foreground flex items-center gap-1 font-sans">
+                                  <Zap className="w-3 h-3 text-blue-400" /> Magic Points
+                                </span>
+                                <span className="text-xs font-sans font-bold" data-testid="sheet-mp">{char.currentMp} / {char.maxMp}</span>
+                              </div>
+                              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    mpPct > 50 ? "bg-blue-500" : mpPct > 20 ? "bg-blue-400" : "bg-blue-300"
+                                  }`}
+                                  style={{ width: `${mpPct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         {/* XP Bar */}
                         <div className="space-y-1">
                           <div className="flex justify-between items-center">
@@ -2660,9 +2699,14 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   <Badge variant="outline" className="border-red-500/40 text-red-400 font-sans text-xs">
                     <Heart className="w-3 h-3 mr-1" /> +{levelUpData.hpGain} HP
                   </Badge>
+                  {(levelUpData.mpGain ?? 0) > 0 && (
+                    <Badge variant="outline" className="border-blue-500/40 text-blue-400 font-sans text-xs">
+                      <Zap className="w-3 h-3 mr-1" /> +{levelUpData.mpGain} MP
+                    </Badge>
+                  )}
                   {isMilestone && (
                     <Badge variant="outline" className="border-violet-500/40 text-violet-400 font-sans text-xs">
-                      <Zap className="w-3 h-3 mr-1" /> New Skill!
+                      <Brain className="w-3 h-3 mr-1" /> New Skill!
                     </Badge>
                   )}
                 </div>

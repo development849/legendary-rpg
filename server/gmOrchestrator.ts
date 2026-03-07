@@ -1440,7 +1440,42 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
             });
             console.log(`[GM] NPC joined party: "${name}"`);
           } else {
-            console.warn(`[GM] NPC_JOINED_PARTY: NPC "${name}" not found in npc_log for party ${partyId}`);
+            console.warn(`[GM] NPC_JOINED_PARTY: NPC "${name}" not found — auto-creating entry`);
+            const companionStats: any = {
+              isPartyMember: true,
+              partyJoinedAt: new Date(),
+              level: update.level ?? 1,
+              maxHp: update.max_hp ?? 10,
+              currentHp: update.max_hp ?? 10,
+              ac: update.ac ?? 10,
+              stats: update.stats ?? {},
+              abilities: update.abilities ?? [],
+              inventory: update.inventory ?? [],
+            };
+            const [inserted] = await db.insert(npcLog).values({
+              partyId,
+              name,
+              role: update.role ?? "companion",
+              description: update.description ?? "",
+              lastSeen: (worldSnap?.state as any)?.currentLocation ?? "Unknown",
+              relationship: "friendly",
+              notes: update.reason ?? "Joined the party.",
+              firstMet: new Date(),
+              updatedAt: new Date(),
+              ...companionStats,
+            }).returning({ id: npcLog.id });
+            generateNpcPortrait(inserted.id, {
+              name,
+              role: update.role ?? "companion",
+              description: update.description ?? "",
+              relationship: "friendly",
+              lastSeen: (worldSnap?.state as any)?.currentLocation ?? "Unknown",
+            }).catch(console.error);
+            await db.insert(gameEvents).values({
+              partyId, campaignId, eventType: "NPC_JOINED_PARTY", actorId: "gm",
+              payload: { name, reason: update.reason ?? "" },
+            });
+            console.log(`[GM] NPC auto-created and joined party: "${name}"`);
           }
           break;
         }

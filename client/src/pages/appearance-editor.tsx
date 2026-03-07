@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Wand2, Save, RefreshCw, ImageOff, Sparkles,
-  User, BookOpen, Sword, Camera,
+  User, BookOpen, Sword, Camera, Pencil, Check, X,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -44,6 +44,8 @@ export default function AppearanceEditorPage({ characterId }: AppearanceEditorPr
   const [extraDetails, setExtraDetails] = useState("");
   const [generatedPortrait, setGeneratedPortrait] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [editingAppearance, setEditingAppearance] = useState(false);
+  const [appearanceText, setAppearanceText] = useState("");
 
   const saveMutation = useMutation({
     mutationFn: async (portrait: string) => {
@@ -59,6 +61,26 @@ export default function AppearanceEditorPage({ characterId }: AppearanceEditorPr
       toast({ title: "Save failed", description: "Could not save portrait. Please try again.", variant: "destructive" });
     },
   });
+
+  const appearanceMutation = useMutation({
+    mutationFn: async (appearance: string) => {
+      return apiRequest("PATCH", `/api/characters/${characterId}/appearance`, { appearance });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/characters/${characterId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/characters"] });
+      setEditingAppearance(false);
+      toast({ title: "Appearance updated", description: "Your character's appearance has been saved.", variant: "success" as any });
+    },
+    onError: () => {
+      toast({ title: "Save failed", description: "Could not update appearance.", variant: "destructive" });
+    },
+  });
+
+  function startEditingAppearance() {
+    setAppearanceText(char?.appearance ?? "");
+    setEditingAppearance(true);
+  }
 
   async function generatePortrait() {
     setGenerating(true);
@@ -173,17 +195,71 @@ export default function AppearanceEditorPage({ characterId }: AppearanceEditorPr
                   })}
                 </div>
 
-                {/* Appearance */}
-                {char.appearance && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-sans uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1">
+                {/* Appearance — editable */}
+                <div className="space-y-1">
+                  <p className="text-[10px] font-sans uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1 justify-between">
+                    <span className="flex items-center gap-1">
                       <User className="w-3 h-3" /> Appearance
-                    </p>
-                    <p className="font-serif text-sm text-foreground/80 italic bg-secondary/20 rounded p-2.5 leading-relaxed">
-                      {char.appearance}
-                    </p>
-                  </div>
-                )}
+                    </span>
+                    {!editingAppearance && (
+                      <button
+                        onClick={startEditingAppearance}
+                        className="flex items-center gap-1 text-primary/70 hover:text-primary transition-colors cursor-pointer"
+                        data-testid="button-edit-appearance"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        <span className="text-[10px] normal-case font-serif">Edit</span>
+                      </button>
+                    )}
+                  </p>
+                  {editingAppearance ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={appearanceText}
+                        onChange={(e) => setAppearanceText(e.target.value)}
+                        placeholder="Describe your character's physical appearance — hair, eyes, build, distinguishing features, style of dress..."
+                        rows={4}
+                        className="font-serif text-sm resize-none"
+                        data-testid="textarea-edit-appearance"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => appearanceMutation.mutate(appearanceText)}
+                          disabled={appearanceMutation.isPending}
+                          data-testid="button-save-appearance"
+                        >
+                          <Check className="w-3.5 h-3.5 mr-1" />
+                          {appearanceMutation.isPending ? "Saving..." : "Save"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditingAppearance(false)}
+                          disabled={appearanceMutation.isPending}
+                          data-testid="button-cancel-appearance"
+                        >
+                          <X className="w-3.5 h-3.5 mr-1" />
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    char.appearance ? (
+                      <p className="font-serif text-sm text-foreground/80 italic bg-secondary/20 rounded p-2.5 leading-relaxed">
+                        {char.appearance}
+                      </p>
+                    ) : (
+                      <button
+                        onClick={startEditingAppearance}
+                        className="w-full font-serif text-sm text-muted-foreground/40 italic bg-secondary/10 hover:bg-secondary/20 rounded p-2.5 leading-relaxed text-center transition-colors cursor-pointer border border-dashed border-border/40"
+                        data-testid="button-add-appearance"
+                      >
+                        Click to add appearance description...
+                      </button>
+                    )
+                  )}
+                </div>
 
                 {/* Backstory */}
                 {char.backstory && (

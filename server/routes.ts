@@ -275,6 +275,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.patch("/api/characters/:id/appearance", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const char = await getCharacter(req.params.id);
+      if (!char) return res.status(404).json({ error: "Not found" });
+      if (char.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+
+      const { appearance } = req.body;
+      if (typeof appearance !== "string") return res.status(400).json({ error: "Appearance text required" });
+
+      const updated = await updateCharacter(req.params.id, { appearance } as any);
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to save appearance" });
+    }
+  });
+
   app.patch("/api/characters/:id/level-up", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;

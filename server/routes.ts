@@ -492,30 +492,37 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.set("Pragma", "no-cache");
 
       const worldSnap = await getWorldState(req.params.id);
-      const currentLocation: string = (worldSnap?.state as any)?.currentLocation ?? "";
+      const state = (worldSnap?.state as any) ?? {};
+      const currentLocation: string = state.currentLocation ?? "";
+      const currentSceneTitle: string = state.currentSceneTitle ?? "";
       if (!currentLocation) return res.json({ pending: false, imageData: null });
 
+      const bgKey = currentSceneTitle || currentLocation;
       const [row] = await db.select()
         .from(locationScenes)
-        .where(and(eq(locationScenes.partyId, req.params.id), eq(locationScenes.locationName, currentLocation)));
+        .where(and(eq(locationScenes.partyId, req.params.id), eq(locationScenes.locationName, bgKey)));
 
       if (row) {
-        res.json({ pending: false, imageData: row.imageData, locationName: currentLocation });
+        res.json({ pending: false, imageData: row.imageData, locationName: bgKey });
       } else {
-        // Trigger generation if not started yet — handles existing campaigns
-        // Find scene title and campaign setting from worldState / campaign
-        const state = (worldSnap?.state as any) ?? {};
-        const locationMeta = (state.locations ?? []).find((l: any) => l.name === currentLocation);
+        const [fallbackRow] = await db.select()
+          .from(locationScenes)
+          .where(and(eq(locationScenes.partyId, req.params.id), eq(locationScenes.locationName, currentLocation)));
+
         const party = await getParty(req.params.id);
         const campaign = party ? await getCampaign(party.campaignId) : null;
         const settingCtx = [(campaign as any)?.setting ?? "", (campaign as any)?.description ?? ""].join(" ");
         generateLocationBackground(
           req.params.id,
           currentLocation,
-          locationMeta?.title ?? currentLocation,
+          bgKey,
           settingCtx,
         ).catch(console.error);
-        res.json({ pending: true, imageData: null, locationName: currentLocation });
+        if (fallbackRow) {
+          res.json({ pending: true, imageData: fallbackRow.imageData, locationName: bgKey });
+        } else {
+          res.json({ pending: true, imageData: null, locationName: bgKey });
+        }
       }
     } catch (e) {
       res.status(500).json({ error: "Failed to fetch scene background" });

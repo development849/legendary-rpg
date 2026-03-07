@@ -16,10 +16,10 @@ export async function generateLocationBackground(
   campaignSetting: string,
 ): Promise<void> {
   try {
-    // Skip if already generated for this party+location
+    const bgKey = sceneTitle || locationName;
     const [existing] = await db.select({ id: locationScenes.id })
       .from(locationScenes)
-      .where(and(eq(locationScenes.partyId, partyId), eq(locationScenes.locationName, locationName)));
+      .where(and(eq(locationScenes.partyId, partyId), eq(locationScenes.locationName, bgKey)));
     if (existing) return;
 
     const { GoogleGenAI, Modality } = await import("@google/genai");
@@ -53,11 +53,11 @@ export async function generateLocationBackground(
 
     await db.insert(locationScenes).values({
       partyId,
-      locationName,
+      locationName: bgKey,
       imageData: dataUrl,
     }).onConflictDoNothing();
 
-    console.log(`[GM] Background generated for "${locationName}" (party ${partyId})`);
+    console.log(`[GM] Background generated for "${bgKey}" (party ${partyId})`);
   } catch (e) {
     console.error(`[GM] Background generation failed for "${locationName}":`, e);
   }
@@ -927,26 +927,35 @@ export async function runGM(
   if (scene?.location) {
     const locations: any[] = prevState.locations ?? [];
     const existing = locations.find((l: any) => l.name === scene.location);
+    const sceneTitle = scene.title ?? scene.location;
     if (!existing) {
       locations.push({
         name: scene.location,
-        title: scene.title ?? scene.location,
+        title: sceneTitle,
         region: scene.region ?? "Unknown Lands",
         threat: scene.threat ?? null,
         firstVisitedTurn: turnNum,
       });
-      // Fire-and-forget background image generation for new locations
       generateLocationBackground(
         ctx.partyId,
         scene.location,
-        scene.title ?? scene.location,
+        sceneTitle,
         (campaign?.setting ?? "") + " " + (campaign?.description ?? ""),
       ).catch(console.error);
     } else {
-      existing.title = scene.title ?? existing.title;
+      const titleChanged = existing.title !== sceneTitle;
+      existing.title = sceneTitle;
       existing.threat = scene.threat ?? null;
+      if (titleChanged) {
+        generateLocationBackground(
+          ctx.partyId,
+          scene.location,
+          sceneTitle,
+          (campaign?.setting ?? "") + " " + (campaign?.description ?? ""),
+        ).catch(console.error);
+      }
     }
-    nextState = { ...prevState, locations, currentLocation: scene.location };
+    nextState = { ...prevState, locations, currentLocation: scene.location, currentSceneTitle: sceneTitle };
   }
   await db.insert(worldState)
     .values({

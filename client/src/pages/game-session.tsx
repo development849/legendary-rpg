@@ -228,6 +228,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
   // Fetch scene background when location changes
   const currentLocation = partyData?.worldState?.state?.currentLocation ?? "";
+  const currentSceneTitle = partyData?.worldState?.state?.currentSceneTitle ?? "";
+  const bgKey = currentSceneTitle || currentLocation;
+  const bgKeyRef = useRef("");
   useEffect(() => {
     if (!currentLocation || !partyId) return;
 
@@ -236,25 +239,34 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
       backgroundPollRef.current = null;
     }
 
+    const keyChanged = bgKey !== bgKeyRef.current;
+    bgKeyRef.current = bgKey;
+
     const fetchBg = async () => {
       const res = await fetch(`/api/parties/${partyId}/scene-background`);
       if (!res.ok) return;
       const data = await res.json();
-      if (data.imageData) {
+      if (data.imageData && !data.pending) {
         setSceneBackground(data.imageData);
         setBackgroundPending(false);
         if (backgroundPollRef.current) {
           clearInterval(backgroundPollRef.current);
           backgroundPollRef.current = null;
         }
+      } else if (data.imageData && data.pending) {
+        setSceneBackground(data.imageData);
+        setBackgroundPending(true);
       } else if (data.pending) {
         setBackgroundPending(true);
       }
     };
 
+    if (keyChanged) {
+      setBackgroundPending(true);
+    }
+
     fetchBg();
 
-    // Poll every 6s while background is still generating
     backgroundPollRef.current = setInterval(fetchBg, 6000);
     return () => {
       if (backgroundPollRef.current) {
@@ -262,7 +274,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         backgroundPollRef.current = null;
       }
     };
-  }, [currentLocation, partyId]);
+  }, [bgKey, partyId]);
 
 
   // Auto-scroll

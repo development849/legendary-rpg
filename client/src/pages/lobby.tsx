@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, Copy, Users, CheckCircle, Clock, Sword, Play, Shield, Sparkles, Settings } from "lucide-react";
+import FriendsPanel from "@/components/FriendsPanel";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -242,6 +243,8 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
             </CardContent>
           </Card>
         </div>
+
+        <FriendsPanel inviteCode={party.inviteCode} />
 
         {/* Actions */}
         <div className={`rounded-lg p-4 flex items-center justify-between ${lobbyBg ? "backdrop-blur-md bg-black/50 border border-white/10" : "border-t border-border pt-4"}`}>

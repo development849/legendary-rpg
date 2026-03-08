@@ -72,6 +72,12 @@ Event-sourced: HP, MP, XP, inventory, conditions, achievements, abilities all up
 - Equipment slots: server enforces hand slot rules — 1 two-handed weapon OR up to 2 one-handed weapons OR 1 one-handed + shield; armor has slots: body (base AC), head (+AC bonus), hands (+AC bonus), feet (+AC bonus); only 1 armor per slot; shields have no slot (use a hand); jewelry has slots: ring (max 2 equipped) and necklace (max 1 equipped); jewelry type "jewelry" with properties.slot "ring" or "necklace" and properties.effect for passive bonuses; equipping auto-swaps conflicting items; UI shows slot hints next to equip buttons and slot labels in character sheet; GM instructed to include `slot` property on all armor and jewelry items
 - Auto-summarizes every 10 turns for memory management
 
+### Friends System
+- `friendships` table: id (UUID), requesterId, addresseeId, status (pending/accepted/declined), createdAt; unique index on (requesterId, addresseeId)
+- Storage CRUD: sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriends, getPendingRequests, getSentRequests, searchUsers
+- FriendsPanel component (`client/src/components/FriendsPanel.tsx`): reusable panel shown on both dashboard and lobby; shows friends list, pending incoming/outgoing requests, add-by-username with search, accept/decline buttons, remove friend; lobby version includes "Invite" button that copies party invite code
+- `or()` imported from drizzle-orm for bidirectional friend queries
+
 ## API Routes
 
 ```
@@ -97,6 +103,15 @@ PATCH /api/characters/:id/level-up — Apply level-up: stat allocation + skill s
 PATCH /api/characters/:id/equip — Equip/unequip weapon or armor
 POST /api/dice/roll            — Standalone dice roller
 WS   /ws                       — Party WebSocket room
+
+GET    /api/friends            — List accepted friends
+GET    /api/friends/requests   — List pending incoming requests
+GET    /api/friends/sent       — List sent pending requests
+POST   /api/friends/request    — Send friend request (body: {username})
+POST   /api/friends/:id/accept — Accept friend request
+POST   /api/friends/:id/decline — Decline friend request
+DELETE /api/friends/:id        — Remove friend
+GET    /api/users/search?q=... — Search users by username
 ```
 
 ## Design

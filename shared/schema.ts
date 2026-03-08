@@ -209,6 +209,23 @@ export const npcLog = pgTable("npc_log", {
 
 export type NpcEntry = typeof npcLog.$inferSelect;
 
+// ─── Friendships ─────────────────────────────────────────────────────────────
+
+export const friendships = pgTable("friendships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requesterId: varchar("requester_id").notNull(),
+  addresseeId: varchar("addressee_id").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").default(sql`NOW()`).notNull(),
+}, (t) => [
+  uniqueIndex("friendships_pair_idx").on(t.requesterId, t.addresseeId),
+  index("friendships_addressee_idx").on(t.addresseeId),
+]);
+
+export const insertFriendshipSchema = createInsertSchema(friendships).omit({ id: true, createdAt: true });
+export type InsertFriendship = z.infer<typeof insertFriendshipSchema>;
+export type Friendship = typeof friendships.$inferSelect;
+
 // ─── Arcs ─────────────────────────────────────────────────────────────────────
 
 export const arcs = pgTable("arcs", {

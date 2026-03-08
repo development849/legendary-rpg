@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Scroll, Target, Star, Flame, Music, Trash2 } from "lucide-react";
+import FriendsPanel from "@/components/FriendsPanel";
 import type { Character } from "@shared/schema";
 import logoPath from "@assets/legendary-logo-transparent.png";
 
@@ -329,6 +330,8 @@ export default function DashboardPage() {
             <JoinPartyCard characters={characters} />
           </div>
         </div>
+
+        <FriendsPanel />
       </div>
 
       {confirmDelete && (

@@ -10,6 +10,8 @@ import {
   createParty, getParty, getPartyByInviteCode, getCampaignParties, getUserParties,
   joinParty, getPartyMembers, setMemberReady,
   saveChatMessage, getPartyMessages, getWorldState,
+  sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend,
+  getFriends, getPendingRequests, getSentRequests, searchUsers,
 } from "./storage";
 import { rollDice, enforceHandLimits } from "./gameEngine";
 import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
@@ -996,6 +998,83 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const result = rollDice(die, count, modifier, advantageState, label);
       res.json(result);
     } catch (e) { res.status(500).json({ error: "Roll failed" }); }
+  });
+
+  // ── Friends ─────────────────────────────────────────────────────────────────
+
+  app.get("/api/friends", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const friends = await getFriends(userId);
+      res.json(friends);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/friends/requests", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const requests = await getPendingRequests(userId);
+      res.json(requests);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/friends/sent", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const sent = await getSentRequests(userId);
+      res.json(sent);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/friends/request", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const { username } = req.body;
+      if (!username) return res.status(400).json({ error: "Username required" });
+
+      const results = await searchUsers(username, userId);
+      const target = results.find(u => u.username?.toLowerCase() === username.toLowerCase());
+      if (!target) return res.status(404).json({ error: "User not found" });
+      if (target.id === userId) return res.status(400).json({ error: "Cannot add yourself" });
+
+      const friendship = await sendFriendRequest(userId, target.id);
+      res.json(friendship);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/friends/:id/accept", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const friendship = await acceptFriendRequest(req.params.id, userId);
+      res.json(friendship);
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+
+  app.post("/api/friends/:id/decline", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      await declineFriendRequest(req.params.id, userId);
+      res.json({ success: true });
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+
+  app.delete("/api/friends/:id", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      await removeFriend(req.params.id, userId);
+      res.json({ success: true });
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+
+  app.get("/api/users/search", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const q = (req.query.q as string) ?? "";
+      const results = await searchUsers(q, userId);
+      res.json(results);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
   // ── WebSocket ────────────────────────────────────────────────────────────────

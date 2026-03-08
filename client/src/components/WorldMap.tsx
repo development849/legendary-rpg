@@ -18,6 +18,7 @@ interface WorldMapProps {
   mapImage: string | null;
   locations: MapLocation[];
   generating?: boolean;
+  isLoading?: boolean;
   onTravelTo?: (locationName: string) => void;
   fullscreen?: boolean;
 }
@@ -26,7 +27,7 @@ const PIN_RADIUS = 6;
 const GLOW_RADIUS = 14;
 const FOG_REVEAL_RADIUS = 55;
 
-export default function WorldMap({ mapImage, locations, generating, onTravelTo, fullscreen }: WorldMapProps) {
+export default function WorldMap({ mapImage, locations, generating, isLoading, onTravelTo, fullscreen }: WorldMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -288,6 +289,15 @@ export default function WorldMap({ mapImage, locations, generating, onTravelTo, 
 
   function handleTouchEnd() {
     setDragging(false);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground p-4">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <p className="text-xs font-sans text-center">Loading map data...</p>
+      </div>
+    );
   }
 
   if (!mapImage && generating) {

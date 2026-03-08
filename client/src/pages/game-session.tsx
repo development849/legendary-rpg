@@ -300,7 +300,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     refetchInterval: 10000,
   });
 
-  const { data: mapData } = useQuery<any>({
+  const { data: mapData, isLoading: isLoadingMap } = useQuery<any>({
     queryKey: ['/api/parties', partyId, 'map'],
     refetchInterval: (query) => (query.state.data as any)?.generating ? 5000 : 30000,
     enabled: sidebarTab === "map" || mapFullscreen,
@@ -1804,6 +1804,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             mapImage={mapData?.mapImage ?? null}
                             locations={mapData?.locations ?? []}
                             generating={mapData?.generating}
+                            isLoading={isLoadingMap}
                             onTravelTo={(name) => sendAction(`[ACTION] I travel to ${name}.`)}
                           />
                         </div>
@@ -2849,6 +2850,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               mapImage={mapData?.mapImage ?? null}
               locations={mapData?.locations ?? []}
               generating={mapData?.generating}
+              isLoading={isLoadingMap}
               onTravelTo={(name) => { sendAction(`[ACTION] I travel to ${name}.`); setMapFullscreen(false); }}
               fullscreen
             />

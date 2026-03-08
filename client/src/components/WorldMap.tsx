@@ -61,14 +61,14 @@ function detectLocationType(name: string): LocType {
   if (/gate|wall|entrance|door/.test(n)) return "gate";
   if (/road|path|trail|highway|bridge|cobblestone|route/.test(n)) return "road";
   if (/forest|wood|grove|glade|thicket|jungle/.test(n)) return "forest";
-  if (/creek|river|lake|sea|ocean|bay|harbor|shore|waterfall|pond|swamp|marsh|ford/.test(n)) return "water";
+  if (/creek|river|lake|sea|ocean|bay|harbor|shore|waterfall|pond|swamp|marsh|\bford\b/.test(n)) return "water";
   if (/cave|cavern|tunnel|underground|mine|quarry/.test(n)) return "cave";
   if (/temple|church|shrine|chapel|sanctuary|cathedral|monastery/.test(n)) return "temple";
   if (/mill|farm|field|barn|windmill/.test(n)) return "mill";
   if (/camp|clearing|site|ruin|rock|boulder/.test(n)) return "camp";
   if (/castle|palace|fortress|keep|citadel|tower/.test(n)) return "castle";
   if (/port|dock|pier|wharf|harbor/.test(n)) return "port";
-  if (/town|city|village|hamlet|settlement/.test(n)) return "town";
+  if (/town|city|village|hamlet|settlement|haven|burg|borough|stead|hold|.+ford$/.test(n)) return "town";
   return "generic";
 }
 

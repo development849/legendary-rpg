@@ -441,7 +441,7 @@ export function assignLocationCoords(
 // In-memory lock: prevents concurrent or repeated portrait generation for the same NPC
 const _portraitInFlight = new Set<string>();
 
-export async function generateNpcPortrait(npcId: string, npc: { name: string; role: string; description: string; relationship: string; lastSeen: string }): Promise<void> {
+export async function generateNpcPortrait(npcId: string, npc: { name: string; pronouns?: string; role: string; description: string; relationship: string; lastSeen: string }): Promise<void> {
   // Skip if already generating or already persisted in DB
   if (_portraitInFlight.has(npcId)) return;
   // Double-check DB — portrait may have been saved since the caller last fetched
@@ -489,8 +489,14 @@ export async function generateNpcPortrait(npcId: string, npc: { name: string; ro
       ? `${npc.description},`
       : "";
 
+    const genderHint = npc.pronouns === "she/her" ? "female character,"
+      : npc.pronouns === "he/him" ? "male character,"
+      : npc.pronouns === "they/them" ? "androgynous non-binary character,"
+      : "";
+
     const prompt = [
       `Cinematic fantasy portrait painting of a character named ${npc.name},`,
+      genderHint,
       descriptionHint,
       `${npc.role},`,
       `${expressionHint},`,
@@ -590,7 +596,7 @@ Achievements: ${((c.achievements as any[]) || []).map((a: any) => `${a.title} [$
   const worldData = worldSnap?.state ? JSON.stringify(worldSnap.state, null, 2) : "{}";
 
   const npcRegister = npcs.length > 0
-    ? npcs.map(n => `• ${n.name} [${n.relationship}]${n.isPartyMember ? " ★COMPANION" : ""} — ${n.role}${n.description ? `. ${n.description}` : ""}${n.lastSeen ? `. Last seen: ${n.lastSeen}` : ""}${n.notes ? `. Notes: ${n.notes}` : ""}`).join("\n")
+    ? npcs.map(n => `• ${n.name} (${(n as any).pronouns || "they/them"}) [${n.relationship}]${n.isPartyMember ? " ★COMPANION" : ""} — ${n.role}${n.description ? `. ${n.description}` : ""}${n.lastSeen ? `. Last seen: ${n.lastSeen}` : ""}${n.notes ? `. Notes: ${n.notes}` : ""}`).join("\n")
     : "No named NPCs recorded yet.";
 
   const activeCompanions = (companions ?? npcs.filter((n: any) => n.isPartyMember));
@@ -845,7 +851,7 @@ Always respond with valid JSON in this structure:
     {"type": "ITEM_GRANTED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item": {"name": "Studded Leather", "type": "armor", "qty": 1, "rarity": "common", "description": "Leather reinforced with metal studs", "properties": {"ac": 12}}},
     {"type": "ITEM_REMOVED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item_name": "Rusty Dagger", "qty": 1, "reason": "Sold to blacksmith"},
     {"type": "GOLD_CHANGED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "delta": -3, "reason": "Bought a roasted chicken for 3gp"},
-    {"type": "NPC_MET", "name": "Marta", "role": "black market fence", "description": "nervous middle-aged woman, quick darting eyes, smells of tallow", "location": "Dockside Tavern back room", "relationship": "neutral", "notes": "Runs stolen goods. Owes money to the Crimson Hand.", "replaces": null},
+    {"type": "NPC_MET", "name": "Marta", "pronouns": "she/her", "role": "black market fence", "description": "nervous middle-aged woman, quick darting eyes, smells of tallow", "location": "Dockside Tavern back room", "relationship": "neutral", "notes": "Runs stolen goods. Owes money to the Crimson Hand.", "replaces": null},
     {"type": "PLOT_FACT_SET", "key": "bandit_hideout", "value": "the old mill on the eastern road, three miles from Thornwick"},
     {"type": "PLOT_FACT_SET", "key": "reward_offered", "value": "200 gold from Mayor Aldren for proof the bandits are stopped"},
     {"type": "SITUATION_UPDATED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "location": "The Dockside Tavern", "situation": "Negotiating with the fence about the stolen ledger. Tension is high.", "active_npcs": [{"name": "Marta", "role": "fence, nervous"}], "companions": ["Other character names sharing this scene"]},
@@ -886,6 +892,7 @@ CRITICAL RULES:
 3. When granting a purchased item, pair ITEM_GRANTED with GOLD_CHANGED in the same response.
    SELLING / LOSING / CONSUMING ITEMS — CRITICAL: Whenever a character sells, trades away, uses up, discards, or loses an item, you MUST emit ITEM_REMOVED with the exact item_name as it appears in their inventory, the qty to remove, and a reason. Pair it with GOLD_CHANGED when selling (positive delta for coins received). Without ITEM_REMOVED, the item stays in inventory forever — GOLD_CHANGED alone does NOT remove it. When selling multiple items, emit a separate ITEM_REMOVED for each one. Check the character's inventory in the CHARACTER SHEET above to get the exact name.
 4. NAMED NPC TRACKING — MANDATORY: Before finalizing your response, list every named NPC that appears in your narrative this turn. Check each one against the KNOWN NPCS list above. If they are NOT in KNOWN NPCS, you MUST emit NPC_MET for them — no exceptions. This includes NPCs who are speaking, being referenced, or acting in the scene. Use relationship: "friendly", "neutral", "hostile", "unknown", or "deceased". The "notes" field should be ONE concise sentence capturing their most important trait, secret, or agenda (max ~30 words). Do NOT repeat the relationship tag or stack multiple [neutral]/[friendly] annotations — the relationship field handles that separately. A response where a named NPC appears in the narrative but is absent from KNOWN NPCS, without a corresponding NPC_MET update, is always a mistake.
+   NPC PRONOUNS — MANDATORY: Every NPC_MET MUST include "pronouns" — one of: "he/him", "she/her", or "they/them". Choose pronouns that match the NPC's gender presentation and description. A "grizzled old man" is "he/him"; an "elven priestess" is "she/her"; a non-binary or genderless entity is "they/them". Use "they/them" ONLY for explicitly non-binary, genderless, or ambiguous characters — never as a lazy default for gendered NPCs. The description field must be consistent with the pronouns: if an NPC uses "she/her", describe them with feminine or androgynous traits, not masculine ones. Once you set an NPC's pronouns, use ONLY those pronouns when referring to them in narrative. Misgendering an NPC in narrative text is always a bug. Check the KNOWN NPCS list — each NPC has pronouns shown in parentheses after their name. Use those pronouns.
    NPC IDENTITY REVEALS — CRITICAL: When an NPC who was previously tracked by a description (e.g. "Mysterious Woman in Crimson Cloak", "Hooded Stranger", "Scarred Bandit Leader") reveals their actual name, you MUST use the "replaces" field on NPC_MET to merge them: {"type": "NPC_MET", "name": "Seraphine", "replaces": "Mysterious Woman in Crimson Cloak", ...}. This updates the existing cast entry instead of creating a duplicate. NEVER create a second NPC entry for the same character — always use "replaces" with the old name/description. Set "replaces" to null when the NPC is genuinely new.
    NPC RELATIONSHIP UPDATES — MANDATORY: NPCs' feelings toward the party change over time based on player actions. Whenever an NPC's disposition shifts (e.g. a neutral NPC becomes friendly after the party helps them, or a friendly NPC turns hostile after being betrayed), you MUST emit NPC_RELATIONSHIP_CHANGED with the NPC's name, their new relationship ("friendly", "neutral", "hostile", "unknown", or "deceased"), and a brief reason. This is how the cast hostility meter stays accurate. Check the [relationship] tag for each KNOWN NPC against how they should feel NOW given recent events. Common triggers: party helped/saved them → friendlier; party threatened/attacked/stole → more hostile; NPC was killed → deceased; significant story reveals → relationship shift. Do NOT leave an NPC as "neutral" forever if the party has had meaningful interactions with them.
 5. Whenever you establish a KEY STORY FACT in your narrative — a specific location for enemies or loot ("bandits are at the old mill"), a named place ("the Thornwick bridge"), a promise or reward ("100gp bounty from the Sheriff"), a plot reveal ("the cult leader is Brother Aldric") — you MUST immediately emit a PLOT_FACT_SET update to lock it into story canon. Use a short snake_case key (e.g. "bandit_hideout", "cult_leader", "active_quest_reward") and a clear descriptive value. Once a fact is set, it appears in ESTABLISHED STORY FACTS and you MUST NEVER contradict it. Check ESTABLISHED STORY FACTS before every narrative you write.
@@ -1449,6 +1456,7 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
           }
 
           const npcData = {
+            pronouns: update.pronouns ?? "they/them",
             role: update.role ?? "",
             description: update.description ?? "",
             lastSeen: update.location ?? "",

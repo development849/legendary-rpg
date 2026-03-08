@@ -854,6 +854,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         for (const npc of missing) {
           generateNpcPortrait(npc.id, {
             name: npc.name,
+            pronouns: npc.pronouns,
             role: npc.role,
             description: npc.description,
             relationship: npc.relationship,

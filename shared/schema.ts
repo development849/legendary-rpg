@@ -186,6 +186,7 @@ export const npcLog = pgTable("npc_log", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   partyId: varchar("party_id").notNull(),
   name: text("name").notNull(),
+  pronouns: text("pronouns").notNull().default("they/them"),
   role: text("role").notNull().default(""),
   description: text("description").notNull().default(""),
   lastSeen: text("last_seen").notNull().default(""),

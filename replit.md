@@ -1,7 +1,7 @@
-# Mythweave — AI-Powered Fantasy RPG
+# Legendary℠ — AI-Powered Fantasy RPG
 
 ## Overview
-Mythweave is an online fantasy RPG where an AI Game Master (powered by GPT-4o) runs real-time campaigns. Players create persistent characters, join parties via invite codes, and interact through natural language. The GM handles dice rolls, state updates, and narrative arcs using the "Mythweave Lite" custom d20 ruleset.
+Legendary℠ is an online fantasy RPG where an AI Game Master (powered by GPT-4o/Gemini) runs real-time campaigns. Players create persistent characters with AI-generated portraits, join parties via invite codes, and interact through natural language. The GM handles dice rolls, state updates, and narrative arcs using the "Legendary Lite" custom d20 ruleset.
 
 ## Architecture
 
@@ -59,7 +59,7 @@ Event-sourced: HP, MP, XP, inventory, conditions, achievements, abilities all up
 - Parses JSON response: `{narrative, dice_requests, proposed_updates, quick_actions, scene}` — scene includes `{title, location, region, threat}`
 - Applies state changes: HP, XP, items (with equipped status), conditions
 - Item properties: weapons require `damage` (e.g. "1d8"), armor requires `ac`; GM prompt enforces this via Critical Rule #6
-- NPC companions: GM emits `NPC_JOINED_PARTY` with full stat block (level, max_hp, ac, stats, abilities, inventory); handler saves to npc_log; companion cards in Party tab show full character sheet (stats grid, abilities, gear, HP/AC/Level/XP badges)
+- NPC companions: GM emits `NPC_JOINED_PARTY` with full stat block (level, max_hp, ac, stats, abilities, inventory); handler saves to npc_log; companion cards in Party tab show full character sheet (stats grid, abilities, gear, HP/AC/Level/XP badges); NPC pronouns (`she/her`, `he/him`, `they/them`) stored in `npcLog.pronouns`; GM required to include `pronouns` in every `NPC_MET` emission; portrait generation uses gender hint based on pronouns; UI shows pronouns in parentheses on NPC register
 - Companion leveling: `npc_log` has `xp` column; when any player character earns XP via `XP_GRANTED`, all active companions (`isPartyMember=true`) receive the same XP amount; companions use the same XP threshold table as players; on level-up they gain +5–8 HP per level gained
 - Level-up system: When a character levels up via XP, server broadcasts `LEVEL_UP` event via WebSocket; client shows a celebration modal with: HP gain display, 2 stat points to allocate (+/- buttons per stat), and at milestone levels (5, 10, 15, 20) a class-specific skill choice and racial skill unlock; confirmed via `PATCH /api/characters/:id/level-up`
 - Skill trees: `shared/skillTrees.ts` defines `CLASS_SKILL_TREES` (3 choices per tier for all 8 classes at levels 5/10/15/20) and `RACE_BONUS_SKILLS` (1 racial skill per race, unlocked at level 5); skills stored in character's `skills` jsonb array; GM prompt includes learned skills with mechanical effects

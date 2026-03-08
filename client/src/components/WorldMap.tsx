@@ -19,6 +19,7 @@ interface WorldMapProps {
   locations: MapLocation[];
   generating?: boolean;
   isLoading?: boolean;
+  error?: boolean;
   onTravelTo?: (locationName: string) => void;
   fullscreen?: boolean;
 }
@@ -27,7 +28,7 @@ const PIN_RADIUS = 6;
 const GLOW_RADIUS = 14;
 const FOG_REVEAL_RADIUS = 55;
 
-export default function WorldMap({ mapImage, locations, generating, isLoading, onTravelTo, fullscreen }: WorldMapProps) {
+export default function WorldMap({ mapImage, locations, generating, isLoading, error, onTravelTo, fullscreen }: WorldMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -306,6 +307,16 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, o
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
         <p className="text-xs font-sans text-center">Generating region map...</p>
         <p className="text-[10px] text-muted-foreground/50 text-center">This may take a moment</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
+        <MapPin className="w-6 h-6 text-muted-foreground/40" />
+        <p className="text-xs font-sans text-center">Could not load map data</p>
+        <p className="text-[10px] text-muted-foreground/50 text-center">Try refreshing the page</p>
       </div>
     );
   }

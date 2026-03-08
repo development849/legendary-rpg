@@ -1,5 +1,5 @@
-import { useRef, useEffect, useState, useCallback } from "react";
-import { MapPin, Navigation, Skull, Loader2, Maximize2, Minimize2 } from "lucide-react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
+import { MapPin, Navigation, Skull, Loader2, Maximize2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MapLocation {
@@ -36,7 +36,7 @@ function isTrueThreat(threat?: string | null): boolean {
 }
 
 const LEGEND_ITEMS: { type: LocType; label: string }[] = [
-  { type: "town", label: "Town" },
+  { type: "town", label: "Town/City" },
   { type: "tavern", label: "Tavern" },
   { type: "market", label: "Market" },
   { type: "castle", label: "Castle" },
@@ -72,6 +72,120 @@ function detectLocationType(name: string): LocType {
   return "generic";
 }
 
+const SETTLEMENT_TYPES = new Set<LocType>(["town", "castle"]);
+const FILLER_WORDS = new Set(["the", "a", "an", "by", "of", "to", "in", "on", "at", "near", "old"]);
+
+function getSignificantWords(name: string): string[] {
+  return name.toLowerCase().split(/[\s,]+/).filter(w => !FILLER_WORDS.has(w) && w.length > 2);
+}
+
+function wordOverlap(a: string[], b: string[]): number {
+  return a.filter(w => b.includes(w)).length;
+}
+
+interface MajorSite {
+  location: MapLocation;
+  children: MapLocation[];
+}
+
+function buildHierarchy(locations: MapLocation[]): { majors: MajorSite[]; ungrouped: MapLocation[] } {
+
+  const settlements: MajorSite[] = [];
+  const others: MapLocation[] = [];
+
+  for (const loc of locations) {
+    const type = detectLocationType(loc.name);
+    if (SETTLEMENT_TYPES.has(type)) {
+      settlements.push({ location: loc, children: [] });
+    } else {
+      others.push(loc);
+    }
+  }
+
+  if (settlements.length === 0) {
+    const standalone: MajorSite[] = [];
+    const grouped = new Set<string>();
+
+    for (let i = 0; i < locations.length; i++) {
+      if (grouped.has(locations[i].name)) continue;
+      const site: MajorSite = { location: locations[i], children: [] };
+      for (let j = 0; j < locations.length; j++) {
+        if (i === j || grouped.has(locations[j].name)) continue;
+        const dist = Math.hypot(locations[i].x - locations[j].x, locations[i].y - locations[j].y);
+        if (dist < 10) {
+          site.children.push(locations[j]);
+          grouped.add(locations[j].name);
+        }
+      }
+      grouped.add(locations[i].name);
+      standalone.push(site);
+    }
+    return { majors: standalone, ungrouped: [] };
+  }
+
+  const ungrouped: MapLocation[] = [];
+
+  for (const other of others) {
+    const otherWords = getSignificantWords(other.name);
+
+    let bestMatch: MajorSite | null = null;
+    let bestScore = 0;
+    let bestDist = Infinity;
+
+    for (const settlement of settlements) {
+      const settWords = getSignificantWords(settlement.location.name);
+      const overlap = wordOverlap(otherWords, settWords);
+      const dist = Math.hypot(other.x - settlement.location.x, other.y - settlement.location.y);
+
+      if (overlap > bestScore || (overlap === bestScore && overlap > 0 && dist < bestDist)) {
+        bestScore = overlap;
+        bestMatch = settlement;
+        bestDist = dist;
+      }
+    }
+
+    if (bestScore > 0) {
+      bestMatch!.children.push(other);
+      continue;
+    }
+
+    let closestSettlement: MajorSite | null = null;
+    let closestDist = Infinity;
+    for (const settlement of settlements) {
+      const dist = Math.hypot(other.x - settlement.location.x, other.y - settlement.location.y);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestSettlement = settlement;
+      }
+    }
+    if (closestSettlement && closestDist < 30) {
+      closestSettlement.children.push(other);
+    } else {
+      ungrouped.push(other);
+    }
+  }
+
+  for (const settlement of settlements) {
+    for (const otherSettlement of settlements) {
+      if (settlement === otherSettlement) continue;
+      const sWords = getSignificantWords(settlement.location.name);
+      const oWords = getSignificantWords(otherSettlement.location.name);
+      if (wordOverlap(sWords, oWords) >= 1) {
+        const dist = Math.hypot(settlement.location.x - otherSettlement.location.x,
+                                settlement.location.y - otherSettlement.location.y);
+        if (dist < 12 && sWords.length > oWords.length) {
+          otherSettlement.children.push(settlement.location);
+        }
+      }
+    }
+  }
+
+  const childNames = new Set(settlements.flatMap(m => m.children.map(c => c.name)));
+  const topSettlements = settlements.filter(m => !childNames.has(m.location.name));
+
+  return { majors: topSettlements, ungrouped };
+}
+
 function drawLocIcon(ctx: CanvasRenderingContext2D, type: LocType, x: number, y: number, size: number) {
   ctx.save();
   ctx.lineWidth = 1.2;
@@ -105,45 +219,56 @@ function drawLocIcon(ctx: CanvasRenderingContext2D, type: LocType, x: number, y:
       ctx.arc(x, y - hs * 0.2, hs * 0.6, Math.PI, 0);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(x, y - hs * 0.2);
-      ctx.lineTo(x, y + hs);
+      ctx.moveTo(x, y - hs * 0.2 + hs * 0.6);
+      ctx.lineTo(x, y + hs * 0.5);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(x - hs * 0.4, y + hs);
-      ctx.lineTo(x + hs * 0.4, y + hs);
+      ctx.moveTo(x - hs * 0.3, y + hs * 0.5);
+      ctx.lineTo(x + hs * 0.3, y + hs * 0.5);
       ctx.stroke();
       break;
     case "market":
-      ctx.strokeStyle = "#c9a857";
+      ctx.strokeStyle = "#d4a017";
       ctx.beginPath();
-      ctx.moveTo(x - hs, y - hs * 0.5);
+      ctx.moveTo(x - hs, y + hs * 0.4);
+      ctx.lineTo(x - hs * 0.7, y - hs * 0.4);
+      ctx.lineTo(x + hs * 0.7, y - hs * 0.4);
+      ctx.lineTo(x + hs, y + hs * 0.4);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y - hs * 0.4);
       ctx.lineTo(x, y - hs);
-      ctx.lineTo(x + hs, y - hs * 0.5);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x - hs * 0.7, y - hs * 0.5);
-      ctx.lineTo(x - hs * 0.7, y + hs);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x + hs * 0.7, y - hs * 0.5);
-      ctx.lineTo(x + hs * 0.7, y + hs);
       ctx.stroke();
       break;
     case "gate":
-      ctx.strokeStyle = "#8b8b83";
+      ctx.strokeStyle = "#a0a0a0";
       ctx.beginPath();
-      ctx.arc(x, y - hs * 0.2, hs * 0.5, Math.PI, 0);
-      ctx.lineTo(x + hs * 0.5, y + hs);
-      ctx.moveTo(x - hs * 0.5, y - hs * 0.2);
-      ctx.lineTo(x - hs * 0.5, y + hs);
+      ctx.moveTo(x - hs, y + hs);
+      ctx.lineTo(x - hs, y - hs * 0.5);
+      ctx.moveTo(x + hs, y + hs);
+      ctx.lineTo(x + hs, y - hs * 0.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y - hs * 0.5, hs, Math.PI, 0);
       ctx.stroke();
       break;
+    case "road":
+      ctx.strokeStyle = "#8b7355";
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y + hs * 0.3);
+      ctx.lineTo(x, y - hs * 0.3);
+      ctx.lineTo(x + hs, y + hs * 0.3);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      break;
     case "forest":
-      ctx.strokeStyle = "#5b7a3b";
+      ctx.strokeStyle = "#2d6a2d";
       ctx.beginPath();
       ctx.moveTo(x, y - hs);
-      ctx.lineTo(x - hs * 0.6, y + hs * 0.3);
-      ctx.lineTo(x + hs * 0.6, y + hs * 0.3);
+      ctx.lineTo(x - hs * 0.7, y + hs * 0.3);
+      ctx.lineTo(x + hs * 0.7, y + hs * 0.3);
       ctx.closePath();
       ctx.stroke();
       ctx.beginPath();
@@ -152,93 +277,105 @@ function drawLocIcon(ctx: CanvasRenderingContext2D, type: LocType, x: number, y:
       ctx.stroke();
       break;
     case "water":
-      ctx.strokeStyle = "#4a7a9b";
+      ctx.strokeStyle = "#4a90d9";
       ctx.beginPath();
-      ctx.moveTo(x - hs, y - hs * 0.3);
-      ctx.quadraticCurveTo(x - hs * 0.3, y - hs, x, y - hs * 0.3);
-      ctx.quadraticCurveTo(x + hs * 0.3, y + hs * 0.3, x + hs, y - hs * 0.3);
+      ctx.moveTo(x - hs, y);
+      ctx.quadraticCurveTo(x - hs * 0.3, y - hs * 0.5, x + hs * 0.3, y);
+      ctx.quadraticCurveTo(x + hs * 0.7, y + hs * 0.5, x + hs, y);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(x - hs * 0.7, y + hs * 0.3);
-      ctx.quadraticCurveTo(x, y - hs * 0.2, x + hs * 0.7, y + hs * 0.3);
+      ctx.moveTo(x - hs * 0.7, y + hs * 0.4);
+      ctx.quadraticCurveTo(x, y, x + hs * 0.7, y + hs * 0.4);
       ctx.stroke();
       break;
     case "cave":
-      ctx.strokeStyle = "#7a6b5b";
+      ctx.strokeStyle = "#666";
+      ctx.beginPath();
+      ctx.arc(x, y, hs * 0.7, Math.PI * 0.2, Math.PI * 0.8, true);
+      ctx.lineTo(x - hs * 0.5, y + hs * 0.3);
+      ctx.stroke();
+      break;
+    case "temple":
+      ctx.strokeStyle = "#c9a857";
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y + hs);
+      ctx.lineTo(x - hs, y - hs * 0.2);
+      ctx.lineTo(x, y - hs);
+      ctx.lineTo(x + hs, y - hs * 0.2);
+      ctx.lineTo(x + hs, y + hs);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - hs * 0.3, y - hs * 0.8);
+      ctx.lineTo(x + hs * 0.3, y - hs * 0.8);
+      ctx.stroke();
+      break;
+    case "mill":
+      ctx.strokeStyle = "#8b6914";
+      ctx.beginPath();
+      ctx.moveTo(x, y + hs);
+      ctx.lineTo(x, y - hs * 0.3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y - hs);
+      ctx.lineTo(x + hs, y + hs * 0.3);
+      ctx.moveTo(x + hs, y - hs);
+      ctx.lineTo(x - hs, y + hs * 0.3);
+      ctx.stroke();
+      break;
+    case "camp":
+      ctx.strokeStyle = "#b87333";
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y + hs * 0.5);
+      ctx.lineTo(x, y - hs);
+      ctx.lineTo(x + hs, y + hs * 0.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - hs * 0.5, y + hs * 0.5);
+      ctx.lineTo(x + hs * 0.5, y + hs * 0.5);
+      ctx.stroke();
+      break;
+    case "castle":
+      ctx.strokeStyle = "#a0a0a0";
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y + hs);
+      ctx.lineTo(x - hs, y - hs * 0.3);
+      ctx.lineTo(x - hs * 0.6, y - hs * 0.3);
+      ctx.lineTo(x - hs * 0.6, y - hs);
+      ctx.lineTo(x - hs * 0.2, y - hs);
+      ctx.lineTo(x - hs * 0.2, y - hs * 0.3);
+      ctx.lineTo(x + hs * 0.2, y - hs * 0.3);
+      ctx.lineTo(x + hs * 0.2, y - hs);
+      ctx.lineTo(x + hs * 0.6, y - hs);
+      ctx.lineTo(x + hs * 0.6, y - hs * 0.3);
+      ctx.lineTo(x + hs, y - hs * 0.3);
+      ctx.lineTo(x + hs, y + hs);
+      ctx.stroke();
+      break;
+    case "port":
+      ctx.strokeStyle = "#4a90d9";
+      ctx.beginPath();
+      ctx.moveTo(x - hs * 0.5, y + hs * 0.3);
+      ctx.quadraticCurveTo(x, y - hs * 0.3, x + hs * 0.5, y + hs * 0.3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y + hs * 0.3);
+      ctx.lineTo(x, y - hs);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y - hs * 0.6);
+      ctx.lineTo(x + hs * 0.5, y - hs * 0.3);
+      ctx.stroke();
+      break;
+    case "mine":
+      ctx.strokeStyle = "#8b6914";
       ctx.beginPath();
       ctx.moveTo(x - hs, y + hs);
       ctx.lineTo(x, y - hs);
       ctx.lineTo(x + hs, y + hs);
       ctx.stroke();
-      break;
-    case "temple":
-      ctx.strokeStyle = "#9b8bbb";
       ctx.beginPath();
-      ctx.moveTo(x - hs * 0.15, y - hs);
-      ctx.lineTo(x - hs * 0.15, y + hs);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x + hs * 0.15, y - hs);
-      ctx.lineTo(x + hs * 0.15, y + hs);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x - hs * 0.6, y);
-      ctx.lineTo(x + hs * 0.6, y);
-      ctx.stroke();
-      break;
-    case "castle":
-      ctx.strokeStyle = "#8b7b6b";
-      ctx.beginPath();
-      ctx.rect(x - hs, y - hs * 0.5, s, hs * 1.5);
-      ctx.stroke();
-      ctx.beginPath();
-      for (let i = 0; i < 3; i++) {
-        const bx = x - hs + i * hs;
-        ctx.rect(bx, y - hs, hs * 0.4, hs * 0.5);
-      }
-      ctx.stroke();
-      break;
-    case "mill":
-      ctx.strokeStyle = "#8b7b4b";
-      ctx.beginPath();
-      ctx.moveTo(x, y - hs);
-      ctx.lineTo(x, y + hs);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x - hs, y - hs * 0.3);
-      ctx.lineTo(x + hs, y + hs * 0.3);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x + hs, y - hs * 0.3);
-      ctx.lineTo(x - hs, y + hs * 0.3);
-      ctx.stroke();
-      break;
-    case "camp":
-      ctx.strokeStyle = "#8b6b3b";
-      ctx.beginPath();
-      ctx.moveTo(x, y - hs);
-      ctx.lineTo(x - hs, y + hs);
-      ctx.lineTo(x + hs, y + hs);
-      ctx.closePath();
-      ctx.stroke();
-      break;
-    case "road":
-      ctx.strokeStyle = "#9b8b6b";
-      ctx.setLineDash([2, 2]);
-      ctx.beginPath();
-      ctx.moveTo(x - hs, y + hs * 0.5);
-      ctx.quadraticCurveTo(x, y - hs, x + hs, y + hs * 0.5);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      break;
-    case "port":
-      ctx.strokeStyle = "#4a7a9b";
-      ctx.beginPath();
-      ctx.arc(x, y, hs * 0.6, 0.3, Math.PI - 0.3);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x, y - hs);
-      ctx.lineTo(x, y + hs * 0.4);
+      ctx.moveTo(x - hs * 0.5, y);
+      ctx.lineTo(x + hs * 0.5, y);
       ctx.stroke();
       break;
     default:
@@ -256,17 +393,18 @@ function getLocColor(type: LocType, isCurrent: boolean): string {
   switch (type) {
     case "town": return "#c9a857";
     case "tavern": return "#b87333";
-    case "market": return "#c9a857";
-    case "gate": return "#8b8b83";
-    case "road": return "#9b8b6b";
-    case "forest": return "#5b7a3b";
-    case "water": return "#4a7a9b";
-    case "cave": return "#7a6b5b";
-    case "temple": return "#9b8bbb";
-    case "mill": return "#8b7b4b";
-    case "camp": return "#8b6b3b";
-    case "castle": return "#8b7b6b";
-    case "port": return "#4a7a9b";
+    case "market": return "#d4a017";
+    case "gate": return "#a0a0a0";
+    case "road": return "#8b7355";
+    case "forest": return "#2d6a2d";
+    case "water": return "#4a90d9";
+    case "cave": return "#666";
+    case "temple": return "#c9a857";
+    case "mill": return "#8b6914";
+    case "camp": return "#b87333";
+    case "castle": return "#a0a0a0";
+    case "port": return "#4a90d9";
+    case "mine": return "#8b6914";
     default: return "#8b7355";
   }
 }
@@ -283,6 +421,29 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [pulsePhase, setPulsePhase] = useState(0);
   const [showLegend, setShowLegend] = useState(false);
+  const [zoomedSite, setZoomedSite] = useState<string | null>(null);
+  const lastClickTime = useRef(0);
+  const lastClickName = useRef<string | null>(null);
+
+  const hierarchy = useMemo(() => buildHierarchy(locations), [locations]);
+
+  useEffect(() => {
+    if (zoomedSite && !hierarchy.majors.some(m => m.location.name === zoomedSite)) {
+      setZoomedSite(null);
+    }
+  }, [zoomedSite, hierarchy]);
+
+  const visibleLocations = useMemo(() => {
+    if (zoomedSite) {
+      const site = hierarchy.majors.find(m => m.location.name === zoomedSite);
+      if (site) {
+        return [site.location, ...site.children];
+      }
+    }
+    const result = hierarchy.majors.map(m => m.location);
+    result.push(...hierarchy.ungrouped);
+    return result;
+  }, [zoomedSite, hierarchy]);
 
   useEffect(() => {
     if (!mapImage) { setBgImage(null); return; }
@@ -384,12 +545,12 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
       }
     }
 
-    if (locations.length > 1) {
+    if (visibleLocations.length > 1 && !zoomedSite) {
       ctx.beginPath();
       ctx.strokeStyle = "rgba(218, 165, 32, 0.3)";
       ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 4]);
-      const sorted = [...locations].sort((a, b) => (a.firstVisitedTurn ?? 0) - (b.firstVisitedTurn ?? 0));
+      const sorted = [...visibleLocations].sort((a, b) => (a.firstVisitedTurn ?? 0) - (b.firstVisitedTurn ?? 0));
       for (let i = 0; i < sorted.length; i++) {
         const lx = mapX + (sorted[i].x / 100) * mapSize;
         const ly = mapY + (sorted[i].y / 100) * mapSize;
@@ -400,10 +561,30 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
       ctx.setLineDash([]);
     }
 
-    for (const loc of locations) {
+    if (zoomedSite && visibleLocations.length > 1) {
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(218, 165, 32, 0.25)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      const sorted = [...visibleLocations].sort((a, b) => (a.firstVisitedTurn ?? 0) - (b.firstVisitedTurn ?? 0));
+      for (let i = 0; i < sorted.length; i++) {
+        const lx = mapX + (sorted[i].x / 100) * mapSize;
+        const ly = mapY + (sorted[i].y / 100) * mapSize;
+        if (i === 0) ctx.moveTo(lx, ly);
+        else ctx.lineTo(lx, ly);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    for (const loc of visibleLocations) {
       const lx = mapX + (loc.x / 100) * mapSize;
       const ly = mapY + (loc.y / 100) * mapSize;
       const locType = detectLocationType(loc.name);
+      const isMajorInOverview = !zoomedSite && hierarchy.majors.some(m => m.location.name === loc.name);
+      const childCount = isMajorInOverview
+        ? (hierarchy.majors.find(m => m.location.name === loc.name)?.children.length ?? 0)
+        : 0;
 
       if (loc.isCurrent) {
         const glowAlpha = 0.3 + Math.sin(pulsePhase) * 0.15;
@@ -421,8 +602,9 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
         ? (loc.isCurrent ? "#ef4444" : "#991b1b")
         : getLocColor(locType, loc.isCurrent);
 
+      const pinR = isMajorInOverview ? PIN_RADIUS + 2 : PIN_RADIUS;
       ctx.beginPath();
-      ctx.arc(lx, ly, PIN_RADIUS, 0, Math.PI * 2);
+      ctx.arc(lx, ly, pinR, 0, Math.PI * 2);
       ctx.fillStyle = pinColor;
       ctx.fill();
       ctx.strokeStyle = loc.isCurrent ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)";
@@ -431,40 +613,57 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
 
       if (selectedLocation?.name === loc.name) {
         ctx.beginPath();
-        ctx.arc(lx, ly, PIN_RADIUS + 4, 0, Math.PI * 2);
+        ctx.arc(lx, ly, pinR + 4, 0, Math.PI * 2);
         ctx.strokeStyle = "#daa520";
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
 
-      const iconSize = fullscreen ? 12 : 10;
+      const iconSize = fullscreen ? 14 : (isMajorInOverview ? 12 : 10);
       if (hasTrueThreat) {
         ctx.strokeStyle = "#ef4444";
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(lx, ly - PIN_RADIUS - 10, iconSize * 0.35, 0, Math.PI * 2);
+        ctx.arc(lx, ly - pinR - 10, iconSize * 0.35, 0, Math.PI * 2);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(lx - iconSize * 0.15, ly - PIN_RADIUS - 10 + iconSize * 0.1);
-        ctx.lineTo(lx - iconSize * 0.15, ly - PIN_RADIUS - 10 - iconSize * 0.1);
-        ctx.moveTo(lx + iconSize * 0.15, ly - PIN_RADIUS - 10 + iconSize * 0.1);
-        ctx.lineTo(lx + iconSize * 0.15, ly - PIN_RADIUS - 10 - iconSize * 0.1);
+        ctx.moveTo(lx - iconSize * 0.15, ly - pinR - 10 + iconSize * 0.1);
+        ctx.lineTo(lx - iconSize * 0.15, ly - pinR - 10 - iconSize * 0.1);
+        ctx.moveTo(lx + iconSize * 0.15, ly - pinR - 10 + iconSize * 0.1);
+        ctx.lineTo(lx + iconSize * 0.15, ly - pinR - 10 - iconSize * 0.1);
         ctx.stroke();
       } else {
-        drawLocIcon(ctx, locType, lx, ly - PIN_RADIUS - 10, iconSize);
+        drawLocIcon(ctx, locType, lx, ly - pinR - 10, iconSize);
       }
 
-      const fontSize = fullscreen ? 11 : 9;
-      ctx.font = `600 ${fontSize}px system-ui, sans-serif`;
+      const fontSize = fullscreen ? 12 : (isMajorInOverview ? 11 : 9);
+      ctx.font = `${isMajorInOverview ? 700 : 600} ${fontSize}px system-ui, sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillStyle = "rgba(0,0,0,0.6)";
-      ctx.fillText(loc.name, lx + 1, ly + PIN_RADIUS + fontSize + 3 + 1);
-      ctx.fillStyle = loc.isCurrent ? "#fff" : "rgba(255,255,255,0.75)";
-      ctx.fillText(loc.name, lx, ly + PIN_RADIUS + fontSize + 3);
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.fillText(loc.name, lx + 1, ly + pinR + fontSize + 3 + 1);
+      ctx.fillStyle = loc.isCurrent ? "#fff" : (isMajorInOverview ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.75)");
+      ctx.fillText(loc.name, lx, ly + pinR + fontSize + 3);
+
+      if (childCount > 0 && !zoomedSite) {
+        const badgeY = ly + pinR + fontSize + 5;
+        const badgeText = `${childCount} more`;
+        ctx.font = `500 ${Math.max(7, fontSize - 3)}px system-ui, sans-serif`;
+        const tw = ctx.measureText(badgeText).width;
+        ctx.fillStyle = "rgba(218, 165, 32, 0.15)";
+        const bx = lx - tw / 2 - 3;
+        const bw = tw + 6;
+        const bh = fontSize - 1;
+        ctx.beginPath();
+        ctx.roundRect(bx, badgeY, bw, bh, 3);
+        ctx.fill();
+        ctx.fillStyle = "rgba(218, 165, 32, 0.6)";
+        ctx.textAlign = "center";
+        ctx.fillText(badgeText, lx, badgeY + bh - 2);
+      }
     }
 
     ctx.restore();
-  }, [bgImage, locations, pan, zoom, selectedLocation, pulsePhase, fullscreen]);
+  }, [bgImage, locations, visibleLocations, pan, zoom, selectedLocation, pulsePhase, fullscreen, zoomedSite, hierarchy]);
 
   useEffect(() => {
     draw();
@@ -505,16 +704,16 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
     if (dragging) {
       const dist = Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y);
       if (dist < 5) {
-        handleClick(e);
+        handleCanvasClick(e);
       }
       setDragging(false);
     }
   }
 
-  function handleClick(e: React.MouseEvent) {
+  function findClickedLocation(e: React.MouseEvent): MapLocation | null {
     const canvas = canvasRef.current;
     const container = containerRef.current;
-    if (!canvas || !container) return;
+    if (!canvas || !container) return null;
 
     const rect = container.getBoundingClientRect();
     const w = rect.width;
@@ -533,17 +732,45 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
     let closest: MapLocation | null = null;
     let closestDist = Infinity;
 
-    for (const loc of locations) {
+    for (const loc of visibleLocations) {
       const lx = mapXOff + (loc.x / 100) * mapSize;
       const ly = mapYOff + (loc.y / 100) * mapSize;
       const dist = Math.hypot(worldX - lx, worldY - ly);
-      if (dist < 20 && dist < closestDist) {
+      if (dist < 25 && dist < closestDist) {
         closest = loc;
         closestDist = dist;
       }
     }
 
-    setSelectedLocation(closest);
+    return closest;
+  }
+
+  function handleCanvasClick(e: React.MouseEvent) {
+    const clicked = findClickedLocation(e);
+    const now = Date.now();
+
+    if (clicked) {
+      if (!zoomedSite && lastClickName.current === clicked.name && now - lastClickTime.current < 400) {
+        const site = hierarchy.majors.find(m => m.location.name === clicked.name);
+        if (site && site.children.length > 0) {
+          setZoomedSite(clicked.name);
+          setSelectedLocation(null);
+          setZoom(1);
+          setPan({ x: 0, y: 0 });
+          lastClickName.current = null;
+          lastClickTime.current = 0;
+          return;
+        }
+      }
+
+      lastClickName.current = clicked.name;
+      lastClickTime.current = now;
+      setSelectedLocation(clicked);
+    } else {
+      setSelectedLocation(null);
+      lastClickName.current = null;
+      lastClickTime.current = 0;
+    }
   }
 
   function handleTouchStart(e: React.TouchEvent) {
@@ -567,6 +794,13 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
 
   function handleTouchEnd() {
     setDragging(false);
+  }
+
+  function exitDetailView() {
+    setZoomedSite(null);
+    setSelectedLocation(null);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
   }
 
   if (isLoading) {
@@ -623,9 +857,25 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
         onTouchEnd={handleTouchEnd}
       />
 
+      {zoomedSite && (
+        <div className="absolute top-2 left-2 z-10 flex items-center gap-2">
+          <button
+            onClick={exitDetailView}
+            className="flex items-center gap-1 px-2 py-1 rounded bg-card/90 border border-border text-foreground hover:bg-card text-xs"
+            data-testid="map-back-button"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            Region
+          </button>
+          <span className="text-xs text-primary font-semibold bg-card/80 border border-border rounded px-2 py-1">
+            {zoomedSite}
+          </span>
+        </div>
+      )}
+
       {selectedLocation && (
         <div
-          className="absolute bottom-2 left-2 right-2 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-lg z-10"
+          className="absolute bottom-2 left-2 right-14 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-lg z-10"
           data-testid={`map-popup-${selectedLocation.name}`}
         >
           <div className="flex items-start justify-between gap-2">
@@ -654,8 +904,41 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
                   <Skull className="w-2.5 h-2.5" /> {selectedLocation.threat}
                 </p>
               )}
+              {!zoomedSite && (() => {
+                const site = hierarchy.majors.find(m => m.location.name === selectedLocation.name);
+                if (site && site.children.length > 0) {
+                  return (
+                    <p className="text-[10px] text-primary/60 mt-1 ml-5">
+                      {site.children.length} nearby location{site.children.length > 1 ? "s" : ""} to explore
+                    </p>
+                  );
+                }
+                return null;
+              })()}
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
+              {!zoomedSite && (() => {
+                const site = hierarchy.majors.find(m => m.location.name === selectedLocation.name);
+                if (site && site.children.length > 0) {
+                  return (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => {
+                        setZoomedSite(selectedLocation.name);
+                        setSelectedLocation(null);
+                        setZoom(1);
+                        setPan({ x: 0, y: 0 });
+                      }}
+                      data-testid={`map-explore-${selectedLocation.name}`}
+                    >
+                      <Maximize2 className="w-3 h-3" /> Explore
+                    </Button>
+                  );
+                }
+                return null;
+              })()}
               {!selectedLocation.isCurrent && onTravelTo && (
                 <Button
                   size="sm"
@@ -673,7 +956,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
                 className="h-7 w-7 p-0 text-muted-foreground"
                 onClick={() => setSelectedLocation(null)}
               >
-                ×
+                x
               </Button>
             </div>
           </div>
@@ -693,14 +976,14 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
           className="w-7 h-7 rounded bg-card/80 border border-border text-foreground flex items-center justify-center hover:bg-card text-sm font-bold"
           data-testid="map-zoom-out"
         >
-          −
+          -
         </button>
         <button
           onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
           className="w-7 h-7 rounded bg-card/80 border border-border text-foreground flex items-center justify-center hover:bg-card text-[10px]"
           data-testid="map-reset"
         >
-          ⌖
+          O
         </button>
       </div>
 
@@ -725,8 +1008,8 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
             <p className="text-[10px] font-sans font-bold text-foreground/80 mb-1.5 tracking-wide uppercase">Map Key</p>
             <div className="space-y-1">
               {LEGEND_ITEMS.map(item => {
-                const usedTypes = new Set(locations.map(l => detectLocationType(l.name)));
-                if (!usedTypes.has(item.type) && locations.length > 0) return null;
+                const usedTypes = new Set(visibleLocations.map(l => detectLocationType(l.name)));
+                if (!usedTypes.has(item.type) && visibleLocations.length > 0) return null;
                 const color = getLocColor(item.type, false);
                 return (
                   <div key={item.type} className="flex items-center gap-2">
@@ -750,7 +1033,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
                   </div>
                 );
               })}
-              {locations.some(l => isTrueThreat(l.threat)) && (
+              {visibleLocations.some(l => isTrueThreat(l.threat)) && (
                 <div className="flex items-center gap-2">
                   <Skull className="w-4 h-4 text-red-400 flex-shrink-0" />
                   <span className="text-[10px] font-sans text-red-400">Danger</span>

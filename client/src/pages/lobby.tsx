@@ -105,8 +105,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
     editRating !== campaign.contentRating ||
     editGmMode !== campaign.gmMode ||
     editNoRomance !== campaign.noRomance ||
-    editNoHorror !== campaign.noHorror ||
-    editFadeToBlack !== campaign.fadeToBlack
+    editNoHorror !== campaign.noHorror
   );
 
   async function saveSettings() {
@@ -116,7 +115,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
       const res = await fetch(`/api/campaigns/${campaign.id}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentRating: editRating, gmMode: editGmMode, noRomance: editNoRomance, noHorror: editNoHorror, fadeToBlack: editFadeToBlack }),
+        body: JSON.stringify({ contentRating: editRating, gmMode: editGmMode, noRomance: editNoRomance, noHorror: editNoHorror }),
       });
       if (!res.ok) throw new Error();
       queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
@@ -304,7 +303,6 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
                   {[
                     { key: "noRomance", label: "No Romance", desc: "Exclude romantic subplots", value: editNoRomance, set: setEditNoRomance },
                     { key: "noHorror", label: "No Horror", desc: "Avoid disturbing content", value: editNoHorror, set: setEditNoHorror },
-                    { key: "fadeToBlack", label: "Fade to Black", desc: "Cut away at explicit moments", value: editFadeToBlack, set: setEditFadeToBlack },
                   ].map(t => (
                     <label key={t.key} className="flex items-center gap-3 cursor-pointer py-1">
                       <div

@@ -252,7 +252,6 @@ export default function CreateCampaignPage() {
                 {[
                   { key: "noRomance", label: "No Romance", desc: "Exclude romantic subplots and scenes", value: noRomance, set: setNoRomance },
                   { key: "noHorror", label: "No Horror", desc: "Avoid disturbing or horrific content", value: noHorror, set: setNoHorror },
-                  { key: "fadeToBlack", label: "Fade to Black", desc: "Skip explicit scenes — cut away at suggestive moments", value: fadeToBlack, set: setFadeToBlack },
                 ].map(item => (
                   <label key={item.key} className="flex items-center gap-4 cursor-pointer py-1">
                     <div

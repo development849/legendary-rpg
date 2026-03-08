@@ -529,7 +529,6 @@ CONTENT SETTINGS:
 - Rating: ${campaign.contentRating}${campaign.contentRating === "pg" ? " — Family-friendly. No real violence, blood, or death. Conflicts resolved through cleverness, diplomacy, or mild slapstick. No scary, dark, or mature themes. Language must be clean and age-appropriate. Think lighthearted storybook adventure." : campaign.contentRating === "pg13" ? " — Classic fantasy adventure. Combat and peril are fine, but keep it tasteful — no graphic gore, dismemberment, or torture. No sexual content. Clean language. Think Lord of the Rings or a D&D family table." : campaign.contentRating === "r" ? " — Mature themes allowed. Blood, graphic violence, strong language, dark psychological themes, morally grey scenarios, gritty realism. Describe wounds, suffering, and brutality when narratively appropriate. No explicit sexual content, but tension, seduction, and romance can be implied or narrated to a tasteful degree." : ""}
 - No Romance: ${campaign.noRomance}
 - No Horror: ${campaign.noHorror}
-- Fade to Black: ${campaign.fadeToBlack}${campaign.fadeToBlack ? " — When scenes become intimate or extremely graphic, skip ahead with a tasteful narrative cut." : " — Do NOT cut away from scenes. Play them out fully in the narrative."}
 - GM Mode: ${campaign.gmMode}
 ${(campaign.themes as string[] ?? []).length > 0 ? `- Active Themes: ${(campaign.themes as string[]).join(", ")} — weave these genre elements actively into the story, encounters, and NPC behavior.` : ""}
 

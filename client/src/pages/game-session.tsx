@@ -165,7 +165,6 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
   const [rating, setRating] = useState(campaign.contentRating ?? "pg13");
   const [noRomance, setNoRomance] = useState(campaign.noRomance ?? false);
   const [noHorror, setNoHorror] = useState(campaign.noHorror ?? false);
-  const [fadeToBlack, setFadeToBlack] = useState(campaign.fadeToBlack ?? true);
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -174,7 +173,7 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
       const res = await fetch(`/api/campaigns/${campaign.id}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentRating: rating, noRomance, noHorror, fadeToBlack }),
+        body: JSON.stringify({ contentRating: rating, noRomance, noHorror }),
       });
       if (!res.ok) throw new Error("Failed to save");
       toast({ title: "Settings updated", description: "Content settings will apply from the next GM response.", variant: "success" as any });
@@ -189,7 +188,6 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
   const toggles = [
     { key: "noRomance", label: "No Romance", desc: "Exclude romantic subplots", value: noRomance, set: setNoRomance },
     { key: "noHorror", label: "No Horror", desc: "Avoid disturbing content", value: noHorror, set: setNoHorror },
-    { key: "fadeToBlack", label: "Fade to Black", desc: "Cut away at explicit moments", value: fadeToBlack, set: setFadeToBlack },
   ];
 
   return (

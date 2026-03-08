@@ -506,10 +506,18 @@ export function assignAllLocationCoords(
     }
 
     const subGroupKeys = Object.keys(subGroups);
-    const clusterSpread = Math.min(18, 6 + subGroupKeys.length * 3);
 
-    for (let g = 0; g < subGroupKeys.length; g++) {
-      const indices = subGroups[subGroupKeys[g]];
+    function getGroupMinTurn(indices: number[]): number {
+      const turns = indices.map(idx => regionLocs[idx].firstVisitedTurn ?? 0).filter(t => t > 0);
+      return turns.length > 0 ? Math.min(...turns) : 0;
+    }
+
+    const sortedGroups = subGroupKeys.map((key, g) => ({
+      key, g, indices: subGroups[key], minTurn: getGroupMinTurn(subGroups[key]),
+    })).sort((a, b) => a.minTurn - b.minTurn);
+
+    for (let sg = 0; sg < sortedGroups.length; sg++) {
+      const { indices, minTurn } = sortedGroups[sg];
       const hasExisting = indices.some(idx => coords[regionLocs[idx].name]);
       const hasNew = indices.some(idx => !coords[regionLocs[idx].name]);
       if (!hasNew) continue;
@@ -519,11 +527,31 @@ export function assignAllLocationCoords(
         const existingPts = indices.filter(idx => coords[regionLocs[idx].name]).map(idx => coords[regionLocs[idx].name]);
         clusterCx = existingPts.reduce((s, p) => s + p.x, 0) / existingPts.length;
         clusterCy = existingPts.reduce((s, p) => s + p.y, 0) / existingPts.length;
+      } else if (sg === 0 && sortedGroups.length > 1) {
+        clusterCx = center.x;
+        clusterCy = center.y;
       } else {
-        const clusterAngle = (g / subGroupKeys.length) * Math.PI * 2 + (regionName.charCodeAt(0) * 0.1);
-        const clusterDist = subGroupKeys.length === 1 ? 0 : clusterSpread * 0.5 + Math.random() * clusterSpread * 0.3;
-        clusterCx = center.x + Math.cos(clusterAngle) * clusterDist;
-        clusterCy = center.y + Math.sin(clusterAngle) * clusterDist;
+        let anchorX = center.x;
+        let anchorY = center.y;
+        let anchorTurn = 0;
+        for (let prev = sg - 1; prev >= 0; prev--) {
+          const prevIndices = sortedGroups[prev].indices;
+          const prevWithCoords = prevIndices.filter(idx => coords[regionLocs[idx].name]);
+          if (prevWithCoords.length > 0) {
+            const pts = prevWithCoords.map(idx => coords[regionLocs[idx].name]);
+            anchorX = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+            anchorY = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+            anchorTurn = sortedGroups[prev].minTurn;
+            break;
+          }
+        }
+
+        const turnGap = Math.max(0, minTurn - anchorTurn);
+        const travelDist = Math.min(30, 5 + turnGap * 1.5);
+
+        const clusterAngle = (sg / sortedGroups.length) * Math.PI * 2 + (regionName.charCodeAt(0) * 0.1);
+        clusterCx = clamp(anchorX + Math.cos(clusterAngle) * travelDist, 10, 90);
+        clusterCy = clamp(anchorY + Math.sin(clusterAngle) * travelDist, 10, 90);
       }
 
       for (const idx of indices) {

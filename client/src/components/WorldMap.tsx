@@ -28,6 +28,30 @@ const PIN_RADIUS = 6;
 const GLOW_RADIUS = 14;
 const FOG_REVEAL_RADIUS = 60;
 
+const THREAT_KEYWORDS = /combat|fight|attack|hostile|danger|enemy|monster|creature|ambush|bandits?|wolves?|ogre|dragon|undead|skeleton|goblin|threat|armed|battle|raid|siege|swarm/i;
+
+function isTrueThreat(threat?: string | null): boolean {
+  if (!threat) return false;
+  return THREAT_KEYWORDS.test(threat);
+}
+
+const LEGEND_ITEMS: { type: LocType; label: string }[] = [
+  { type: "town", label: "Town" },
+  { type: "tavern", label: "Tavern" },
+  { type: "market", label: "Market" },
+  { type: "castle", label: "Castle" },
+  { type: "gate", label: "Gate" },
+  { type: "temple", label: "Temple" },
+  { type: "forest", label: "Forest" },
+  { type: "water", label: "Water" },
+  { type: "cave", label: "Cave" },
+  { type: "camp", label: "Camp" },
+  { type: "road", label: "Road" },
+  { type: "port", label: "Port" },
+  { type: "mill", label: "Mill" },
+  { type: "mine", label: "Mine" },
+];
+
 type LocType = "town" | "tavern" | "market" | "gate" | "road" | "forest" | "water" | "cave" | "temple" | "mill" | "camp" | "castle" | "port" | "mine" | "generic";
 
 function detectLocationType(name: string): LocType {
@@ -258,6 +282,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [pulsePhase, setPulsePhase] = useState(0);
+  const [showLegend, setShowLegend] = useState(false);
 
   useEffect(() => {
     if (!mapImage) { setBgImage(null); return; }
@@ -391,7 +416,8 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
         ctx.fill();
       }
 
-      const pinColor = loc.threat
+      const hasTrueThreat = isTrueThreat(loc.threat);
+      const pinColor = hasTrueThreat
         ? (loc.isCurrent ? "#ef4444" : "#991b1b")
         : getLocColor(locType, loc.isCurrent);
 
@@ -412,7 +438,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
       }
 
       const iconSize = fullscreen ? 12 : 10;
-      if (loc.threat) {
+      if (hasTrueThreat) {
         ctx.strokeStyle = "#ef4444";
         ctx.lineWidth = 1.2;
         ctx.beginPath();
@@ -605,7 +631,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                {selectedLocation.threat ? (
+                {isTrueThreat(selectedLocation.threat) ? (
                   <Skull className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
                 ) : (
                   <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${selectedLocation.isCurrent ? "text-primary" : "text-muted-foreground/50"}`} />
@@ -623,7 +649,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
               {selectedLocation.region && (
                 <p className="text-[10px] text-muted-foreground/60 mt-0.5 ml-5">{selectedLocation.region}</p>
               )}
-              {selectedLocation.threat && (
+              {isTrueThreat(selectedLocation.threat) && (
                 <p className="text-xs text-red-400/80 mt-1 ml-5 flex items-center gap-1">
                   <Skull className="w-2.5 h-2.5" /> {selectedLocation.threat}
                 </p>
@@ -684,6 +710,62 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
           <span className="text-[10px] text-muted-foreground">Generating map...</span>
         </div>
       )}
+
+      <div className="absolute bottom-2 right-2 z-10" data-testid="map-legend">
+        <button
+          onClick={() => setShowLegend(l => !l)}
+          className="w-7 h-7 rounded bg-card/80 border border-border text-foreground flex items-center justify-center hover:bg-card text-[10px] font-bold"
+          data-testid="map-legend-toggle"
+          title="Map Key"
+        >
+          ?
+        </button>
+        {showLegend && (
+          <div className="absolute bottom-8 right-0 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-2.5 shadow-lg min-w-[140px]">
+            <p className="text-[10px] font-sans font-bold text-foreground/80 mb-1.5 tracking-wide uppercase">Map Key</p>
+            <div className="space-y-1">
+              {LEGEND_ITEMS.map(item => {
+                const usedTypes = new Set(locations.map(l => detectLocationType(l.name)));
+                if (!usedTypes.has(item.type) && locations.length > 0) return null;
+                const color = getLocColor(item.type, false);
+                return (
+                  <div key={item.type} className="flex items-center gap-2">
+                    <canvas
+                      ref={el => {
+                        if (!el) return;
+                        const c = el.getContext("2d");
+                        if (!c) return;
+                        const dpr = window.devicePixelRatio || 1;
+                        el.width = 16 * dpr;
+                        el.height = 16 * dpr;
+                        el.style.width = "16px";
+                        el.style.height = "16px";
+                        c.scale(dpr, dpr);
+                        c.clearRect(0, 0, 16, 16);
+                        drawLocIcon(c, item.type, 8, 8, 10);
+                      }}
+                      className="flex-shrink-0"
+                    />
+                    <span className="text-[10px] font-sans" style={{ color }}>{item.label}</span>
+                  </div>
+                );
+              })}
+              {locations.some(l => isTrueThreat(l.threat)) && (
+                <div className="flex items-center gap-2">
+                  <Skull className="w-4 h-4 text-red-400 flex-shrink-0" />
+                  <span className="text-[10px] font-sans text-red-400">Danger</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 mt-1 pt-1 border-t border-border/50">
+                <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#daa520] shadow-[0_0_6px_rgba(218,165,32,0.5)]" />
+                </div>
+                <span className="text-[10px] font-sans text-[#daa520]">Current</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

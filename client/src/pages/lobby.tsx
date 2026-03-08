@@ -243,6 +243,39 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
           </Card>
         </div>
 
+        {/* Actions */}
+        <div className={`rounded-lg p-4 flex items-center justify-between ${lobbyBg ? "backdrop-blur-md bg-black/50 border border-white/10" : "border-t border-border pt-4"}`}>
+          <Button
+            variant="outline"
+            onClick={() => readyMutation.mutate(!isReady)}
+            disabled={readyMutation.isPending}
+            data-testid="button-toggle-ready"
+            className={isReady ? "border-primary text-primary" : ""}
+          >
+            {isReady ? (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2 text-primary" />
+                Ready — Click to Unready
+              </>
+            ) : (
+              <>
+                <Clock className="w-4 h-4 mr-2" />
+                Mark as Ready
+              </>
+            )}
+          </Button>
+
+          <Button
+            onClick={startAdventure}
+            disabled={members.length === 0}
+            data-testid="button-start-adventure"
+            className="gap-2"
+          >
+            <Play className="w-4 h-4" />
+            Begin Adventure
+          </Button>
+        </div>
+
         {/* Campaign Settings — owner only */}
         {isOwner && editRating !== null && (
           <Card className={`backdrop-blur-sm ${lobbyBg ? "bg-black/30 border-white/10" : "bg-card/80"}`}>
@@ -330,39 +363,6 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
             </CardContent>
           </Card>
         )}
-
-        {/* Actions */}
-        <div className={`rounded-lg p-4 flex items-center justify-between ${lobbyBg ? "backdrop-blur-md bg-black/50 border border-white/10" : "border-t border-border pt-4"}`}>
-          <Button
-            variant="outline"
-            onClick={() => readyMutation.mutate(!isReady)}
-            disabled={readyMutation.isPending}
-            data-testid="button-toggle-ready"
-            className={isReady ? "border-primary text-primary" : ""}
-          >
-            {isReady ? (
-              <>
-                <CheckCircle className="w-4 h-4 mr-2 text-primary" />
-                Ready — Click to Unready
-              </>
-            ) : (
-              <>
-                <Clock className="w-4 h-4 mr-2" />
-                Mark as Ready
-              </>
-            )}
-          </Button>
-
-          <Button
-            onClick={startAdventure}
-            disabled={members.length === 0}
-            data-testid="button-start-adventure"
-            className="gap-2"
-          >
-            <Play className="w-4 h-4" />
-            Begin Adventure
-          </Button>
-        </div>
 
         <p className="text-center text-xs text-muted-foreground/50 font-serif">
           You can start at any time. The GM will introduce the scene.

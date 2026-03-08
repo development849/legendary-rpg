@@ -2054,18 +2054,30 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                               type="button"
                               className="w-14 h-14 rounded-md flex-shrink-0 border border-border cursor-pointer hover:ring-1 hover:ring-primary/50 transition-all overflow-hidden p-0 bg-transparent"
                               data-testid="sheet-portrait"
-                              onClick={() => setExpandedPortrait({ name: char.name, url: char.profilePicture!, role: `${char.race} ${char.class}` })}
+                              onClick={() => {
+                                if ((window as any).__portraitClickTimer) { clearTimeout((window as any).__portraitClickTimer); (window as any).__portraitClickTimer = null; return; }
+                                (window as any).__portraitClickTimer = setTimeout(() => { (window as any).__portraitClickTimer = null; setExpandedPortrait({ name: char.name, url: char.profilePicture!, role: `${char.race} ${char.class}` }); }, 250);
+                              }}
+                              onDoubleClick={(e) => { e.preventDefault(); if ((window as any).__portraitClickTimer) { clearTimeout((window as any).__portraitClickTimer); (window as any).__portraitClickTimer = null; } navigate(`/characters/${char.id}/appearance`); }}
+                              title="Double-click to open Portrait Studio"
                             >
                               <img
                                 src={char.profilePicture}
                                 alt={char.name}
                                 className="w-full h-full object-cover"
+                                draggable={false}
                               />
                             </button>
                           ) : (
-                            <div className="w-14 h-14 rounded-md bg-secondary flex items-center justify-center flex-shrink-0 border border-border">
+                            <button
+                              type="button"
+                              className="w-14 h-14 rounded-md bg-secondary flex items-center justify-center flex-shrink-0 border border-border cursor-pointer hover:ring-1 hover:ring-primary/50 transition-all"
+                              data-testid="sheet-portrait-empty"
+                              onClick={() => navigate(`/characters/${char.id}/appearance`)}
+                              title="Click to open Portrait Studio"
+                            >
                               <BookOpen className="w-6 h-6 text-muted-foreground" />
-                            </div>
+                            </button>
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="font-sans font-bold text-base tracking-wide leading-tight" data-testid="sheet-name">{char.name}</p>

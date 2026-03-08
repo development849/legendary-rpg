@@ -1482,7 +1482,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                       </div>
                                       {npc.lastSeen && (
                                         <div>
-                                          <p className="text-[10px] text-muted-foreground/50 font-sans uppercase">Last Seen</p>
+                                          <p className="text-[10px] text-muted-foreground/50 font-sans uppercase">First Met</p>
                                           <p className="text-xs font-serif text-muted-foreground/80">{npc.lastSeen}</p>
                                         </div>
                                       )}

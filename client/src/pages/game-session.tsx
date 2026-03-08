@@ -13,7 +13,8 @@ import {
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
   Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy,
-  Download, Share2, Maximize2, Minimize2, List, Map as MapIcon, RefreshCw
+  Download, Share2, Maximize2, Minimize2, List, Map as MapIcon, RefreshCw,
+  ClipboardList, AlertTriangle, Clock, Target
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import WorldMap from "@/components/WorldMap";
@@ -45,6 +46,23 @@ interface ShopData {
   merchant_name: string;
   shop_flavor: string;
   inventory: ShopItem[];
+}
+
+interface NoticeItem {
+  title: string;
+  description: string;
+  poster: string;
+  reward_gold: number;
+  reward_items: string[];
+  difficulty: "easy" | "moderate" | "hard" | "deadly";
+  location_hint: string;
+  deadline: string | null;
+}
+
+interface NoticeBoardData {
+  board_name: string;
+  board_flavor: string;
+  notices: NoticeItem[];
 }
 
 type TabType = "chat" | "characters" | "dice";
@@ -273,6 +291,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
   const [shopData, setShopData] = useState<ShopData | null>(null);
+  const [noticeBoardData, setNoticeBoardData] = useState<NoticeBoardData | null>(null);
+  const [expandedNotice, setExpandedNotice] = useState<number | null>(null);
   const [expandedPortrait, setExpandedPortrait] = useState<{ name: string; url: string; role?: string } | null>(null);
   const [shopTab, setShopTab] = useState<"buy" | "sell">("buy");
   const [shopBusy, setShopBusy] = useState(false);
@@ -454,6 +474,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               setShopData({ merchant_name: wsShop.merchant_name, shop_flavor: wsShop.shop_flavor ?? "", inventory: wsShop.inventory ?? [] });
               setShopTab("buy");
             }
+            const wsNotice = wsUpdates.find((u: any) => u.type === "NOTICE_BOARD_OPENED");
+            if (wsNotice) {
+              setNoticeBoardData({ board_name: wsNotice.board_name, board_flavor: wsNotice.board_flavor ?? "", notices: wsNotice.notices ?? [] });
+              setExpandedNotice(null);
+            }
           }
         } else if (msg.type === "STATE_UPDATE") {
           queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
@@ -628,6 +653,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               if (shopUpdate) {
                 setShopData({ merchant_name: shopUpdate.merchant_name, shop_flavor: shopUpdate.shop_flavor ?? "", inventory: shopUpdate.inventory ?? [] });
                 setShopTab("buy");
+              }
+              const noticeUpdate = ups.find((u: any) => u.type === "NOTICE_BOARD_OPENED");
+              if (noticeUpdate) {
+                setNoticeBoardData({ board_name: noticeUpdate.board_name, board_flavor: noticeUpdate.board_flavor ?? "", notices: noticeUpdate.notices ?? [] });
+                setExpandedNotice(null);
               }
               const evtLevelUps = evt.levelUps ?? evt.message?.metadata?.levelUps ?? [];
               if (evtLevelUps.length > 0) {
@@ -2881,6 +2911,147 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
               <div className="px-4 py-2.5 border-t border-border flex-shrink-0">
                 <p className="text-[10px] text-muted-foreground text-center font-serif italic">Sell prices are roughly 25-50% of item value. Equipped items must be unequipped first.</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {noticeBoardData && (() => {
+        const difficultyConfig: Record<string, { color: string; label: string; icon: any }> = {
+          easy: { color: "text-emerald-400", label: "Easy", icon: Target },
+          moderate: { color: "text-amber-400", label: "Moderate", icon: Target },
+          hard: { color: "text-orange-400", label: "Hard", icon: AlertTriangle },
+          deadly: { color: "text-red-400", label: "Deadly", icon: Skull },
+        };
+
+        const handleAcceptNotice = (notice: NoticeItem) => {
+          const rewardParts: string[] = [];
+          if (notice.reward_gold > 0) rewardParts.push(`${notice.reward_gold}gp`);
+          if (notice.reward_items.length > 0) rewardParts.push(notice.reward_items.join(", "));
+          const rewardStr = rewardParts.length > 0 ? ` (reward: ${rewardParts.join(" + ")})` : "";
+          sendAction(`[ACTION] I accept the notice "${notice.title}" from the board${rewardStr}. I want to take on this quest.`);
+          setNoticeBoardData(null);
+          setExpandedNotice(null);
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" data-testid="notice-board-overlay">
+            <div className="bg-card border border-border rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-amber-500" />
+                  <div>
+                    <h2 className="text-sm font-sans font-bold" data-testid="notice-board-name">{noticeBoardData.board_name}</h2>
+                    {noticeBoardData.board_flavor && <p className="text-[11px] text-muted-foreground font-serif italic">{noticeBoardData.board_flavor}</p>}
+                  </div>
+                </div>
+                <button onClick={() => { setNoticeBoardData(null); setExpandedNotice(null); }} className="text-muted-foreground hover:text-foreground" data-testid="button-notice-board-close">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <div className="p-3 space-y-2">
+                  {noticeBoardData.notices.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-6 font-serif italic">The board is bare — no notices posted.</p>
+                  ) : (
+                    noticeBoardData.notices.map((notice, i) => {
+                      const diff = difficultyConfig[notice.difficulty] ?? difficultyConfig.moderate;
+                      const DiffIcon = diff.icon;
+                      const isExpanded = expandedNotice === i;
+                      const rewardParts: string[] = [];
+                      if (notice.reward_gold > 0) rewardParts.push(`${notice.reward_gold}gp`);
+                      if (notice.reward_items.length > 0) rewardParts.push(...notice.reward_items);
+
+                      return (
+                        <div
+                          key={i}
+                          className={`rounded-md border transition-colors cursor-pointer ${isExpanded ? "bg-secondary/50 border-primary/30" : "bg-secondary/20 border-border hover:bg-secondary/40"}`}
+                          data-testid={`notice-item-${i}`}
+                        >
+                          <div
+                            className="flex items-start gap-2.5 px-3 py-2.5"
+                            onClick={() => setExpandedNotice(isExpanded ? null : i)}
+                          >
+                            <ScrollText className="w-4 h-4 flex-shrink-0 text-amber-500/70 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-sans font-semibold text-foreground">{notice.title}</span>
+                                <span className={`text-[8px] font-sans font-bold uppercase ${diff.color} flex items-center gap-0.5`}>
+                                  <DiffIcon className="w-2.5 h-2.5" />
+                                  {diff.label}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">Posted by {notice.poster}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {notice.reward_gold > 0 && (
+                                <span className="flex items-center gap-0.5 text-xs font-sans font-bold text-amber-400">
+                                  <Coins className="w-3 h-3" />
+                                  {notice.reward_gold}
+                                </span>
+                              )}
+                              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="px-3 pb-3 space-y-2 border-t border-border/50 pt-2 mx-2">
+                              <p className="text-[11px] text-foreground/90 font-serif leading-relaxed">{notice.description}</p>
+
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
+                                {notice.location_hint && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {notice.location_hint}
+                                  </span>
+                                )}
+                                {notice.deadline && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {notice.deadline}
+                                  </span>
+                                )}
+                              </div>
+
+                              {rewardParts.length > 0 && (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[10px] text-muted-foreground">Reward:</span>
+                                  {notice.reward_gold > 0 && (
+                                    <span className="inline-flex items-center gap-0.5 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-400">
+                                      <Coins className="w-3 h-3" />
+                                      {notice.reward_gold}gp
+                                    </span>
+                                  )}
+                                  {notice.reward_items.map((item, ri) => (
+                                    <span key={ri} className="inline-flex items-center gap-0.5 bg-primary/10 border border-primary/20 rounded px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                                      <Package className="w-3 h-3" />
+                                      {item}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              <Button
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); handleAcceptNotice(notice); }}
+                                className="w-full h-8 text-xs font-sans mt-1"
+                                data-testid={`button-accept-notice-${i}`}
+                              >
+                                Accept Quest
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="px-4 py-2.5 border-t border-border flex-shrink-0">
+                <p className="text-[10px] text-muted-foreground text-center font-serif italic">Click a notice to read the details. Accept a quest to begin the mission.</p>
               </div>
             </div>
           </div>

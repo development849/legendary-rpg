@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Sword, Heart, Star, Package, Zap, ScrollText, Camera } from "lucide-react";
+import { RECHARGE_LABELS, type RechargeType } from "@shared/skillTrees";
 
 interface CharacterSheetPageProps {
   characterId: string;
@@ -278,7 +279,12 @@ export default function CharacterSheetPage({ characterId }: CharacterSheetPagePr
                                 {ability.usesLeft}/{ability.usesMax} uses
                               </Badge>
                             )}
-                            {ability.usesMax === -1 && (
+                            {ability.recharge && ability.recharge !== "at-will" && (
+                              <Badge variant="outline" className="text-[10px] text-muted-foreground/60">
+                                {RECHARGE_LABELS[ability.recharge as RechargeType] ?? ability.recharge}
+                              </Badge>
+                            )}
+                            {(!ability.recharge || ability.recharge === "at-will") && ability.usesMax === -1 && (
                               <Badge variant="outline" className="text-xs">At will</Badge>
                             )}
                           </div>
@@ -299,7 +305,12 @@ export default function CharacterSheetPage({ characterId }: CharacterSheetPagePr
                               {ability.usesLeft}/{ability.usesMax} uses
                             </Badge>
                           )}
-                          {ability.usesMax === -1 && (
+                          {ability.recharge && ability.recharge !== "at-will" && (
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground/60">
+                              {RECHARGE_LABELS[ability.recharge as RechargeType] ?? ability.recharge}
+                            </Badge>
+                          )}
+                          {(!ability.recharge || ability.recharge === "at-will") && ability.usesMax === -1 && (
                             <Badge variant="outline" className="text-xs">At will</Badge>
                           )}
                         </div>

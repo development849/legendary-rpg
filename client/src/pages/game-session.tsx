@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { getAvailableSkills, SKILL_MILESTONE_LEVELS, type SkillOption } from "@shared/skillTrees";
+import { getAvailableSkills, SKILL_MILESTONE_LEVELS, type SkillOption, RECHARGE_LABELS, type RechargeType } from "@shared/skillTrees";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -1324,6 +1324,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                             {ab.source === "background" && (
                                               <span className="text-[9px] text-primary/50 font-sans">BG</span>
                                             )}
+                                            {ab.recharge && ab.recharge !== "at-will" && (
+                                              <span className="text-[9px] text-muted-foreground/40 font-sans">{RECHARGE_LABELS[ab.recharge as RechargeType] ?? ab.recharge}</span>
+                                            )}
                                             {ab.usesMax > 0 && (
                                               <span className="text-[9px] text-muted-foreground/50 ml-auto">{ab.usesLeft}/{ab.usesMax}</span>
                                             )}
@@ -1694,13 +1697,18 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             <div key={i} className="rounded bg-secondary/30 px-2.5 py-2">
                               <div className="flex items-center justify-between gap-2">
                                 <p className="text-sm font-sans font-medium">{ab.name}</p>
-                                {ab.usesMax > 0 && (
-                                  <div className="flex gap-0.5">
-                                    {Array.from({ length: ab.usesMax }).map((_, j) => (
-                                      <div key={j} className={`w-2 h-2 rounded-full ${j < ab.usesLeft ? "bg-primary" : "bg-secondary"}`} />
-                                    ))}
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  {ab.recharge && ab.recharge !== "at-will" && (
+                                    <span className="text-[9px] text-muted-foreground/50 font-sans">{RECHARGE_LABELS[ab.recharge as RechargeType] ?? ab.recharge}</span>
+                                  )}
+                                  {ab.usesMax > 0 && (
+                                    <div className="flex gap-0.5">
+                                      {Array.from({ length: ab.usesMax }).map((_, j) => (
+                                        <div key={j} className={`w-2 h-2 rounded-full ${j < ab.usesLeft ? "bg-primary" : "bg-secondary"}`} />
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               {ab.description && (
                                 <p className="text-xs text-muted-foreground mt-0.5 leading-snug break-words">{ab.description}</p>
@@ -2296,26 +2304,31 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                               <div key={i} className="rounded-md bg-secondary/30 px-2.5 py-2.5 space-y-1" data-testid={`sheet-ability-${i}`}>
                                 <div className="flex items-center justify-between gap-2">
                                   <p className="text-sm font-sans font-semibold leading-tight">{ab.name}</p>
-                                  {ab.usesMax > 0 && (
-                                    <div className="flex gap-0.5 flex-shrink-0">
-                                      {Array.from({ length: ab.usesMax }).map((_, j) => (
-                                        <div
-                                          key={j}
-                                          className={`w-2.5 h-2.5 rounded-full border ${
-                                            j < ab.usesLeft
-                                              ? "bg-primary border-primary"
-                                              : "bg-transparent border-muted-foreground/30"
-                                          }`}
-                                        />
-                                      ))}
-                                    </div>
-                                  )}
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    {ab.recharge && ab.recharge !== "at-will" && (
+                                      <span className="text-[9px] text-muted-foreground/50 font-sans uppercase tracking-wide">{RECHARGE_LABELS[ab.recharge as RechargeType] ?? ab.recharge}</span>
+                                    )}
+                                    {ab.usesMax > 0 && (
+                                      <div className="flex gap-0.5">
+                                        {Array.from({ length: ab.usesMax }).map((_, j) => (
+                                          <div
+                                            key={j}
+                                            className={`w-2.5 h-2.5 rounded-full border ${
+                                              j < ab.usesLeft
+                                                ? "bg-primary border-primary"
+                                                : "bg-transparent border-muted-foreground/30"
+                                            }`}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                                 {ab.description && (
                                   <p className="text-xs text-muted-foreground leading-snug font-serif">{ab.description}</p>
                                 )}
                                 {ab.usesMax > 0 && (
-                                  <p className="text-[10px] text-muted-foreground/50 font-sans">{ab.usesLeft}/{ab.usesMax} uses remaining</p>
+                                  <p className="text-[10px] text-muted-foreground/50 font-sans">{ab.usesLeft}/{ab.usesMax} uses remaining{ab.recharge ? ` · ${RECHARGE_LABELS[ab.recharge as RechargeType] ?? ab.recharge}` : ""}</p>
                                 )}
                               </div>
                             ))}

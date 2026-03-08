@@ -207,49 +207,49 @@ export function getStartingAbilities(cls: string): any[] {
   switch (cls) {
     case "fighter":
       return [
-        { id: "second_wind", name: "Second Wind", description: "Regain 1d10+level HP as a bonus action (once per rest)", usesMax: 1, usesLeft: 1 },
-        { id: "action_surge", name: "Action Surge", description: "Take an extra action on your turn (once per rest)", usesMax: 1, usesLeft: 1 },
+        { id: "second_wind", name: "Second Wind", description: "Regain 1d10+level HP as a bonus action (recharges after a rest)", usesMax: 1, usesLeft: 1, recharge: "per-rest" },
+        { id: "action_surge", name: "Action Surge", description: "Take an extra action on your turn (recharges after a rest)", usesMax: 1, usesLeft: 1, recharge: "per-rest" },
       ];
     case "rogue":
       return [
-        { id: "sneak_attack", name: "Sneak Attack", description: "Deal 1d6 extra damage when you have advantage or an ally nearby", usesMax: -1, usesLeft: -1 },
-        { id: "cunning_action", name: "Cunning Action", description: "Dash, Disengage, or Hide as a bonus action", usesMax: -1, usesLeft: -1 },
+        { id: "sneak_attack", name: "Sneak Attack", description: "Deal 1d6 extra damage when you have advantage or an ally nearby", usesMax: -1, usesLeft: -1, recharge: "at-will" },
+        { id: "cunning_action", name: "Cunning Action", description: "Dash, Disengage, or Hide as a bonus action", usesMax: -1, usesLeft: -1, recharge: "at-will" },
       ];
     case "wizard":
       return [
-        { id: "arcane_blast", name: "Arcane Blast", description: "Ranged spell attack dealing 1d10 force damage", usesMax: -1, usesLeft: -1 },
-        { id: "mage_armor", name: "Mage Armor", description: "Set AC to 13+agility modifier for 8 hours (uses 1 Focus)", usesMax: -1, usesLeft: -1 },
-        { id: "sleep_spell", name: "Sleep", description: "Put creatures in a 20ft radius to sleep (uses 1 Focus). Affects up to 5d8 HP worth of creatures", usesMax: 2, usesLeft: 2 },
+        { id: "arcane_blast", name: "Arcane Blast", description: "Ranged spell attack dealing 1d10 force damage", usesMax: -1, usesLeft: -1, recharge: "at-will" },
+        { id: "mage_armor", name: "Mage Armor", description: "Set AC to 13+agility modifier for 8 hours (uses 1 Focus)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
+        { id: "sleep_spell", name: "Sleep", description: "Put creatures in a 20ft radius to sleep (uses 1 Focus). Affects up to 5d8 HP worth of creatures", usesMax: 2, usesLeft: 2, recharge: "per-rest" },
       ];
     case "cleric":
       return [
-        { id: "sacred_flame", name: "Sacred Flame", description: "Ranged spell attack dealing 1d8 radiant damage", usesMax: -1, usesLeft: -1 },
-        { id: "healing_word", name: "Healing Word", description: "Heal a creature for 1d4+will modifier HP (uses 1 Focus)", usesMax: -1, usesLeft: -1 },
-        { id: "divine_smite", name: "Divine Smite", description: "Add 2d8 radiant damage to a melee hit (uses 1 Focus)", usesMax: -1, usesLeft: -1 },
+        { id: "sacred_flame", name: "Sacred Flame", description: "Ranged spell attack dealing 1d8 radiant damage", usesMax: -1, usesLeft: -1, recharge: "at-will" },
+        { id: "healing_word", name: "Healing Word", description: "Heal a creature for 1d4+will modifier HP (uses 1 Focus)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
+        { id: "divine_smite", name: "Divine Smite", description: "Add 2d8 radiant damage to a melee hit (uses 1 Focus)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
       ];
     case "ranger":
       return [
-        { id: "hunters_mark", name: "Hunter's Mark", description: "Mark a creature as your quarry. Deal 1d6 extra damage against it and track it unerringly (concentration)", usesMax: -1, usesLeft: -1 },
-        { id: "volley", name: "Volley", description: "Fire a hail of arrows in a 10ft radius; each creature makes an Agility save (DC 13) or takes 1d8 damage", usesMax: 2, usesLeft: 2 },
-        { id: "natural_explorer", name: "Natural Explorer", description: "Advantage on Endurance checks in wilderness, never lost outdoors, double rations foraged", usesMax: -1, usesLeft: -1 },
+        { id: "hunters_mark", name: "Hunter's Mark", description: "Mark a creature as your quarry. Deal 1d6 extra damage against it and track it unerringly (concentration)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
+        { id: "volley", name: "Volley", description: "Fire a hail of arrows in a 10ft radius; each creature makes an Agility save (DC 13) or takes 1d8 damage", usesMax: 2, usesLeft: 2, recharge: "per-rest" },
+        { id: "natural_explorer", name: "Natural Explorer", description: "Advantage on Endurance checks in wilderness, never lost outdoors, double rations foraged", usesMax: -1, usesLeft: -1, recharge: "at-will" },
       ];
     case "paladin":
       return [
-        { id: "lay_on_hands", name: "Lay on Hands", description: "Touch a creature to restore up to 5 HP from a shared pool (pool refreshes on rest)", usesMax: 5, usesLeft: 5 },
-        { id: "paladin_divine_smite", name: "Divine Smite", description: "After hitting with a melee weapon, expend 1 Focus to deal an extra 2d8 radiant damage", usesMax: -1, usesLeft: -1 },
-        { id: "aura_of_protection", name: "Aura of Protection", description: "Allies within 10ft add your Will modifier to all saving throws", usesMax: -1, usesLeft: -1 },
+        { id: "lay_on_hands", name: "Lay on Hands", description: "Touch a creature to restore up to 5 HP from a shared pool (pool refreshes after a rest)", usesMax: 5, usesLeft: 5, recharge: "per-rest" },
+        { id: "paladin_divine_smite", name: "Divine Smite", description: "After hitting with a melee weapon, expend 1 Focus to deal an extra 2d8 radiant damage", usesMax: -1, usesLeft: -1, recharge: "at-will" },
+        { id: "aura_of_protection", name: "Aura of Protection", description: "Allies within 10ft add your Will modifier to all saving throws", usesMax: -1, usesLeft: -1, recharge: "at-will" },
       ];
     case "barbarian":
       return [
-        { id: "rage", name: "Rage", description: "Enter a furious rage for 1 minute: +2 damage on melee attacks, resistance to physical damage, advantage on Might checks (2 uses per rest)", usesMax: 2, usesLeft: 2 },
-        { id: "reckless_attack", name: "Reckless Attack", description: "Attack with advantage, but enemies also have advantage against you until your next turn", usesMax: -1, usesLeft: -1 },
-        { id: "danger_sense", name: "Danger Sense", description: "Advantage on Agility saving throws against effects you can see (traps, spells, hazards)", usesMax: -1, usesLeft: -1 },
+        { id: "rage", name: "Rage", description: "Enter a furious rage for 1 minute: +2 damage on melee attacks, resistance to physical damage, advantage on Might checks (2 uses, recharges after a rest)", usesMax: 2, usesLeft: 2, recharge: "per-rest" },
+        { id: "reckless_attack", name: "Reckless Attack", description: "Attack with advantage, but enemies also have advantage against you until your next turn", usesMax: -1, usesLeft: -1, recharge: "at-will" },
+        { id: "danger_sense", name: "Danger Sense", description: "Advantage on Agility saving throws against effects you can see (traps, spells, hazards)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
       ];
     case "bard":
       return [
-        { id: "bardic_inspiration", name: "Bardic Inspiration", description: "Grant an ally a d6 they can add to any roll in the next 10 minutes (Presence modifier uses per rest)", usesMax: 3, usesLeft: 3 },
-        { id: "cutting_words", name: "Cutting Words", description: "Spend Bardic Inspiration to reduce an enemy's attack roll, damage roll, or ability check by 1d6", usesMax: -1, usesLeft: -1 },
-        { id: "vicious_mockery", name: "Vicious Mockery", description: "Psychic insult deals 1d4 damage and gives the target disadvantage on its next attack (Will save DC 13 to resist)", usesMax: -1, usesLeft: -1 },
+        { id: "bardic_inspiration", name: "Bardic Inspiration", description: "Grant an ally a d6 they can add to any roll in the next 10 minutes (Presence modifier uses, recharges after a long rest)", usesMax: 3, usesLeft: 3, recharge: "per-day" },
+        { id: "cutting_words", name: "Cutting Words", description: "Spend Bardic Inspiration to reduce an enemy's attack roll, damage roll, or ability check by 1d6", usesMax: -1, usesLeft: -1, recharge: "at-will" },
+        { id: "vicious_mockery", name: "Vicious Mockery", description: "Psychic insult deals 1d4 damage and gives the target disadvantage on its next attack (Will save DC 13 to resist)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
       ];
     default:
       return [];
@@ -297,8 +297,8 @@ export function getBackgroundAbility(background: string, cls: string): any {
       return {
         id: "battle_hardened",
         name: "Battle-Hardened",
-        description: "Advantage on Might saves against fear and exhaustion. Once per rest, call out a rallying order to grant an ally +1d6 on their next attack roll.",
-        usesMax: -1, usesLeft: -1,
+        description: "Advantage on Might saves against fear and exhaustion. Call out a rallying order to grant an ally +1d6 on their next attack roll (recharges after a rest).",
+        usesMax: 1, usesLeft: 1, recharge: "per-rest",
         source: "background",
       };
     case "scholar":
@@ -306,23 +306,23 @@ export function getBackgroundAbility(background: string, cls: string): any {
         id: "wealth_of_knowledge",
         name: "Wealth of Knowledge",
         description: "Identify magical items and recall obscure lore without rolling. +2 bonus to all Intellect checks when researching a topic with access to texts.",
-        usesMax: -1, usesLeft: -1,
+        usesMax: -1, usesLeft: -1, recharge: "at-will",
         source: "background",
       };
     case "criminal":
       return {
         id: "street_network",
         name: "Street Network",
-        description: "Once per session, locate a criminal contact in the current settlement who can provide information, fenced goods, or a safe house.",
-        usesMax: -1, usesLeft: -1,
+        description: "Locate a criminal contact in the current settlement who can provide information, fenced goods, or a safe house (recharges per session).",
+        usesMax: 1, usesLeft: 1, recharge: "per-session",
         source: "background",
       };
     case "acolyte":
       return {
         id: "deitys_favor",
         name: "Deity's Favor",
-        description: "Once per day, spend 10 minutes in prayer. The GM truthfully answers one yes/no question about the safest or most righteous path forward.",
-        usesMax: 1, usesLeft: 1,
+        description: "Spend 10 minutes in prayer. The GM truthfully answers one yes/no question about the safest or most righteous path forward (recharges after a long rest).",
+        usesMax: 1, usesLeft: 1, recharge: "per-day",
         source: "background",
       };
     case "merchant":
@@ -330,15 +330,15 @@ export function getBackgroundAbility(background: string, cls: string): any {
         id: "appraisers_eye",
         name: "Appraiser's Eye",
         description: "Determine exact market value of any item at a glance. Advantage on Presence checks to negotiate prices, debts, or favors.",
-        usesMax: -1, usesLeft: -1,
+        usesMax: -1, usesLeft: -1, recharge: "at-will",
         source: "background",
       };
     case "noble":
       return {
         id: "noble_authority",
         name: "Noble Authority",
-        description: "Aristocrats and officials treat you as a social equal. Once per session, invoke your noble status to gain an audience, dismiss minor threats, or avoid arrest.",
-        usesMax: -1, usesLeft: -1,
+        description: "Aristocrats and officials treat you as a social equal. Invoke your noble status to gain an audience, dismiss minor threats, or avoid arrest (recharges per session).",
+        usesMax: 1, usesLeft: 1, recharge: "per-session",
         source: "background",
       };
     case "outlander":
@@ -346,7 +346,7 @@ export function getBackgroundAbility(background: string, cls: string): any {
         id: "pathfinder",
         name: "Pathfinder",
         description: "Never lost in wilderness. Always locate food, water, and shelter outdoors without rolling. Advantage on checks to track creatures across natural terrain.",
-        usesMax: -1, usesLeft: -1,
+        usesMax: -1, usesLeft: -1, recharge: "at-will",
         source: "background",
       };
     case "sailor":
@@ -354,23 +354,23 @@ export function getBackgroundAbility(background: string, cls: string): any {
         id: "salt_and_sinew",
         name: "Salt & Sinew",
         description: "Immune to sea sickness and unstable footing aboard vessels. Advantage on Agility checks made on ships, in storms, or on treacherous wet terrain.",
-        usesMax: -1, usesLeft: -1,
+        usesMax: -1, usesLeft: -1, recharge: "at-will",
         source: "background",
       };
     case "folk_hero":
       return {
         id: "champions_welcome",
         name: "Champion's Welcome",
-        description: "Common folk are predisposed to trust and shelter you. Once per session, a willing commoner provides unexpected aid — shelter, information, or a diversion.",
-        usesMax: -1, usesLeft: -1,
+        description: "Common folk are predisposed to trust and shelter you. A willing commoner provides unexpected aid — shelter, information, or a diversion (recharges per session).",
+        usesMax: 1, usesLeft: 1, recharge: "per-session",
         source: "background",
       };
     case "hermit":
       return {
         id: "still_mind",
         name: "Still Mind",
-        description: "Advantage on Will saves against mind-affecting magic and illusions. Once per day, meditate for 10 minutes to gain advantage on your next Will or Intellect check.",
-        usesMax: 1, usesLeft: 1,
+        description: "Advantage on Will saves against mind-affecting magic and illusions. Meditate for 10 minutes to gain advantage on your next Will or Intellect check (recharges after a long rest).",
+        usesMax: 1, usesLeft: 1, recharge: "per-day",
         source: "background",
       };
     case "charlatan":
@@ -378,7 +378,7 @@ export function getBackgroundAbility(background: string, cls: string): any {
         id: "thousand_faces",
         name: "Thousand Faces",
         description: "Advantage on Presence checks to deceive, impersonate, or bluff. Can maintain a convincing false identity for up to one week without active effort.",
-        usesMax: -1, usesLeft: -1,
+        usesMax: -1, usesLeft: -1, recharge: "at-will",
         source: "background",
       };
     case "guild_artisan":
@@ -386,15 +386,15 @@ export function getBackgroundAbility(background: string, cls: string): any {
         id: "master_crafter",
         name: "Master Crafter",
         description: "Craft, identify, or repair any mundane item given materials and time. Advantage on all Intellect checks relating to your craft or trade.",
-        usesMax: -1, usesLeft: -1,
+        usesMax: -1, usesLeft: -1, recharge: "at-will",
         source: "background",
       };
     default:
       return {
         id: "worldly_experience",
         name: "Worldly Experience",
-        description: "Your varied past gives you advantage on one Presence or Intellect check per session when drawing on life experience outside your class training.",
-        usesMax: -1, usesLeft: -1,
+        description: "Your varied past gives you advantage on one Presence or Intellect check when drawing on life experience outside your class training (recharges per session).",
+        usesMax: 1, usesLeft: 1, recharge: "per-session",
         source: "background",
       };
   }

@@ -13,7 +13,7 @@ import {
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
   Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy,
-  Download, Share2, Maximize2, Minimize2, List, Map
+  Download, Share2, Maximize2, Minimize2, List, Map as MapIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import WorldMap from "@/components/WorldMap";
@@ -1729,6 +1729,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
                 {/* MAP TAB */}
                 {sidebarTab === "map" && (() => {
+                  try {
                   const ws = partyData?.worldState?.state ?? {};
                   const locations: any[] = ws.locations ?? [];
                   const currentLocation: string = ws.currentLocation ?? "";
@@ -1797,7 +1798,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             data-testid="toggle-map-view-mode"
                             title={mapViewMode === "map" ? "Switch to list view" : "Switch to map view"}
                           >
-                            {mapViewMode === "map" ? <List className="w-3.5 h-3.5" /> : <Map className="w-3.5 h-3.5" />}
+                            {mapViewMode === "map" ? <List className="w-3.5 h-3.5" /> : <MapIcon className="w-3.5 h-3.5" />}
                           </button>
                           {mapViewMode === "map" && (
                             <button
@@ -1946,6 +1947,15 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                       )}
                     </div>
                   );
+                  } catch (err) {
+                    console.error("Map tab render error:", err);
+                    return (
+                      <div className="text-center py-8">
+                        <MapPin className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
+                        <p className="text-xs text-muted-foreground font-serif italic">Map could not be loaded.</p>
+                      </div>
+                    );
+                  }
                 })()}
 
                 {/* CODEX TAB */}

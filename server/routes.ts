@@ -12,7 +12,7 @@ import {
   saveChatMessage, getPartyMessages, getWorldState,
 } from "./storage";
 import { rollDice, enforceHandLimits } from "./gameEngine";
-import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
+import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, assignLocationCoords, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
 import { db } from "./db";
 import { characters, characters as charsTable, locationScenes, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -615,6 +615,68 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
     } catch (e) {
       res.status(500).json({ error: "Failed to fetch scene background" });
+    }
+  });
+
+  app.get("/api/parties/:id/map", requireAuth, async (req: any, res) => {
+    try {
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+      const partyId = req.params.id;
+      const userId = getUserId(req)!;
+      const members = await getPartyMembers(partyId);
+      if (!members.some((m: any) => m.userId === userId)) {
+        return res.status(403).json({ error: "Not a member of this party" });
+      }
+      const worldSnap = await getWorldState(partyId);
+      const state = (worldSnap?.state as any) ?? {};
+      const locations: any[] = state.locations ?? [];
+      const currentLocation: string = state.currentLocation ?? "";
+      const mapCoords: Record<string, { x: number; y: number }> = (worldSnap as any)?.mapCoords ?? {};
+
+      let needsCoordBackfill = false;
+      const coordsCopy = { ...mapCoords };
+      for (const loc of locations) {
+        if (!coordsCopy[loc.name]) {
+          coordsCopy[loc.name] = assignLocationCoords(coordsCopy, loc.name);
+          needsCoordBackfill = true;
+        }
+      }
+      if (needsCoordBackfill && worldSnap) {
+        await db.update(worldState)
+          .set({ mapCoords: coordsCopy, updatedAt: new Date() })
+          .where(eq(worldState.partyId, partyId));
+      }
+
+      const sceneRows = await db.select({ locationName: locationScenes.locationName })
+        .from(locationScenes)
+        .where(eq(locationScenes.partyId, partyId));
+      const sceneSet = new Set(sceneRows.map(r => r.locationName));
+
+      const mapLocations = locations.map((loc: any) => ({
+        name: loc.name,
+        title: loc.title,
+        region: loc.region,
+        threat: loc.threat,
+        firstVisitedTurn: loc.firstVisitedTurn,
+        x: coordsCopy[loc.name]?.x ?? 50,
+        y: coordsCopy[loc.name]?.y ?? 50,
+        isCurrent: loc.name === currentLocation,
+        hasSceneImage: sceneSet.has(loc.title || loc.name) || sceneSet.has(loc.name),
+      }));
+
+      const mapImage = (worldSnap as any)?.mapImageData ?? null;
+
+      if (!mapImage && locations.length > 0) {
+        const party = await getParty(partyId);
+        const campaign = party ? await getCampaign(party.campaignId) : null;
+        const setting = [(campaign as any)?.setting ?? "", (campaign as any)?.description ?? ""].join(" ").trim();
+        generateRegionMap(partyId, setting).catch(console.error);
+      }
+
+      res.json({ mapImage, locations: mapLocations, generating: !mapImage && locations.length > 0 });
+    } catch (e) {
+      console.error("Map API error:", e);
+      res.status(500).json({ error: "Failed to fetch map data" });
     }
   });
 

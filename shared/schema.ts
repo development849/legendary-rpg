@@ -114,6 +114,8 @@ export const worldState = pgTable("world_state", {
   partyId: varchar("party_id").primaryKey(),
   state: jsonb("state").notNull().default(sql`'{}'::jsonb`),
   turnNumber: integer("turn_number").notNull().default(0),
+  mapImageData: text("map_image_data"),
+  mapCoords: jsonb("map_coords").default(sql`'{}'::jsonb`),
   updatedAt: timestamp("updated_at").default(sql`NOW()`).notNull(),
 });
 

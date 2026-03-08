@@ -332,6 +332,112 @@ export async function generateLobbyBackground(): Promise<void> {
   }
 }
 
+// ─── Region Map Generation ────────────────────────────────────────────────────
+
+let _mapGenInFlight = new Set<string>();
+
+export async function generateRegionMap(partyId: string, campaignSetting: string): Promise<void> {
+  if (_mapGenInFlight.has(partyId)) return;
+  const [snap] = await db.select({ mapImageData: worldState.mapImageData }).from(worldState).where(eq(worldState.partyId, partyId));
+  if (snap?.mapImageData) return;
+
+  _mapGenInFlight.add(partyId);
+  try {
+    const { GoogleGenAI, Modality } = await import("@google/genai");
+    const ai = new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+      httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+    });
+
+    const settingDesc = campaignSetting?.slice(0, 200) || "a classic high-fantasy realm";
+    const prompt = `Top-down bird's eye view fantasy region map of ${settingDesc}. Parchment and ink cartography style with aged paper texture. Show varied terrain: forests as clusters of tiny trees, mountains as small peaked ridges, rivers as winding blue lines, plains as open space, a coastline if appropriate. Include 4-6 small settlement markers (tiny building clusters) scattered across the map. Compass rose in one corner. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, forest green, dusty blue for water. Square aspect ratio. ${STYLE_PROMPT}`;
+
+    let imageData: string | null = null;
+    try {
+      const parts: any[] = [];
+      parts.push({ text: prompt });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-pro-image-preview",
+        contents: [{ role: "user", parts }],
+        config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+      });
+
+      const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+      if (imagePart?.inlineData?.data) {
+        const mimeType = imagePart.inlineData.mimeType || "image/png";
+        imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+      }
+    } catch (geminiErr: any) {
+      if (geminiErr?.status === 429) {
+        console.log("[GM] Map gen: Gemini rate-limited, retrying without style refs...");
+        const ai2 = new GoogleGenAI({
+          apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+          httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+        });
+        const simplePrompt = `Top-down bird's eye view fantasy region map. Parchment ink cartography style, aged paper texture. Varied terrain: forests, mountains, rivers, plains. Small settlement markers. NO TEXT, NO LABELS. Muted earth tones. Square aspect ratio.`;
+        const response = await ai2.models.generateContent({
+          model: "gemini-3-pro-image-preview",
+          contents: [{ role: "user", parts: [{ text: simplePrompt }] }],
+          config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+        });
+        const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+        if (imagePart?.inlineData?.data) {
+          const mimeType = imagePart.inlineData.mimeType || "image/png";
+          imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+        }
+      } else {
+        throw geminiErr;
+      }
+    }
+
+    if (imageData) {
+      await db.update(worldState)
+        .set({ mapImageData: imageData, updatedAt: new Date() })
+        .where(eq(worldState.partyId, partyId));
+      console.log(`[GM] Region map generated for party ${partyId}`);
+    }
+  } catch (e) {
+    console.error(`[GM] Region map generation failed for party ${partyId}:`, e);
+  } finally {
+    _mapGenInFlight.delete(partyId);
+  }
+}
+
+export function assignLocationCoords(
+  existingCoords: Record<string, { x: number; y: number }>,
+  newLocationName: string,
+): { x: number; y: number } {
+  const existing = Object.values(existingCoords);
+  if (existing.length === 0) {
+    return { x: 50 + (Math.random() * 10 - 5), y: 50 + (Math.random() * 10 - 5) };
+  }
+
+  const minDist = 8;
+  const maxAttempts = 30;
+  const avgX = existing.reduce((s, p) => s + p.x, 0) / existing.length;
+  const avgY = existing.reduce((s, p) => s + p.y, 0) / existing.length;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 10 + Math.random() * 20;
+    const lastPoint = existing[existing.length - 1];
+    const baseX = attempt < 15 ? lastPoint.x : avgX;
+    const baseY = attempt < 15 ? lastPoint.y : avgY;
+    const x = Math.max(5, Math.min(95, baseX + Math.cos(angle) * dist));
+    const y = Math.max(5, Math.min(95, baseY + Math.sin(angle) * dist));
+
+    const tooClose = existing.some(p => Math.hypot(p.x - x, p.y - y) < minDist);
+    if (!tooClose) return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+  }
+
+  const angle = Math.random() * Math.PI * 2;
+  return {
+    x: Math.max(5, Math.min(95, Math.round((avgX + Math.cos(angle) * 25) * 10) / 10)),
+    y: Math.max(5, Math.min(95, Math.round((avgY + Math.sin(angle) * 25) * 10) / 10)),
+  };
+}
+
 // In-memory lock: prevents concurrent or repeated portrait generation for the same NPC
 const _portraitInFlight = new Set<string>();
 
@@ -1000,16 +1106,27 @@ export async function runGM(
     }
     nextState = { ...prevState, locations, currentLocation: scene.location, currentSceneTitle: sceneTitle };
   }
+
+  const prevCoords: Record<string, { x: number; y: number }> = (worldSnap as any)?.mapCoords ?? {};
+  let updatedCoords = { ...prevCoords };
+  const allLocs: any[] = nextState.locations ?? [];
+  for (const loc of allLocs) {
+    if (!updatedCoords[loc.name]) {
+      updatedCoords[loc.name] = assignLocationCoords(updatedCoords, loc.name);
+    }
+  }
+
   await db.insert(worldState)
     .values({
       partyId: ctx.partyId,
       state: nextState,
       turnNumber: turnNum,
+      mapCoords: updatedCoords,
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
       target: worldState.partyId,
-      set: { state: nextState, turnNumber: turnNum, updatedAt: new Date() },
+      set: { state: nextState, turnNumber: turnNum, mapCoords: updatedCoords, updatedAt: new Date() },
     });
 
   // Auto-summarize every 10 turns

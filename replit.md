@@ -47,7 +47,7 @@ Achievements: JSONB array on characters — `{title, category, description, earn
 Event-sourced: HP, MP, XP, inventory, conditions, achievements, abilities all updatable by GM
 
 ### Campaigns → Parties
-- Campaign: settings, GM mode (fast/balanced/cinematic), content rating (pg13/r/adult), content preferences (noRomance, noHorror, fadeToBlack); changeable mid-campaign via settings gear icon in game session header (owner only) or at creation; GM prompt includes rating-specific behavioral instructions
+- Campaign: settings, GM mode (fast/balanced/cinematic), content rating (pg/pg13/r), content preferences (noRomance, noHorror); changeable mid-campaign via settings gear icon in game session header (owner only) or at creation; GM prompt includes rating-specific behavioral instructions
 - Party: invite code for multiplayer, ready states, world state snapshots
 - Chat messages: player/gm roles, metadata for character names
 - Scene summaries: auto-generated every 10 turns via gpt-4o-mini
@@ -65,7 +65,8 @@ Event-sourced: HP, MP, XP, inventory, conditions, achievements, abilities all up
 - Skill trees: `shared/skillTrees.ts` defines `CLASS_SKILL_TREES` (3 choices per tier for all 8 classes at levels 5/10/15/20) and `RACE_BONUS_SKILLS` (1 racial skill per race, unlocked at level 5); skills stored in character's `skills` jsonb array; GM prompt includes learned skills with mechanical effects
 - Scene backgrounds: AI-generated via Gemini, keyed by scene title (not just location name); when scene title changes within the same location (e.g., entering a guild common room from the city), a new background is generated; `currentSceneTitle` tracked in world state; client polls until new image is ready, showing previous background as fallback during generation
 - Location naming: GM instructed to give proper fantasy names (not generic descriptions); scene.region groups locations hierarchically
-- Journey Map: locations grouped by region with collapsible sections; fast-travel button on non-current locations sends travel action to GM
+- Interactive World Map: AI-generated parchment-style region map (via Gemini) stored in `world_state.mapImageData`; location coordinates in `world_state.mapCoords` (0-100 range, auto-assigned on discovery); canvas-based renderer with fog-of-war, glowing current location pin, dotted travel paths, zoom/pan, click-to-travel; fullscreen overlay mode; list view fallback toggle; map generates lazily on first Map tab open; `GET /api/parties/:id/map` returns map image + location data; `client/src/components/WorldMap.tsx` is the interactive canvas component
+- Journey Map (list view): locations grouped by region with collapsible sections; fast-travel button on non-current locations sends travel action to GM
 - Codex system: GM emits `RECIPE_DISCOVERED` when player learns crafting recipes/spells/enchantments; stored in world state `recipes` array; Codex sidebar tab shows recipes with ingredient checklists cross-referenced against inventory; "Craft/Perform" button when all ingredients collected
 - Equipment slots: server enforces hand slot rules — 1 two-handed weapon OR up to 2 one-handed weapons OR 1 one-handed + shield; armor has slots: body (base AC), head (+AC bonus), hands (+AC bonus), feet (+AC bonus); only 1 armor per slot; shields have no slot (use a hand); jewelry has slots: ring (max 2 equipped) and necklace (max 1 equipped); jewelry type "jewelry" with properties.slot "ring" or "necklace" and properties.effect for passive bonuses; equipping auto-swaps conflicting items; UI shows slot hints next to equip buttons and slot labels in character sheet; GM instructed to include `slot` property on all armor and jewelry items
 - Auto-summarizes every 10 turns for memory management

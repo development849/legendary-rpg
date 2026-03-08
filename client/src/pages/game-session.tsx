@@ -13,9 +13,10 @@ import {
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
   Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy,
-  Download, Share2
+  Download, Share2, Maximize2, Minimize2, List, Map
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import WorldMap from "@/components/WorldMap";
 
 interface GameSessionPageProps {
   partyId: string;
@@ -268,6 +269,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [rolledPrompts, setRolledPrompts] = useState<Record<string, boolean>>({});
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
   const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set());
+  const [mapViewMode, setMapViewMode] = useState<"map" | "list">("map");
+  const [mapFullscreen, setMapFullscreen] = useState(false);
   const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
   const [shopData, setShopData] = useState<ShopData | null>(null);
   const [expandedPortrait, setExpandedPortrait] = useState<{ name: string; url: string; role?: string } | null>(null);
@@ -295,6 +298,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const { data: npcs = [] } = useQuery<any[]>({
     queryKey: [`/api/parties/${partyId}/npcs`],
     refetchInterval: 10000,
+  });
+
+  const { data: mapData } = useQuery<any>({
+    queryKey: ['/api/parties', partyId, 'map'],
+    refetchInterval: (query) => (query.state.data as any)?.generating ? 5000 : 30000,
+    enabled: sidebarTab === "map" || mapFullscreen,
   });
 
   // Load messages — must complete before the auto-start effect can fire
@@ -1763,127 +1772,162 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         </div>
                       )}
 
-                      <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5 pb-1 pt-1 border-t border-border">
-                        <MapPin className="w-3 h-3 text-primary" /> Journey Map
-                      </p>
-
-                      {locations.length === 0 ? (
-                        <div className="text-center py-8">
-                          <MapPin className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
-                          <p className="text-xs text-muted-foreground font-serif italic">
-                            No locations discovered yet.
-                          </p>
+                      <div className="flex items-center justify-between border-t border-border pt-2">
+                        <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
+                          <MapPin className="w-3 h-3 text-primary" /> Journey Map
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setMapViewMode(mapViewMode === "map" ? "list" : "map")}
+                            className="p-1 rounded hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors"
+                            data-testid="toggle-map-view-mode"
+                            title={mapViewMode === "map" ? "Switch to list view" : "Switch to map view"}
+                          >
+                            {mapViewMode === "map" ? <List className="w-3.5 h-3.5" /> : <Map className="w-3.5 h-3.5" />}
+                          </button>
+                          {mapViewMode === "map" && (
+                            <button
+                              onClick={() => setMapFullscreen(true)}
+                              className="p-1 rounded hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors"
+                              data-testid="toggle-map-fullscreen"
+                              title="Expand map"
+                            >
+                              <Maximize2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
-                      ) : (() => {
-                        const regionMap: Record<string, any[]> = {};
-                        locations.forEach((loc: any) => {
-                          const r = loc.region || "Unknown Lands";
-                          if (!regionMap[r]) regionMap[r] = [];
-                          regionMap[r].push(loc);
-                        });
-                        const regionNames = Object.keys(regionMap);
-                        const currentRegion = regionNames.find(r => regionMap[r].some((l: any) => l.name === currentLocation));
-                        const autoExpanded = new Set(expandedRegions);
-                        if (currentRegion) autoExpanded.add(currentRegion);
-                        if (regionNames.length === 1) autoExpanded.add(regionNames[0]);
+                      </div>
 
-                        return (
-                          <div className="space-y-1.5">
-                            {regionNames.map((regionName) => {
-                              const locs = regionMap[regionName];
-                              const isExpanded = autoExpanded.has(regionName) || expandedRegions.has(regionName);
-                              const hasCurrentLoc = locs.some((l: any) => l.name === currentLocation);
+                      {mapViewMode === "map" ? (
+                        <div className="rounded-md border border-border overflow-hidden" style={{ height: "280px" }}>
+                          <WorldMap
+                            mapImage={mapData?.mapImage ?? null}
+                            locations={mapData?.locations ?? []}
+                            generating={mapData?.generating}
+                            onTravelTo={(name) => sendAction(`[ACTION] I travel to ${name}.`)}
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          {locations.length === 0 ? (
+                            <div className="text-center py-8">
+                              <MapPin className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
+                              <p className="text-xs text-muted-foreground font-serif italic">
+                                No locations discovered yet.
+                              </p>
+                            </div>
+                          ) : (() => {
+                            const regionMap: Record<string, any[]> = {};
+                            locations.forEach((loc: any) => {
+                              const r = loc.region || "Unknown Lands";
+                              if (!regionMap[r]) regionMap[r] = [];
+                              regionMap[r].push(loc);
+                            });
+                            const regionNames = Object.keys(regionMap);
+                            const currentRegion = regionNames.find(r => regionMap[r].some((l: any) => l.name === currentLocation));
+                            const autoExpanded = new Set(expandedRegions);
+                            if (currentRegion) autoExpanded.add(currentRegion);
+                            if (regionNames.length === 1) autoExpanded.add(regionNames[0]);
 
-                              return (
-                                <div key={regionName} data-testid={`map-region-${regionName}`}>
-                                  <button
-                                    data-testid={`toggle-region-${regionName}`}
-                                    onClick={() => {
-                                      setExpandedRegions(prev => {
-                                        const next = new Set(prev);
-                                        if (next.has(regionName)) next.delete(regionName);
-                                        else next.add(regionName);
-                                        return next;
-                                      });
-                                    }}
-                                    className={`w-full flex items-center gap-1.5 py-1 px-1 rounded text-left hover:bg-muted/40 transition-colors ${hasCurrentLoc ? "text-primary" : "text-muted-foreground"}`}
-                                  >
-                                    {isExpanded ? (
-                                      <ChevronDown className="w-3 h-3 flex-shrink-0" />
-                                    ) : (
-                                      <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                                    )}
-                                    <MapPin className={`w-3 h-3 flex-shrink-0 ${hasCurrentLoc ? "text-primary" : "text-muted-foreground/50"}`} />
-                                    <span className="text-xs font-sans font-semibold tracking-wide uppercase truncate">{regionName}</span>
-                                    <span className="text-xs text-muted-foreground/40 ml-auto flex-shrink-0">{locs.length}</span>
-                                  </button>
+                            return (
+                              <div className="space-y-1.5">
+                                {regionNames.map((regionName) => {
+                                  const locs = regionMap[regionName];
+                                  const isExpanded = autoExpanded.has(regionName) || expandedRegions.has(regionName);
+                                  const hasCurrentLoc = locs.some((l: any) => l.name === currentLocation);
 
-                                  {isExpanded && (
-                                    <div className="relative ml-3 pl-3 border-l border-border/40">
-                                      <div className="space-y-1.5 py-1">
-                                        {locs.map((loc: any, i: number) => {
-                                          const isCurrent = loc.name === currentLocation;
-                                          return (
-                                            <div
-                                              key={i}
-                                              data-testid={`map-location-${loc.name}`}
-                                              className={`rounded-md border px-2.5 py-2 ${
-                                                isCurrent
-                                                  ? "border-primary/50 bg-primary/5"
-                                                  : "border-border bg-card/60"
-                                              }`}
-                                            >
-                                              <div className="flex items-start justify-between gap-1">
-                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                  {loc.threat ? (
-                                                    <Skull className="w-3 h-3 text-red-400 flex-shrink-0" />
-                                                  ) : (
-                                                    <MapPin className={`w-3 h-3 flex-shrink-0 ${isCurrent ? "text-primary" : "text-muted-foreground/40"}`} />
+                                  return (
+                                    <div key={regionName} data-testid={`map-region-${regionName}`}>
+                                      <button
+                                        data-testid={`toggle-region-${regionName}`}
+                                        onClick={() => {
+                                          setExpandedRegions(prev => {
+                                            const next = new Set(prev);
+                                            if (next.has(regionName)) next.delete(regionName);
+                                            else next.add(regionName);
+                                            return next;
+                                          });
+                                        }}
+                                        className={`w-full flex items-center gap-1.5 py-1 px-1 rounded text-left hover:bg-muted/40 transition-colors ${hasCurrentLoc ? "text-primary" : "text-muted-foreground"}`}
+                                      >
+                                        {isExpanded ? (
+                                          <ChevronDown className="w-3 h-3 flex-shrink-0" />
+                                        ) : (
+                                          <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                                        )}
+                                        <MapPin className={`w-3 h-3 flex-shrink-0 ${hasCurrentLoc ? "text-primary" : "text-muted-foreground/50"}`} />
+                                        <span className="text-xs font-sans font-semibold tracking-wide uppercase truncate">{regionName}</span>
+                                        <span className="text-xs text-muted-foreground/40 ml-auto flex-shrink-0">{locs.length}</span>
+                                      </button>
+
+                                      {isExpanded && (
+                                        <div className="relative ml-3 pl-3 border-l border-border/40">
+                                          <div className="space-y-1.5 py-1">
+                                            {locs.map((loc: any, i: number) => {
+                                              const isCurrent = loc.name === currentLocation;
+                                              return (
+                                                <div
+                                                  key={i}
+                                                  data-testid={`map-location-${loc.name}`}
+                                                  className={`rounded-md border px-2.5 py-2 ${
+                                                    isCurrent
+                                                      ? "border-primary/50 bg-primary/5"
+                                                      : "border-border bg-card/60"
+                                                  }`}
+                                                >
+                                                  <div className="flex items-start justify-between gap-1">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                      {loc.threat ? (
+                                                        <Skull className="w-3 h-3 text-red-400 flex-shrink-0" />
+                                                      ) : (
+                                                        <MapPin className={`w-3 h-3 flex-shrink-0 ${isCurrent ? "text-primary" : "text-muted-foreground/40"}`} />
+                                                      )}
+                                                      <p className={`text-xs font-sans font-semibold leading-tight truncate ${isCurrent ? "text-primary" : "text-foreground"}`}>
+                                                        {loc.name}
+                                                      </p>
+                                                    </div>
+                                                    {isCurrent ? (
+                                                      <span className="text-[10px] font-sans text-primary/70 flex-shrink-0 bg-primary/10 px-1.5 rounded">here</span>
+                                                    ) : (
+                                                      <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                          <button
+                                                            data-testid={`fast-travel-${loc.name}`}
+                                                            onClick={() => {
+                                                              sendAction(`[ACTION] I travel to ${loc.name}.`);
+                                                            }}
+                                                            className="flex-shrink-0 p-0.5 rounded hover:bg-primary/10 text-muted-foreground/50 hover:text-primary transition-colors"
+                                                          >
+                                                            <Navigation className="w-3 h-3" />
+                                                          </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="left" className="text-xs">Travel to {loc.name}</TooltipContent>
+                                                      </Tooltip>
+                                                    )}
+                                                  </div>
+                                                  {loc.title && loc.title !== loc.name && (
+                                                    <p className="text-xs text-muted-foreground font-serif italic mt-0.5 leading-tight ml-[18px]">{loc.title}</p>
                                                   )}
-                                                  <p className={`text-xs font-sans font-semibold leading-tight truncate ${isCurrent ? "text-primary" : "text-foreground"}`}>
-                                                    {loc.name}
-                                                  </p>
+                                                  {loc.threat && (
+                                                    <p className="text-xs text-red-400 mt-0.5 flex items-start gap-1 ml-[18px]">
+                                                      <Skull className="w-2.5 h-2.5 flex-shrink-0 mt-0.5" /> <span className="break-words">{loc.threat}</span>
+                                                    </p>
+                                                  )}
+                                                  <p className="text-xs text-muted-foreground/40 mt-1 ml-[18px]">Turn {loc.firstVisitedTurn}</p>
                                                 </div>
-                                                {isCurrent ? (
-                                                  <span className="text-[10px] font-sans text-primary/70 flex-shrink-0 bg-primary/10 px-1.5 rounded">here</span>
-                                                ) : (
-                                                  <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                      <button
-                                                        data-testid={`fast-travel-${loc.name}`}
-                                                        onClick={() => {
-                                                          sendAction(`[ACTION] I travel to ${loc.name}.`);
-                                                        }}
-                                                        className="flex-shrink-0 p-0.5 rounded hover:bg-primary/10 text-muted-foreground/50 hover:text-primary transition-colors"
-                                                      >
-                                                        <Navigation className="w-3 h-3" />
-                                                      </button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="left" className="text-xs">Travel to {loc.name}</TooltipContent>
-                                                  </Tooltip>
-                                                )}
-                                              </div>
-                                              {loc.title && loc.title !== loc.name && (
-                                                <p className="text-xs text-muted-foreground font-serif italic mt-0.5 leading-tight ml-[18px]">{loc.title}</p>
-                                              )}
-                                              {loc.threat && (
-                                                <p className="text-xs text-red-400 mt-0.5 flex items-start gap-1 ml-[18px]">
-                                                  <Skull className="w-2.5 h-2.5 flex-shrink-0 mt-0.5" /> <span className="break-words">{loc.threat}</span>
-                                                </p>
-                                              )}
-                                              <p className="text-xs text-muted-foreground/40 mt-1 ml-[18px]">Turn {loc.firstVisitedTurn}</p>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </>
+                      )}
                     </div>
                   );
                 })()}
@@ -2783,6 +2827,34 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           </div>
         );
       })()}
+
+      {mapFullscreen && (
+        <div className="fixed inset-0 z-[90] bg-background/95 backdrop-blur-sm flex flex-col" data-testid="overlay-map-fullscreen">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+            <p className="text-sm font-sans font-semibold tracking-wide flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary" /> World Map
+            </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setMapFullscreen(false)}
+              data-testid="close-map-fullscreen"
+              className="h-8 w-8 p-0"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="flex-1 min-h-0">
+            <WorldMap
+              mapImage={mapData?.mapImage ?? null}
+              locations={mapData?.locations ?? []}
+              generating={mapData?.generating}
+              onTravelTo={(name) => { sendAction(`[ACTION] I travel to ${name}.`); setMapFullscreen(false); }}
+              fullscreen
+            />
+          </div>
+        </div>
+      )}
 
       {expandedPortrait && (
         <div

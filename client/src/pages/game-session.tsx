@@ -301,9 +301,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   });
 
   const { data: mapData, isLoading: isLoadingMap } = useQuery<any>({
-    queryKey: ['/api/parties', partyId, 'map'],
+    queryKey: [`/api/parties/${partyId}/map`],
     refetchInterval: (query) => (query.state.data as any)?.generating ? 5000 : 30000,
-    enabled: sidebarTab === "map" || mapFullscreen,
+    enabled: (sidebarTab === "map" || mapFullscreen) && !!partyId,
   });
 
   // Load messages — must complete before the auto-start effect can fire

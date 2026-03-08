@@ -338,7 +338,7 @@ let _mapGenInFlight = new Set<string>();
 
 export async function generateRegionMap(partyId: string, campaignSetting: string): Promise<void> {
   if (_mapGenInFlight.has(partyId)) return;
-  const [snap] = await db.select({ mapImageData: worldState.mapImageData }).from(worldState).where(eq(worldState.partyId, partyId));
+  const [snap] = await db.select({ mapImageData: worldState.mapImageData, state: worldState.state }).from(worldState).where(eq(worldState.partyId, partyId));
   if (snap?.mapImageData) return;
 
   _mapGenInFlight.add(partyId);
@@ -350,7 +350,27 @@ export async function generateRegionMap(partyId: string, campaignSetting: string
     });
 
     const settingDesc = campaignSetting?.slice(0, 200) || "a classic high-fantasy realm";
-    const prompt = `Top-down bird's eye view fantasy region map of ${settingDesc}. Parchment and ink cartography style with aged paper texture. Show varied terrain: forests as clusters of tiny trees, mountains as small peaked ridges, rivers as winding blue lines, plains as open space, a coastline if appropriate. Include 4-6 small settlement markers (tiny building clusters) scattered across the map. Compass rose in one corner. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, forest green, dusty blue for water. Square aspect ratio. ${STYLE_PROMPT}`;
+    const storyState = snap?.state as any;
+    const locations: any[] = storyState?.locations ?? [];
+    const regionSet = new Set<string>();
+    const terrainHints: string[] = [];
+    for (const loc of locations) {
+      if (loc.region) regionSet.add(loc.region);
+      const n = (loc.name || "").toLowerCase();
+      if (/creek|river|ford|lake|pond|swamp/.test(n)) terrainHints.push("rivers and creeks");
+      if (/forest|wood|grove|thicket/.test(n)) terrainHints.push("dense forests");
+      if (/mountain|peak|cliff|ridge/.test(n)) terrainHints.push("mountain ranges");
+      if (/road|path|trail|cobblestone/.test(n)) terrainHints.push("winding roads");
+      if (/mill|farm|field/.test(n)) terrainHints.push("farmland and mills");
+      if (/cave|mine|quarry/.test(n)) terrainHints.push("rocky caves");
+      if (/town|market|gate|tavern|inn/.test(n)) terrainHints.push("a settlement with buildings");
+    }
+    const uniqueTerrain = [...new Set(terrainHints)].slice(0, 5).join(", ");
+    const regionList = [...regionSet].slice(0, 4).join(", ");
+    const terrainCtx = uniqueTerrain ? ` The landscape features ${uniqueTerrain}.` : "";
+    const regionCtx = regionList ? ` Key regions: ${regionList}.` : "";
+
+    const prompt = `Top-down bird's eye view fantasy region map of ${settingDesc}.${regionCtx}${terrainCtx} Parchment and ink cartography style with aged paper texture. Show varied terrain: forests as clusters of tiny trees, mountains as small peaked ridges, rivers as winding blue lines, plains as open space, a coastline if appropriate. Include small settlement markers (tiny building clusters) where towns would be. Compass rose in one corner. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, forest green, dusty blue for water. Square aspect ratio. ${STYLE_PROMPT}`;
 
     let imageData: string | null = null;
     try {
@@ -404,37 +424,140 @@ export async function generateRegionMap(partyId: string, campaignSetting: string
   }
 }
 
+export function assignAllLocationCoords(
+  locations: { name: string; region?: string; firstVisitedTurn?: number }[],
+  existingCoords?: Record<string, { x: number; y: number }>,
+): Record<string, { x: number; y: number }> {
+  if (locations.length === 0) return existingCoords ?? {};
+
+  const coords: Record<string, { x: number; y: number }> = { ...(existingCoords ?? {}) };
+  const newLocs = locations.filter(l => !coords[l.name]);
+  if (newLocs.length === 0 && existingCoords && Object.keys(existingCoords).length > 0) return coords;
+
+  const needsFullRecalc = !existingCoords || Object.keys(existingCoords).length === 0;
+  const locsToPlace = needsFullRecalc ? locations : newLocs;
+
+  const regionGroups: Record<string, typeof locations> = {};
+  for (const loc of locations) {
+    const region = loc.region || "Unknown";
+    if (!regionGroups[region]) regionGroups[region] = [];
+    regionGroups[region].push(loc);
+  }
+
+  const regionNames = Object.keys(regionGroups);
+  const regionCenters: Record<string, { x: number; y: number }> = {};
+
+  if (regionNames.length === 1) {
+    regionCenters[regionNames[0]] = { x: 50, y: 50 };
+  } else {
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < regionNames.length; i++) {
+      const r = 20 + (i / regionNames.length) * 15;
+      const angle = i * goldenAngle;
+      regionCenters[regionNames[i]] = {
+        x: Math.max(15, Math.min(85, 50 + Math.cos(angle) * r)),
+        y: Math.max(15, Math.min(85, 50 + Math.sin(angle) * r)),
+      };
+    }
+  }
+
+  for (const regionName of regionNames) {
+    const existingInRegion = regionGroups[regionName].filter(l => coords[l.name]);
+    if (existingInRegion.length > 0) {
+      const avgX = existingInRegion.reduce((s, l) => s + coords[l.name].x, 0) / existingInRegion.length;
+      const avgY = existingInRegion.reduce((s, l) => s + coords[l.name].y, 0) / existingInRegion.length;
+      regionCenters[regionName] = { x: avgX, y: avgY };
+    }
+  }
+
+  function findCommonBase(a: string, b: string): string {
+    const wordsA = a.toLowerCase().split(/[\s,]+/);
+    const wordsB = b.toLowerCase().split(/[\s,]+/);
+    const filler = new Set(["the", "a", "an", "by", "of", "to", "in", "on", "at", "near", "old"]);
+    const sigA = wordsA.filter(w => !filler.has(w));
+    const sigB = wordsB.filter(w => !filler.has(w));
+    const shared = sigA.filter(w => sigB.includes(w));
+    return shared.join(" ");
+  }
+
+  for (const regionName of regionNames) {
+    const regionLocs = regionGroups[regionName];
+    const center = regionCenters[regionName];
+    const toPlace = regionLocs.filter(l => locsToPlace.includes(l));
+    if (toPlace.length === 0) continue;
+
+    const subGroups: Record<string, number[]> = {};
+    for (let i = 0; i < regionLocs.length; i++) {
+      let bestGroup = "";
+      let bestScore = 0;
+      for (const key of Object.keys(subGroups)) {
+        const representative = regionLocs[subGroups[key][0]].name;
+        const shared = findCommonBase(regionLocs[i].name, representative);
+        if (shared.length > bestScore) {
+          bestScore = shared.length;
+          bestGroup = key;
+        }
+      }
+      if (bestScore >= 3) {
+        subGroups[bestGroup].push(i);
+      } else {
+        subGroups[regionLocs[i].name] = [i];
+      }
+    }
+
+    const subGroupKeys = Object.keys(subGroups);
+    const clusterSpread = Math.min(18, 6 + subGroupKeys.length * 3);
+
+    for (let g = 0; g < subGroupKeys.length; g++) {
+      const indices = subGroups[subGroupKeys[g]];
+      const hasExisting = indices.some(idx => coords[regionLocs[idx].name]);
+      const hasNew = indices.some(idx => !coords[regionLocs[idx].name]);
+      if (!hasNew) continue;
+
+      let clusterCx: number, clusterCy: number;
+      if (hasExisting) {
+        const existingPts = indices.filter(idx => coords[regionLocs[idx].name]).map(idx => coords[regionLocs[idx].name]);
+        clusterCx = existingPts.reduce((s, p) => s + p.x, 0) / existingPts.length;
+        clusterCy = existingPts.reduce((s, p) => s + p.y, 0) / existingPts.length;
+      } else {
+        const clusterAngle = (g / subGroupKeys.length) * Math.PI * 2 + (regionName.charCodeAt(0) * 0.1);
+        const clusterDist = subGroupKeys.length === 1 ? 0 : clusterSpread * 0.5 + Math.random() * clusterSpread * 0.3;
+        clusterCx = center.x + Math.cos(clusterAngle) * clusterDist;
+        clusterCy = center.y + Math.sin(clusterAngle) * clusterDist;
+      }
+
+      for (const idx of indices) {
+        const loc = regionLocs[idx];
+        if (coords[loc.name]) continue;
+        const innerAngle = Math.random() * Math.PI * 2;
+        const innerDist = 2 + Math.random() * 3;
+        const x = clamp(clusterCx + Math.cos(innerAngle) * innerDist, 8, 92);
+        const y = clamp(clusterCy + Math.sin(innerAngle) * innerDist, 8, 92);
+        coords[loc.name] = { x: round1(x), y: round1(y) };
+      }
+    }
+  }
+
+  return coords;
+}
+
+function clamp(v: number, min: number, max: number) { return Math.max(min, Math.min(max, v)); }
+function round1(v: number) { return Math.round(v * 10) / 10; }
+
 export function assignLocationCoords(
   existingCoords: Record<string, { x: number; y: number }>,
-  newLocationName: string,
+  _newLocationName: string,
 ): { x: number; y: number } {
   const existing = Object.values(existingCoords);
   if (existing.length === 0) {
     return { x: 50 + (Math.random() * 10 - 5), y: 50 + (Math.random() * 10 - 5) };
   }
-
-  const minDist = 8;
-  const maxAttempts = 30;
-  const avgX = existing.reduce((s, p) => s + p.x, 0) / existing.length;
-  const avgY = existing.reduce((s, p) => s + p.y, 0) / existing.length;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 10 + Math.random() * 20;
-    const lastPoint = existing[existing.length - 1];
-    const baseX = attempt < 15 ? lastPoint.x : avgX;
-    const baseY = attempt < 15 ? lastPoint.y : avgY;
-    const x = Math.max(5, Math.min(95, baseX + Math.cos(angle) * dist));
-    const y = Math.max(5, Math.min(95, baseY + Math.sin(angle) * dist));
-
-    const tooClose = existing.some(p => Math.hypot(p.x - x, p.y - y) < minDist);
-    if (!tooClose) return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
-  }
-
+  const lastPoint = existing[existing.length - 1];
   const angle = Math.random() * Math.PI * 2;
+  const dist = 3 + Math.random() * 5;
   return {
-    x: Math.max(5, Math.min(95, Math.round((avgX + Math.cos(angle) * 25) * 10) / 10)),
-    y: Math.max(5, Math.min(95, Math.round((avgY + Math.sin(angle) * 25) * 10) / 10)),
+    x: round1(clamp(lastPoint.x + Math.cos(angle) * dist, 8, 92)),
+    y: round1(clamp(lastPoint.y + Math.sin(angle) * dist, 8, 92)),
   };
 }
 
@@ -1125,13 +1248,9 @@ export async function runGM(
   }
 
   const prevCoords: Record<string, { x: number; y: number }> = (worldSnap as any)?.mapCoords ?? {};
-  let updatedCoords = { ...prevCoords };
   const allLocs: any[] = nextState.locations ?? [];
-  for (const loc of allLocs) {
-    if (!updatedCoords[loc.name]) {
-      updatedCoords[loc.name] = assignLocationCoords(updatedCoords, loc.name);
-    }
-  }
+  const hasNewLocs = allLocs.some((loc: any) => !prevCoords[loc.name]);
+  let updatedCoords = hasNewLocs ? assignAllLocationCoords(allLocs, prevCoords) : { ...prevCoords };
 
   await db.insert(worldState)
     .values({

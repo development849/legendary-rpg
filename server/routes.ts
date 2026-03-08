@@ -12,7 +12,7 @@ import {
   saveChatMessage, getPartyMessages, getWorldState,
 } from "./storage";
 import { rollDice, enforceHandLimits } from "./gameEngine";
-import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, assignLocationCoords, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
+import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
 import { db } from "./db";
 import { characters, characters as charsTable, locationScenes, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -634,12 +634,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const mapCoords: Record<string, { x: number; y: number }> = (worldSnap as any)?.mapCoords ?? {};
 
       let needsCoordBackfill = false;
-      const coordsCopy = { ...mapCoords };
-      for (const loc of locations) {
-        if (!coordsCopy[loc.name]) {
-          coordsCopy[loc.name] = assignLocationCoords(coordsCopy, loc.name);
-          needsCoordBackfill = true;
-        }
+      let coordsCopy = { ...mapCoords };
+      const forceRecalc = req.query.recalculate === "1";
+      const missingCoords = locations.some((loc: any) => !coordsCopy[loc.name]);
+      if (forceRecalc) {
+        coordsCopy = assignAllLocationCoords(locations);
+        needsCoordBackfill = true;
+      } else if (missingCoords) {
+        coordsCopy = assignAllLocationCoords(locations, coordsCopy);
+        needsCoordBackfill = true;
       }
       if (needsCoordBackfill && worldSnap) {
         await db.update(worldState)
@@ -666,14 +669,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const mapImage = (worldSnap as any)?.mapImageData ?? null;
 
-      if (!mapImage && locations.length > 0) {
+      const regenerateMap = req.query.regenerate_map === "1";
+      if (regenerateMap && mapImage) {
+        await db.update(worldState)
+          .set({ mapImageData: null, updatedAt: new Date() })
+          .where(eq(worldState.partyId, partyId));
+      }
+
+      const effectiveMapImage = regenerateMap ? null : mapImage;
+      if (!effectiveMapImage && locations.length > 0) {
         const party = await getParty(partyId);
         const campaign = party ? await getCampaign(party.campaignId) : null;
         const setting = [(campaign as any)?.setting ?? "", (campaign as any)?.description ?? ""].join(" ").trim();
         generateRegionMap(partyId, setting).catch(console.error);
       }
 
-      res.json({ mapImage, locations: mapLocations, generating: !mapImage && locations.length > 0 });
+      res.json({ mapImage: effectiveMapImage, locations: mapLocations, generating: !effectiveMapImage && locations.length > 0 });
     } catch (e) {
       console.error("Map API error:", e);
       res.status(500).json({ error: "Failed to fetch map data" });

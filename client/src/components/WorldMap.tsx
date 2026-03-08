@@ -26,7 +26,226 @@ interface WorldMapProps {
 
 const PIN_RADIUS = 6;
 const GLOW_RADIUS = 14;
-const FOG_REVEAL_RADIUS = 55;
+const FOG_REVEAL_RADIUS = 60;
+
+type LocType = "town" | "tavern" | "market" | "gate" | "road" | "forest" | "water" | "cave" | "temple" | "mill" | "camp" | "castle" | "port" | "mine" | "generic";
+
+function detectLocationType(name: string): LocType {
+  const n = name.toLowerCase();
+  if (/tavern|inn|pub|bar|ale\s?house/.test(n)) return "tavern";
+  if (/market|shop|bazaar|merchant|store|trade/.test(n)) return "market";
+  if (/gate|wall|entrance|door/.test(n)) return "gate";
+  if (/road|path|trail|highway|bridge|cobblestone|route/.test(n)) return "road";
+  if (/forest|wood|grove|glade|thicket|jungle/.test(n)) return "forest";
+  if (/creek|river|lake|sea|ocean|bay|harbor|shore|waterfall|pond|swamp|marsh|ford/.test(n)) return "water";
+  if (/cave|cavern|tunnel|underground|mine|quarry/.test(n)) return "cave";
+  if (/temple|church|shrine|chapel|sanctuary|cathedral|monastery/.test(n)) return "temple";
+  if (/mill|farm|field|barn|windmill/.test(n)) return "mill";
+  if (/camp|clearing|site|ruin|rock|boulder/.test(n)) return "camp";
+  if (/castle|palace|fortress|keep|citadel|tower/.test(n)) return "castle";
+  if (/port|dock|pier|wharf|harbor/.test(n)) return "port";
+  if (/town|city|village|hamlet|settlement/.test(n)) return "town";
+  return "generic";
+}
+
+function drawLocIcon(ctx: CanvasRenderingContext2D, type: LocType, x: number, y: number, size: number) {
+  ctx.save();
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  const s = size;
+  const hs = s / 2;
+
+  switch (type) {
+    case "town":
+      ctx.strokeStyle = "#c9a857";
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y + hs);
+      ctx.lineTo(x - hs, y - hs * 0.3);
+      ctx.lineTo(x - hs * 0.3, y - hs);
+      ctx.lineTo(x + hs * 0.3, y - hs);
+      ctx.lineTo(x + hs, y - hs * 0.3);
+      ctx.lineTo(x + hs, y + hs);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - hs * 0.2, y + hs);
+      ctx.lineTo(x - hs * 0.2, y);
+      ctx.lineTo(x + hs * 0.2, y);
+      ctx.lineTo(x + hs * 0.2, y + hs);
+      ctx.stroke();
+      break;
+    case "tavern":
+      ctx.strokeStyle = "#b87333";
+      ctx.beginPath();
+      ctx.arc(x, y - hs * 0.2, hs * 0.6, Math.PI, 0);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y - hs * 0.2);
+      ctx.lineTo(x, y + hs);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - hs * 0.4, y + hs);
+      ctx.lineTo(x + hs * 0.4, y + hs);
+      ctx.stroke();
+      break;
+    case "market":
+      ctx.strokeStyle = "#c9a857";
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y - hs * 0.5);
+      ctx.lineTo(x, y - hs);
+      ctx.lineTo(x + hs, y - hs * 0.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - hs * 0.7, y - hs * 0.5);
+      ctx.lineTo(x - hs * 0.7, y + hs);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + hs * 0.7, y - hs * 0.5);
+      ctx.lineTo(x + hs * 0.7, y + hs);
+      ctx.stroke();
+      break;
+    case "gate":
+      ctx.strokeStyle = "#8b8b83";
+      ctx.beginPath();
+      ctx.arc(x, y - hs * 0.2, hs * 0.5, Math.PI, 0);
+      ctx.lineTo(x + hs * 0.5, y + hs);
+      ctx.moveTo(x - hs * 0.5, y - hs * 0.2);
+      ctx.lineTo(x - hs * 0.5, y + hs);
+      ctx.stroke();
+      break;
+    case "forest":
+      ctx.strokeStyle = "#5b7a3b";
+      ctx.beginPath();
+      ctx.moveTo(x, y - hs);
+      ctx.lineTo(x - hs * 0.6, y + hs * 0.3);
+      ctx.lineTo(x + hs * 0.6, y + hs * 0.3);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y + hs * 0.3);
+      ctx.lineTo(x, y + hs);
+      ctx.stroke();
+      break;
+    case "water":
+      ctx.strokeStyle = "#4a7a9b";
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y - hs * 0.3);
+      ctx.quadraticCurveTo(x - hs * 0.3, y - hs, x, y - hs * 0.3);
+      ctx.quadraticCurveTo(x + hs * 0.3, y + hs * 0.3, x + hs, y - hs * 0.3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - hs * 0.7, y + hs * 0.3);
+      ctx.quadraticCurveTo(x, y - hs * 0.2, x + hs * 0.7, y + hs * 0.3);
+      ctx.stroke();
+      break;
+    case "cave":
+      ctx.strokeStyle = "#7a6b5b";
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y + hs);
+      ctx.lineTo(x, y - hs);
+      ctx.lineTo(x + hs, y + hs);
+      ctx.stroke();
+      break;
+    case "temple":
+      ctx.strokeStyle = "#9b8bbb";
+      ctx.beginPath();
+      ctx.moveTo(x - hs * 0.15, y - hs);
+      ctx.lineTo(x - hs * 0.15, y + hs);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + hs * 0.15, y - hs);
+      ctx.lineTo(x + hs * 0.15, y + hs);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - hs * 0.6, y);
+      ctx.lineTo(x + hs * 0.6, y);
+      ctx.stroke();
+      break;
+    case "castle":
+      ctx.strokeStyle = "#8b7b6b";
+      ctx.beginPath();
+      ctx.rect(x - hs, y - hs * 0.5, s, hs * 1.5);
+      ctx.stroke();
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const bx = x - hs + i * hs;
+        ctx.rect(bx, y - hs, hs * 0.4, hs * 0.5);
+      }
+      ctx.stroke();
+      break;
+    case "mill":
+      ctx.strokeStyle = "#8b7b4b";
+      ctx.beginPath();
+      ctx.moveTo(x, y - hs);
+      ctx.lineTo(x, y + hs);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y - hs * 0.3);
+      ctx.lineTo(x + hs, y + hs * 0.3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x + hs, y - hs * 0.3);
+      ctx.lineTo(x - hs, y + hs * 0.3);
+      ctx.stroke();
+      break;
+    case "camp":
+      ctx.strokeStyle = "#8b6b3b";
+      ctx.beginPath();
+      ctx.moveTo(x, y - hs);
+      ctx.lineTo(x - hs, y + hs);
+      ctx.lineTo(x + hs, y + hs);
+      ctx.closePath();
+      ctx.stroke();
+      break;
+    case "road":
+      ctx.strokeStyle = "#9b8b6b";
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(x - hs, y + hs * 0.5);
+      ctx.quadraticCurveTo(x, y - hs, x + hs, y + hs * 0.5);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      break;
+    case "port":
+      ctx.strokeStyle = "#4a7a9b";
+      ctx.beginPath();
+      ctx.arc(x, y, hs * 0.6, 0.3, Math.PI - 0.3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y - hs);
+      ctx.lineTo(x, y + hs * 0.4);
+      ctx.stroke();
+      break;
+    default:
+      ctx.fillStyle = "#8b7355";
+      ctx.beginPath();
+      ctx.arc(x, y, hs * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+  }
+  ctx.restore();
+}
+
+function getLocColor(type: LocType, isCurrent: boolean): string {
+  if (isCurrent) return "#daa520";
+  switch (type) {
+    case "town": return "#c9a857";
+    case "tavern": return "#b87333";
+    case "market": return "#c9a857";
+    case "gate": return "#8b8b83";
+    case "road": return "#9b8b6b";
+    case "forest": return "#5b7a3b";
+    case "water": return "#4a7a9b";
+    case "cave": return "#7a6b5b";
+    case "temple": return "#9b8bbb";
+    case "mill": return "#8b7b4b";
+    case "camp": return "#8b6b3b";
+    case "castle": return "#8b7b6b";
+    case "port": return "#4a7a9b";
+    default: return "#8b7355";
+  }
+}
 
 export default function WorldMap({ mapImage, locations, generating, isLoading, error, onTravelTo, fullscreen }: WorldMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,6 +304,43 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
 
     if (bgImage) {
       ctx.drawImage(bgImage, mapX, mapY, mapSize, mapSize);
+
+      if (locations.length > 0) {
+        const fogCanvas = document.createElement("canvas");
+        fogCanvas.width = canvas.width;
+        fogCanvas.height = canvas.height;
+        const fogCtx = fogCanvas.getContext("2d");
+        if (fogCtx) {
+          fogCtx.scale(dpr, dpr);
+          fogCtx.save();
+          fogCtx.translate(w / 2 + pan.x, h / 2 + pan.y);
+          fogCtx.scale(zoom, zoom);
+
+          fogCtx.fillStyle = "rgba(10, 8, 5, 0.75)";
+          fogCtx.fillRect(mapX, mapY, mapSize, mapSize);
+
+          fogCtx.globalCompositeOperation = "destination-out";
+          for (const loc of locations) {
+            const lx = mapX + (loc.x / 100) * mapSize;
+            const ly = mapY + (loc.y / 100) * mapSize;
+            const revealR = FOG_REVEAL_RADIUS * (mapSize / 500);
+            const gradient = fogCtx.createRadialGradient(lx, ly, 0, lx, ly, revealR);
+            gradient.addColorStop(0, "rgba(0,0,0,1)");
+            gradient.addColorStop(0.6, "rgba(0,0,0,0.9)");
+            gradient.addColorStop(1, "rgba(0,0,0,0)");
+            fogCtx.fillStyle = gradient;
+            fogCtx.beginPath();
+            fogCtx.arc(lx, ly, revealR, 0, Math.PI * 2);
+            fogCtx.fill();
+          }
+          fogCtx.restore();
+
+          ctx.save();
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.drawImage(fogCanvas, 0, 0);
+          ctx.restore();
+        }
+      }
     } else {
       ctx.fillStyle = "#2a2015";
       ctx.fillRect(mapX, mapY, mapSize, mapSize);
@@ -103,32 +359,9 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
       }
     }
 
-    if (bgImage && locations.length > 0) {
-      ctx.save();
-      ctx.globalCompositeOperation = "source-atop";
-      ctx.fillStyle = "rgba(10, 8, 5, 0.7)";
-      ctx.fillRect(mapX, mapY, mapSize, mapSize);
-
-      ctx.globalCompositeOperation = "destination-out";
-      for (const loc of locations) {
-        const lx = mapX + (loc.x / 100) * mapSize;
-        const ly = mapY + (loc.y / 100) * mapSize;
-        const revealR = FOG_REVEAL_RADIUS * (mapSize / 500);
-        const gradient = ctx.createRadialGradient(lx, ly, 0, lx, ly, revealR);
-        gradient.addColorStop(0, "rgba(0,0,0,1)");
-        gradient.addColorStop(0.7, "rgba(0,0,0,0.8)");
-        gradient.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(lx, ly, revealR, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-
     if (locations.length > 1) {
       ctx.beginPath();
-      ctx.strokeStyle = "rgba(218, 165, 32, 0.35)";
+      ctx.strokeStyle = "rgba(218, 165, 32, 0.3)";
       ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 4]);
       const sorted = [...locations].sort((a, b) => (a.firstVisitedTurn ?? 0) - (b.firstVisitedTurn ?? 0));
@@ -145,6 +378,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
     for (const loc of locations) {
       const lx = mapX + (loc.x / 100) * mapSize;
       const ly = mapY + (loc.y / 100) * mapSize;
+      const locType = detectLocationType(loc.name);
 
       if (loc.isCurrent) {
         const glowAlpha = 0.3 + Math.sin(pulsePhase) * 0.15;
@@ -157,13 +391,13 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
         ctx.fill();
       }
 
+      const pinColor = loc.threat
+        ? (loc.isCurrent ? "#ef4444" : "#991b1b")
+        : getLocColor(locType, loc.isCurrent);
+
       ctx.beginPath();
       ctx.arc(lx, ly, PIN_RADIUS, 0, Math.PI * 2);
-      if (loc.threat) {
-        ctx.fillStyle = loc.isCurrent ? "#ef4444" : "#991b1b";
-      } else {
-        ctx.fillStyle = loc.isCurrent ? "#daa520" : "#8b7355";
-      }
+      ctx.fillStyle = pinColor;
       ctx.fill();
       ctx.strokeStyle = loc.isCurrent ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)";
       ctx.lineWidth = loc.isCurrent ? 2 : 1;
@@ -177,13 +411,30 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
         ctx.stroke();
       }
 
+      const iconSize = fullscreen ? 12 : 10;
+      if (loc.threat) {
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(lx, ly - PIN_RADIUS - 10, iconSize * 0.35, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(lx - iconSize * 0.15, ly - PIN_RADIUS - 10 + iconSize * 0.1);
+        ctx.lineTo(lx - iconSize * 0.15, ly - PIN_RADIUS - 10 - iconSize * 0.1);
+        ctx.moveTo(lx + iconSize * 0.15, ly - PIN_RADIUS - 10 + iconSize * 0.1);
+        ctx.lineTo(lx + iconSize * 0.15, ly - PIN_RADIUS - 10 - iconSize * 0.1);
+        ctx.stroke();
+      } else {
+        drawLocIcon(ctx, locType, lx, ly - PIN_RADIUS - 10, iconSize);
+      }
+
       const fontSize = fullscreen ? 11 : 9;
       ctx.font = `600 ${fontSize}px system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillStyle = "rgba(0,0,0,0.6)";
-      ctx.fillText(loc.name, lx + 1, ly - PIN_RADIUS - 5 + 1);
-      ctx.fillStyle = loc.isCurrent ? "#fff" : "rgba(255,255,255,0.7)";
-      ctx.fillText(loc.name, lx, ly - PIN_RADIUS - 5);
+      ctx.fillText(loc.name, lx + 1, ly + PIN_RADIUS + fontSize + 3 + 1);
+      ctx.fillStyle = loc.isCurrent ? "#fff" : "rgba(255,255,255,0.75)";
+      ctx.fillText(loc.name, lx, ly + PIN_RADIUS + fontSize + 3);
     }
 
     ctx.restore();
@@ -250,15 +501,15 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
     const worldX = (clickX - w / 2 - pan.x) / zoom;
     const worldY = (clickY - h / 2 - pan.y) / zoom;
 
-    const mapX = -mapSize / 2;
-    const mapY = -mapSize / 2;
+    const mapXOff = -mapSize / 2;
+    const mapYOff = -mapSize / 2;
 
     let closest: MapLocation | null = null;
     let closestDist = Infinity;
 
     for (const loc of locations) {
-      const lx = mapX + (loc.x / 100) * mapSize;
-      const ly = mapY + (loc.y / 100) * mapSize;
+      const lx = mapXOff + (loc.x / 100) * mapSize;
+      const ly = mapYOff + (loc.y / 100) * mapSize;
       const dist = Math.hypot(worldX - lx, worldY - ly);
       if (dist < 20 && dist < closestDist) {
         closest = loc;

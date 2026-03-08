@@ -13,7 +13,7 @@ import {
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
   Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy,
-  Download, Share2, Maximize2, Minimize2, List, Map as MapIcon
+  Download, Share2, Maximize2, Minimize2, List, Map as MapIcon, RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import WorldMap from "@/components/WorldMap";
@@ -300,10 +300,23 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     refetchInterval: 10000,
   });
 
+  const mapRecalcDone = useRef(false);
+  const mapRegenPending = useRef(false);
   const { data: mapData, isLoading: isLoadingMap, error: mapError } = useQuery<any>({
     queryKey: [`/api/parties/${partyId}/map`],
-    queryFn: async ({ queryKey }) => {
-      const res = await fetch(queryKey[0] as string, { credentials: "include" });
+    queryFn: async () => {
+      let url = `/api/parties/${partyId}/map`;
+      const params: string[] = [];
+      if (!mapRecalcDone.current) {
+        params.push("recalculate=1");
+        mapRecalcDone.current = true;
+      }
+      if (mapRegenPending.current) {
+        params.push("regenerate_map=1");
+        mapRegenPending.current = false;
+      }
+      if (params.length) url += "?" + params.join("&");
+      const res = await fetch(url, { credentials: "include" });
       if (res.status === 401) return null;
       if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
       return res.json();
@@ -311,6 +324,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     refetchInterval: (query) => (query.state.data as any)?.generating ? 5000 : 30000,
     enabled: (sidebarTab === "map" || mapFullscreen) && !!partyId,
   });
+
+  const handleRegenerateMap = useCallback(() => {
+    mapRegenPending.current = true;
+    queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/map`] });
+  }, [partyId, queryClient]);
 
   // Load messages — must complete before the auto-start effect can fire
   useEffect(() => {
@@ -1801,14 +1819,24 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             {mapViewMode === "map" ? <List className="w-3.5 h-3.5" /> : <MapIcon className="w-3.5 h-3.5" />}
                           </button>
                           {mapViewMode === "map" && (
-                            <button
-                              onClick={() => setMapFullscreen(true)}
-                              className="p-1 rounded hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors"
-                              data-testid="toggle-map-fullscreen"
-                              title="Expand map"
-                            >
-                              <Maximize2 className="w-3.5 h-3.5" />
-                            </button>
+                            <>
+                              <button
+                                onClick={handleRegenerateMap}
+                                className="p-1 rounded hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors"
+                                data-testid="regenerate-map"
+                                title="Regenerate map"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setMapFullscreen(true)}
+                                className="p-1 rounded hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors"
+                                data-testid="toggle-map-fullscreen"
+                                title="Expand map"
+                              >
+                                <Maximize2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>

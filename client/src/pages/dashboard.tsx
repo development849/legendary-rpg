@@ -106,7 +106,7 @@ export default function DashboardPage() {
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <img src={logoPath} alt="Legendary" className="w-7 h-7 rounded-sm object-contain" />
-            <span className="font-sans font-bold tracking-widest text-lg">LEGENDARY<sup className="text-xs align-super ml-px">℠</sup></span>
+            <span className="font-sans font-bold tracking-widest text-lg">LEGENDARY RPG<sup className="text-xs align-super ml-px">℠</sup></span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-muted-foreground text-sm font-serif">Welcome, {displayName}</span>

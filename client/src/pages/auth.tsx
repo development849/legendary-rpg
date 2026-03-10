@@ -194,7 +194,7 @@ export default function AuthPage() {
               <img src={logoPath} alt="Legendary" className="w-14 h-14 rounded-md object-contain" />
             </div>
             <h1 className="text-4xl font-sans font-bold tracking-widest text-foreground glow-gold">
-              LEGENDARY<sup className="text-lg align-super ml-1">℠</sup>
+              LEGENDARY RPG<sup className="text-lg align-super ml-1">℠</sup>
             </h1>
             <p className="text-primary font-sans tracking-widest text-xs uppercase">The Living Chronicle</p>
             <p className="text-muted-foreground font-serif italic text-lg leading-relaxed max-w-xs">

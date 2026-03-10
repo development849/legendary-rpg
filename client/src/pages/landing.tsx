@@ -74,7 +74,7 @@ export default function LandingPage() {
           {/* Title */}
           <div className="space-y-3">
             <h1 className="text-5xl md:text-7xl font-sans font-bold tracking-widest text-foreground glow-gold drop-shadow-lg">
-              LEGENDARY<sup className="text-2xl md:text-3xl align-super ml-1">&#8480;</sup>
+              LEGENDARY RPG<sup className="text-2xl md:text-3xl align-super ml-1">&#8480;</sup>
             </h1>
             <p className="text-lg md:text-xl text-primary font-sans tracking-widest uppercase font-light drop-shadow-md">
               The Living Chronicle
@@ -196,7 +196,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <div className="text-center py-6 text-muted-foreground/30 text-xs font-sans tracking-widest">
-        LEGENDARY&#8480; &middot; THE LIVING CHRONICLE &middot; POWERED BY AI
+        LEGENDARY RPG&#8480; &middot; THE LIVING CHRONICLE &middot; POWERED BY AI
       </div>
     </div>
   );

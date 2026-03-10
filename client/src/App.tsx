@@ -55,7 +55,7 @@ function LoadingScreen() {
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center space-y-4">
         <img src={logoPath} alt="Legendary" className="w-20 h-20 mx-auto opacity-90 animate-pulse object-contain" />
-        <div className="text-3xl font-sans text-primary glow-gold tracking-widest">LEGENDARY<sup className="text-lg align-super">℠</sup></div>
+        <div className="text-3xl font-sans text-primary glow-gold tracking-widest">LEGENDARY RPG<sup className="text-lg align-super">℠</sup></div>
         <div className="text-muted-foreground text-sm font-serif italic animate-pulse">Summoning your adventure...</div>
       </div>
     </div>

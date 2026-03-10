@@ -247,7 +247,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
         <FriendsPanel inviteCode={party.inviteCode} />
 
         {/* Actions */}
-        <div className={`rounded-lg p-4 flex items-center justify-between ${lobbyBg ? "backdrop-blur-md bg-black/50 border border-white/10" : "border-t border-border pt-4"}`}>
+        <div className={`rounded-lg p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 ${lobbyBg ? "backdrop-blur-md bg-black/50 border border-white/10" : "border-t border-border pt-4"}`}>
           <Button
             variant="outline"
             onClick={() => readyMutation.mutate(!isReady)}

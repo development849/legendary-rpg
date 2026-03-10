@@ -1855,7 +1855,16 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         </p>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => setMapViewMode(mapViewMode === "map" ? "list" : "map")}
+                            onClick={() => {
+                              if (mapViewMode !== "map") {
+                                const isMobile = window.innerWidth < 640;
+                                if (isMobile) {
+                                  setMapFullscreen(true);
+                                  return;
+                                }
+                              }
+                              setMapViewMode(mapViewMode === "map" ? "list" : "map");
+                            }}
                             className="p-1 rounded hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors"
                             data-testid="toggle-map-view-mode"
                             title={mapViewMode === "map" ? "Switch to list view" : "Switch to map view"}
@@ -1886,16 +1895,27 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                       </div>
 
                       {mapViewMode === "map" ? (
-                        <div className="rounded-md border border-border overflow-hidden" style={{ height: "280px" }}>
-                          <WorldMap
-                            mapImage={mapData?.mapImage ?? null}
-                            locations={mapData?.locations ?? []}
-                            generating={mapData?.generating}
-                            isLoading={isLoadingMap}
-                            error={!!mapError}
-                            onTravelTo={(name) => sendAction(`[ACTION] I travel to ${name}.`)}
-                          />
-                        </div>
+                        <>
+                          <div className="rounded-md border border-border overflow-hidden sm:block hidden" style={{ height: "min(50vh, 400px)", minHeight: "250px" }}>
+                            <WorldMap
+                              mapImage={mapData?.mapImage ?? null}
+                              locations={mapData?.locations ?? []}
+                              generating={mapData?.generating}
+                              isLoading={isLoadingMap}
+                              error={!!mapError}
+                              onTravelTo={(name) => sendAction(`[ACTION] I travel to ${name}.`)}
+                            />
+                          </div>
+                          <button
+                            onClick={() => setMapFullscreen(true)}
+                            className="sm:hidden flex items-center justify-center gap-2 w-full rounded-md border border-border bg-card/60 py-6 text-sm text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
+                            data-testid="mobile-open-fullscreen-map"
+                          >
+                            <Maximize2 className="w-4 h-4" />
+                            Open Full Map
+                          </button>
+                        </>
+                      
                       ) : (
                         <>
                           {locations.length === 0 ? (

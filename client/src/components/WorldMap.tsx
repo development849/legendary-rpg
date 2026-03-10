@@ -602,7 +602,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
         ? (loc.isCurrent ? "#ef4444" : "#991b1b")
         : getLocColor(locType, loc.isCurrent);
 
-      const pinR = isMajorInOverview ? PIN_RADIUS + 2 : PIN_RADIUS;
+      const pinR = fullscreen ? PIN_RADIUS + 3 : (isMajorInOverview ? PIN_RADIUS + 2 : PIN_RADIUS);
       ctx.beginPath();
       ctx.arc(lx, ly, pinR, 0, Math.PI * 2);
       ctx.fillStyle = pinColor;
@@ -619,7 +619,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
         ctx.stroke();
       }
 
-      const iconSize = fullscreen ? 14 : (isMajorInOverview ? 12 : 10);
+      const iconSize = fullscreen ? 16 : (isMajorInOverview ? 12 : 10);
       if (hasTrueThreat) {
         ctx.strokeStyle = "#ef4444";
         ctx.lineWidth = 1.2;
@@ -636,7 +636,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
         drawLocIcon(ctx, locType, lx, ly - pinR - 10, iconSize);
       }
 
-      const fontSize = fullscreen ? 12 : (isMajorInOverview ? 11 : 9);
+      const fontSize = fullscreen ? 13 : (isMajorInOverview ? 11 : 9);
       ctx.font = `${isMajorInOverview ? 700 : 600} ${fontSize}px system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillStyle = "rgba(0,0,0,0.7)";
@@ -736,7 +736,8 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
       const lx = mapXOff + (loc.x / 100) * mapSize;
       const ly = mapYOff + (loc.y / 100) * mapSize;
       const dist = Math.hypot(worldX - lx, worldY - ly);
-      if (dist < 25 && dist < closestDist) {
+      const hitRadius = fullscreen ? 35 : 25;
+      if (dist < hitRadius && dist < closestDist) {
         closest = loc;
         closestDist = dist;
       }

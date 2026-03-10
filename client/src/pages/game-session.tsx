@@ -954,7 +954,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         />
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Scene background */}
@@ -1192,7 +1192,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
         {/* Character Panel (collapsible) */}
         {showCharacters && (
-          <div className="w-72 flex-shrink-0 border-l border-border bg-card/50 flex flex-col overflow-hidden">
+          <div className="absolute inset-0 z-30 sm:relative sm:inset-auto sm:z-auto sm:w-72 flex-shrink-0 border-l border-border bg-card/95 sm:bg-card/50 flex flex-col overflow-hidden">
             {/* Panel header with tabs */}
             <div className="flex-shrink-0 border-b border-border">
               <div className="flex items-center px-0.5 py-1.5 gap-0">

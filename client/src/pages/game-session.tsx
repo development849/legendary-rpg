@@ -3266,12 +3266,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         const base = currentStats[stat] ?? 10;
                         const added = statPoints[stat] ?? 0;
                         return (
-                          <div key={stat} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2 border border-border/50" data-testid={`stat-row-${stat}`}>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-xs font-sans font-bold capitalize text-foreground/80">{stat}</span>
-                              <span className="text-xs text-muted-foreground ml-1.5">{base}{added > 0 ? ` → ${base + added}` : ""}</span>
+                          <div key={stat} className="flex items-center justify-between bg-muted/40 rounded-lg px-2 sm:px-3 py-2 border border-border/50 gap-1" data-testid={`stat-row-${stat}`}>
+                            <div className="min-w-0 shrink">
+                              <span className="text-[10px] sm:text-xs font-sans font-bold uppercase text-foreground/80 block leading-tight truncate">{stat}</span>
+                              <span className="text-[10px] sm:text-xs text-muted-foreground leading-tight">{base}{added > 0 ? ` +${added}` : ""}</span>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                               <button
                                 onClick={() => {
                                   if (added > 0) setStatPoints(prev => ({ ...prev, [stat]: prev[stat] - 1 }));
@@ -3282,7 +3282,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                               >
                                 -
                               </button>
-                              <span className={`w-5 text-center text-sm font-bold ${added > 0 ? "text-primary" : "text-muted-foreground/50"}`}>{added}</span>
+                              <span className={`w-4 sm:w-5 text-center text-xs sm:text-sm font-bold ${added > 0 ? "text-primary" : "text-muted-foreground/50"}`}>{added}</span>
                               <button
                                 onClick={() => {
                                   if (totalStatAllocated < 2) setStatPoints(prev => ({ ...prev, [stat]: prev[stat] + 1 }));

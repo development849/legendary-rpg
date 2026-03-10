@@ -646,6 +646,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             } else if (evt.type === "done") {
               setStreamingContent("");
               setIsStreaming(false);
+              queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
+              queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/situations`] });
+              queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/npcs`] });
               if (evt.message) {
                 setMessages(prev => {
                   if (prev.find(m => m.id === evt.message.id)) return prev;

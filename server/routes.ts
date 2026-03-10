@@ -981,10 +981,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         },
       );
     } catch (e: any) {
+      console.error("[GM action error]", e.message ?? e);
       if (!res.headersSent) {
-        res.status(500).json({ error: "GM action failed" });
+        res.status(500).json({ error: e.message || "GM action failed" });
       } else {
-        res.write(`data: ${JSON.stringify({ type: "error", error: e.message })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: "error", error: e.message || "GM action failed" })}\n\n`);
         res.end();
       }
     }

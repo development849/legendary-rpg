@@ -632,7 +632,15 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           if (!line.startsWith("data: ")) continue;
           try {
             const evt = JSON.parse(line.slice(6));
-            if (evt.type === "chunk") {
+            if (evt.type === "error") {
+              const errMsg = evt.error || "GM failed to respond";
+              toast({ title: "Connection lost", description: errMsg, variant: "destructive" });
+              setIsStreaming(false);
+              setStreamingContent("");
+              setSending(false);
+              reader.cancel();
+              return;
+            } else if (evt.type === "chunk") {
               accumulated += evt.content;
               setStreamingContent(accumulated);
             } else if (evt.type === "done") {
@@ -674,7 +682,10 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
       }
     } catch (e: any) {
       if (e.name !== "AbortError") {
-        toast({ title: "Connection lost", description: "The GM couldn't respond. Try again.", variant: "destructive" });
+        const desc = e.message?.includes("Failed to fetch") || e.message === "Request failed"
+          ? "The GM couldn't respond. Try again."
+          : (e.message || "The GM couldn't respond. Try again.");
+        toast({ title: "Connection lost", description: desc, variant: "destructive" });
         setIsStreaming(false);
         setStreamingContent("");
       }

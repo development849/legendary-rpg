@@ -13,7 +13,7 @@ import {
   sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend,
   getFriends, getPendingRequests, getSentRequests, searchUsers,
 } from "./storage";
-import { rollDice, enforceHandLimits } from "./gameEngine";
+import { rollDice, parseDieString, enforceHandLimits } from "./gameEngine";
 import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
 import { db } from "./db";
 import { characters, characters as charsTable, locationScenes, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs } from "@shared/schema";
@@ -993,8 +993,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Dice roll endpoint
   app.post("/api/dice/roll", requireAuth, async (req: any, res) => {
     try {
-      const { die, count = 1, modifier = 0, advantageState = "normal", label } = req.body;
-      if (!die) return res.status(400).json({ error: "die required" });
+      const { die: rawDie, count: rawCount = 1, modifier: rawMod = 0, advantageState = "normal", label } = req.body;
+      if (!rawDie) return res.status(400).json({ error: "die required" });
+      const parsed = parseDieString(String(rawDie));
+      const die = parsed.die;
+      const count = parsed.count || rawCount;
+      const modifier = (parsed.modifier || 0) + (rawMod || 0);
       const result = rollDice(die, count, modifier, advantageState, label);
       res.json(result);
     } catch (e) { res.status(500).json({ error: "Roll failed" }); }

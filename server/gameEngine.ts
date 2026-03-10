@@ -25,6 +25,15 @@ function dieSides(die: Die): number {
   return map[die];
 }
 
+export function parseDieString(raw: string): { die: Die; count: number; modifier: number } {
+  const m = raw.match(/^(\d+)?d(\d+)([+-]\d+)?$/i);
+  if (!m) return { die: (raw as Die) || "d20", count: 1, modifier: 0 };
+  const count = m[1] ? parseInt(m[1]) : 1;
+  const die = `d${m[2]}` as Die;
+  const modifier = m[3] ? parseInt(m[3]) : 0;
+  return { die, count, modifier };
+}
+
 export function rollDice(
   die: Die,
   count: number,

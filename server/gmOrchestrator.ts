@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { db } from "./db";
-import { chatMessages, gameEvents, worldState, sceneSummaries, characters, parties, campaigns, partyMembers, arcs, locationScenes, characterSituations, npcLog } from "@shared/schema";
+import { chatMessages, gameEvents, worldState, sceneSummaries, characters, parties, campaigns, partyMembers, arcs, locationScenes, characterSituations, npcLog, locationMaps } from "@shared/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { rollDice, enforceHandLimits } from "./gameEngine";
 
@@ -422,6 +422,106 @@ export async function generateRegionMap(partyId: string, campaignSetting: string
   } finally {
     _mapGenInFlight.delete(partyId);
   }
+}
+
+const _locationMapGenInFlight = new Set<string>();
+
+export async function generateLocationMap(
+  partyId: string,
+  locationName: string,
+  locationType: string,
+  campaignSetting: string,
+  locationContext?: string,
+): Promise<void> {
+  const flightKey = `${partyId}:${locationName}`;
+  if (_locationMapGenInFlight.has(flightKey)) return;
+
+  const [existing] = await db.select({ id: locationMaps.id })
+    .from(locationMaps)
+    .where(and(eq(locationMaps.partyId, partyId), eq(locationMaps.locationName, locationName)));
+  if (existing) return;
+
+  _locationMapGenInFlight.add(flightKey);
+  try {
+    const { GoogleGenAI, Modality } = await import("@google/genai");
+    const ai = new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+      httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+    });
+
+    const settingDesc = campaignSetting?.slice(0, 200) || "a classic high-fantasy realm";
+    const ctx = locationContext?.slice(0, 300) || "";
+
+    const typePrompts: Record<string, string> = {
+      town: `Top-down bird's eye view detailed town map of "${locationName}" in ${settingDesc}. Show streets, buildings as small rectangular shapes, a central market square, tavern, gates, walls if fortified. Small gardens, wells, and alleys. Include a town gate entrance.`,
+      dungeon: `Top-down dungeon floor plan map of "${locationName}" in ${settingDesc}. Show interconnected chambers, corridors, dead ends, secret passages, a main entrance, treasure rooms, and trap-marked areas. Stone walls, archways, and varied room sizes.`,
+      crypt: `Top-down crypt/catacomb map of "${locationName}" in ${settingDesc}. Show burial chambers, narrow passages, altar rooms, collapsed sections, sarcophagi markers, and a central tomb. Dark stone architecture with cobwebs suggested.`,
+      cave: `Top-down cave system map of "${locationName}" in ${settingDesc}. Show natural cavern chambers connected by narrow tunnels, underground pools, stalactite formations, branching paths, and a main entrance.`,
+      castle: `Top-down castle/fortress floor plan of "${locationName}" in ${settingDesc}. Show a keep, great hall, towers, courtyard, barracks, dungeon level, and defensive walls with gates.`,
+      forest: `Top-down bird's eye view forest clearing map of "${locationName}" in ${settingDesc}. Show dense tree coverage with clearings, paths, a stream, fallen logs, and points of interest like ruins or camps.`,
+      generic: `Top-down bird's eye view detailed area map of "${locationName}" in ${settingDesc}. Show the layout with notable features, paths, structures, and terrain.`,
+    };
+
+    const basePrompt = typePrompts[locationType] || typePrompts.generic;
+    const prompt = `${basePrompt}${ctx ? ` Context: ${ctx}.` : ""} Parchment and ink cartography style with aged paper texture. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, dark grey for walls, dusty blue for water. Square aspect ratio. Clear room/area boundaries. ${STYLE_PROMPT}`;
+
+    let imageData: string | null = null;
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-pro-image-preview",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+      });
+      const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+      if (imagePart?.inlineData?.data) {
+        const mimeType = imagePart.inlineData.mimeType || "image/png";
+        imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+      }
+    } catch (geminiErr: any) {
+      if (geminiErr?.status === 429) {
+        console.log("[GM] Location map gen: rate-limited, retrying simple...");
+        const ai2 = new GoogleGenAI({
+          apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+          httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+        });
+        const simple = `Top-down ${locationType} map. Parchment ink style. NO TEXT NO LABELS. Muted earth tones. Square.`;
+        const response = await ai2.models.generateContent({
+          model: "gemini-3-pro-image-preview",
+          contents: [{ role: "user", parts: [{ text: simple }] }],
+          config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
+        });
+        const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
+        if (imagePart?.inlineData?.data) {
+          const mimeType = imagePart.inlineData.mimeType || "image/png";
+          imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
+        }
+      } else {
+        throw geminiErr;
+      }
+    }
+
+    if (imageData) {
+      await db.insert(locationMaps).values({
+        partyId,
+        locationName,
+        locationType,
+        mapImageData: imageData,
+        pointsOfInterest: [],
+      }).onConflictDoUpdate({
+        target: [locationMaps.partyId, locationMaps.locationName],
+        set: { mapImageData: imageData, locationType },
+      });
+      console.log(`[GM] Location map generated for "${locationName}" (party ${partyId})`);
+    }
+  } catch (e) {
+    console.error(`[GM] Location map generation failed for "${locationName}":`, e);
+  } finally {
+    _locationMapGenInFlight.delete(flightKey);
+  }
+}
+
+export function isLocationMapGenerating(partyId: string, locationName: string): boolean {
+  return _locationMapGenInFlight.has(`${partyId}:${locationName}`);
 }
 
 export function assignAllLocationCoords(

@@ -226,6 +226,24 @@ export const insertFriendshipSchema = createInsertSchema(friendships).omit({ id:
 export type InsertFriendship = z.infer<typeof insertFriendshipSchema>;
 export type Friendship = typeof friendships.$inferSelect;
 
+// ─── Location Maps (dungeon/town/delve maps saved per location) ──────────────
+
+export const locationMaps = pgTable("location_maps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partyId: varchar("party_id").notNull(),
+  locationName: text("location_name").notNull(),
+  locationType: text("location_type").notNull().default("generic"),
+  mapImageData: text("map_image_data").notNull(),
+  pointsOfInterest: jsonb("points_of_interest").notNull().default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at").default(sql`NOW()`).notNull(),
+}, (t) => [
+  uniqueIndex("location_maps_party_location_idx").on(t.partyId, t.locationName),
+]);
+
+export const insertLocationMapSchema = createInsertSchema(locationMaps).omit({ id: true, createdAt: true });
+export type InsertLocationMap = z.infer<typeof insertLocationMapSchema>;
+export type LocationMap = typeof locationMaps.$inferSelect;
+
 // ─── Arcs ─────────────────────────────────────────────────────────────────────
 
 export const arcs = pgTable("arcs", {

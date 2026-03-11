@@ -13,10 +13,11 @@ import {
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
   Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy,
-  Download, Share2, Maximize2, Minimize2, List, Map as MapIcon, RefreshCw,
+  Download, Share2, Maximize2, Minimize2, List, Map as MapIcon, RefreshCw, Loader2,
   ClipboardList, AlertTriangle, Clock, Target
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import WorldMap from "@/components/WorldMap";
 
 interface GameSessionPageProps {
@@ -289,6 +290,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set());
   const [mapViewMode, setMapViewMode] = useState<"map" | "list">("map");
   const [mapFullscreen, setMapFullscreen] = useState(false);
+  const [viewingLocationMap, setViewingLocationMap] = useState<string | null>(null);
   const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
   const [shopData, setShopData] = useState<ShopData | null>(null);
   const [noticeBoardData, setNoticeBoardData] = useState<NoticeBoardData | null>(null);
@@ -343,6 +345,26 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     },
     refetchInterval: (query) => (query.state.data as any)?.generating ? 5000 : 30000,
     enabled: (sidebarTab === "map" || mapFullscreen) && !!partyId,
+  });
+
+  const { data: locationMapData, isLoading: isLoadingLocationMap } = useQuery<any>({
+    queryKey: [`/api/parties/${partyId}/location-maps`, viewingLocationMap],
+    queryFn: async () => {
+      if (!viewingLocationMap) return null;
+      const res = await fetch(`/api/parties/${partyId}/location-maps/${encodeURIComponent(viewingLocationMap)}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!viewingLocationMap && !!partyId,
+    refetchInterval: (query) => {
+      const d = query.state.data;
+      return d?.generating ? 4000 : false;
+    },
+  });
+
+  const { data: savedLocationMaps } = useQuery<any[]>({
+    queryKey: [`/api/parties/${partyId}/location-maps`],
+    enabled: sidebarTab === "map" && !!partyId,
   });
 
   const handleRegenerateMap = useCallback(() => {
@@ -2022,7 +2044,30 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                                       <Skull className="w-2.5 h-2.5 flex-shrink-0 mt-0.5" /> <span className="break-words">{loc.threat}</span>
                                                     </p>
                                                   )}
-                                                  <p className="text-xs text-muted-foreground/40 mt-1 ml-[18px]">Turn {loc.firstVisitedTurn}</p>
+                                                  <div className="flex items-center gap-2 mt-1 ml-[18px]">
+                                                    <p className="text-xs text-muted-foreground/40">Turn {loc.firstVisitedTurn}</p>
+                                                    {savedLocationMaps?.some((m: any) => m.locationName === loc.name) ? (
+                                                      <button
+                                                        onClick={() => setViewingLocationMap(loc.name)}
+                                                        className="text-[10px] text-primary/70 hover:text-primary flex items-center gap-0.5 transition-colors"
+                                                        data-testid={`view-location-map-${loc.name}`}
+                                                      >
+                                                        <MapIcon className="w-2.5 h-2.5" /> Map
+                                                      </button>
+                                                    ) : (
+                                                      <button
+                                                        onClick={async () => {
+                                                          await apiRequest("POST", `/api/parties/${partyId}/location-maps/${encodeURIComponent(loc.name)}/generate`);
+                                                          queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/location-maps`] });
+                                                          setViewingLocationMap(loc.name);
+                                                        }}
+                                                        className="text-[10px] text-muted-foreground/50 hover:text-primary flex items-center gap-0.5 transition-colors"
+                                                        data-testid={`generate-location-map-${loc.name}`}
+                                                      >
+                                                        <MapIcon className="w-2.5 h-2.5" /> Map
+                                                      </button>
+                                                    )}
+                                                  </div>
                                                 </div>
                                               );
                                             })}
@@ -3091,6 +3136,91 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           </div>
         );
       })()}
+
+      {viewingLocationMap && (
+        <div className="fixed inset-0 z-[91] bg-background/95 backdrop-blur-sm flex flex-col" data-testid="overlay-location-map">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+            <p className="text-sm font-sans font-semibold tracking-wide flex items-center gap-2 min-w-0">
+              <MapIcon className="w-4 h-4 text-primary flex-shrink-0" />
+              <span className="truncate">{viewingLocationMap}</span>
+            </p>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  try {
+                    await apiRequest("DELETE", `/api/parties/${partyId}/location-maps/${encodeURIComponent(viewingLocationMap)}`);
+                  } catch {}
+                  await apiRequest("POST", `/api/parties/${partyId}/location-maps/${encodeURIComponent(viewingLocationMap)}/generate`);
+                  queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/location-maps`, viewingLocationMap] });
+                  queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/location-maps`] });
+                }}
+                className="h-8 w-8 p-0"
+                data-testid="regenerate-location-map"
+                title="Regenerate map"
+                disabled={locationMapData?.generating}
+              >
+                <RefreshCw className={`w-4 h-4 ${locationMapData?.generating ? "animate-spin" : ""}`} />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setViewingLocationMap(null)}
+                data-testid="close-location-map"
+                className="h-8 w-8 p-0"
+              >
+                <Minimize2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0 flex items-center justify-center p-4">
+            {isLoadingLocationMap ? (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-8 h-8 animate-spin text-primary/50" />
+                <p className="text-sm font-sans">Loading map...</p>
+              </div>
+            ) : locationMapData?.generating && !locationMapData?.mapImage ? (
+              <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                <Loader2 className="w-10 h-10 animate-spin text-primary/50" />
+                <p className="text-sm font-sans font-semibold">Generating map for {viewingLocationMap}...</p>
+                <p className="text-xs text-muted-foreground/60">This may take a moment</p>
+              </div>
+            ) : locationMapData?.mapImage ? (
+              <img
+                src={locationMapData.mapImage}
+                alt={`Map of ${viewingLocationMap}`}
+                className="max-w-full max-h-full object-contain rounded-lg border border-border shadow-lg"
+                data-testid="location-map-image"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                <MapIcon className="w-8 h-8 text-muted-foreground/30" />
+                <p className="text-sm font-sans">No map generated yet</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    await apiRequest("POST", `/api/parties/${partyId}/location-maps/${encodeURIComponent(viewingLocationMap)}/generate`);
+                    queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/location-maps`, viewingLocationMap] });
+                    queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/location-maps`] });
+                  }}
+                  data-testid="generate-location-map-button"
+                >
+                  Generate Map
+                </Button>
+              </div>
+            )}
+          </div>
+          {locationMapData?.locationType && (
+            <div className="px-4 py-2 border-t border-border flex-shrink-0">
+              <p className="text-[10px] text-muted-foreground text-center font-sans uppercase tracking-widest">
+                {locationMapData.locationType} map
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {mapFullscreen && (
         <div className="fixed inset-0 z-[90] bg-background/95 backdrop-blur-sm flex flex-col" data-testid="overlay-map-fullscreen">

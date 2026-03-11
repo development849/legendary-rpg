@@ -465,6 +465,7 @@ export default function WorldMap({ mapImage, locations, generating, isLoading, e
     if (!canvas || !container) return;
 
     const rect = container.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;

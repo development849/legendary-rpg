@@ -14,13 +14,26 @@ import {
   getFriends, getPendingRequests, getSentRequests, searchUsers,
 } from "./storage";
 import { rollDice, parseDieString, enforceHandLimits } from "./gameEngine";
-import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
+import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, generateLocationMap, isLocationMapGenerating, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
 import { db } from "./db";
-import { characters, characters as charsTable, locationScenes, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs } from "@shared/schema";
+import { characters, characters as charsTable, locationScenes, locationMaps, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 // WebSocket connections per party
 const partyConnections = new Map<string, Set<WebSocket>>();
+
+function detectLocationType(name: string): string {
+  const n = name.toLowerCase();
+  if (/crypt|tomb|catacomb|mausoleum/.test(n)) return "crypt";
+  if (/dungeon|lair|stronghold/.test(n)) return "dungeon";
+  if (/cave|cavern|grotto|mine|quarry/.test(n)) return "cave";
+  if (/castle|fortress|citadel|keep|tower/.test(n)) return "castle";
+  if (/town|city|village|hamlet|market|gate|district/.test(n)) return "town";
+  if (/forest|wood|grove|thicket|wilder/.test(n)) return "forest";
+  if (/temple|shrine|sanctuary|chapel/.test(n)) return "dungeon";
+  if (/ruin|ancient|abandoned/.test(n)) return "dungeon";
+  return "generic";
+}
 
 function broadcastToParty(partyId: string, data: any) {
   const connections = partyConnections.get(partyId);
@@ -690,6 +703,113 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) {
       console.error("Map API error:", e);
       res.status(500).json({ error: "Failed to fetch map data" });
+    }
+  });
+
+  app.get("/api/parties/:id/location-maps", requireAuth, async (req: any, res) => {
+    try {
+      const partyId = req.params.id;
+      const userId = getUserId(req)!;
+      const members = await getPartyMembers(partyId);
+      if (!members.some((m: any) => m.userId === userId)) {
+        return res.status(403).json({ error: "Not a member of this party" });
+      }
+      const rows = await db.select({
+        id: locationMaps.id,
+        locationName: locationMaps.locationName,
+        locationType: locationMaps.locationType,
+        createdAt: locationMaps.createdAt,
+      }).from(locationMaps).where(eq(locationMaps.partyId, partyId));
+      res.json(rows);
+    } catch (e) {
+      console.error("Location maps list error:", e);
+      res.status(500).json({ error: "Failed to fetch location maps" });
+    }
+  });
+
+  app.get("/api/parties/:id/location-maps/:locationName", requireAuth, async (req: any, res) => {
+    try {
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+      const partyId = req.params.id;
+      const locationName = decodeURIComponent(req.params.locationName);
+      const userId = getUserId(req)!;
+      const members = await getPartyMembers(partyId);
+      if (!members.some((m: any) => m.userId === userId)) {
+        return res.status(403).json({ error: "Not a member of this party" });
+      }
+
+      const [row] = await db.select()
+        .from(locationMaps)
+        .where(and(eq(locationMaps.partyId, partyId), eq(locationMaps.locationName, locationName)));
+
+      if (row) {
+        return res.json({
+          mapImage: row.mapImageData,
+          locationType: row.locationType,
+          pointsOfInterest: row.pointsOfInterest,
+          generating: false,
+        });
+      }
+
+      const generating = isLocationMapGenerating(partyId, locationName);
+      res.json({ mapImage: null, locationType: null, pointsOfInterest: [], generating });
+    } catch (e) {
+      console.error("Location map fetch error:", e);
+      res.status(500).json({ error: "Failed to fetch location map" });
+    }
+  });
+
+  app.post("/api/parties/:id/location-maps/:locationName/generate", requireAuth, async (req: any, res) => {
+    try {
+      const partyId = req.params.id;
+      const locationName = decodeURIComponent(req.params.locationName);
+      const userId = getUserId(req)!;
+      const members = await getPartyMembers(partyId);
+      if (!members.some((m: any) => m.userId === userId)) {
+        return res.status(403).json({ error: "Not a member of this party" });
+      }
+
+      const [existing] = await db.select({ id: locationMaps.id })
+        .from(locationMaps)
+        .where(and(eq(locationMaps.partyId, partyId), eq(locationMaps.locationName, locationName)));
+      if (existing) {
+        return res.json({ status: "exists" });
+      }
+
+      const locationType = detectLocationType(locationName);
+
+      const party = await getParty(partyId);
+      const campaign = party ? await getCampaign(party.campaignId) : null;
+      const setting = [(campaign as any)?.setting ?? "", (campaign as any)?.description ?? ""].join(" ").trim();
+
+      const worldSnap = await getWorldState(partyId);
+      const state = (worldSnap?.state as any) ?? {};
+      const locData = (state.locations ?? []).find((l: any) => l.name === locationName);
+      const context = locData?.title || "";
+
+      generateLocationMap(partyId, locationName, locationType, setting, context).catch(console.error);
+      res.json({ status: "generating" });
+    } catch (e) {
+      console.error("Location map generate error:", e);
+      res.status(500).json({ error: "Failed to generate location map" });
+    }
+  });
+
+  app.delete("/api/parties/:id/location-maps/:locationName", requireAuth, async (req: any, res) => {
+    try {
+      const partyId = req.params.id;
+      const locationName = decodeURIComponent(req.params.locationName);
+      const userId = getUserId(req)!;
+      const members = await getPartyMembers(partyId);
+      if (!members.some((m: any) => m.userId === userId)) {
+        return res.status(403).json({ error: "Not a member of this party" });
+      }
+      await db.delete(locationMaps)
+        .where(and(eq(locationMaps.partyId, partyId), eq(locationMaps.locationName, locationName)));
+      res.json({ status: "deleted" });
+    } catch (e) {
+      console.error("Location map delete error:", e);
+      res.status(500).json({ error: "Failed to delete location map" });
     }
   });
 

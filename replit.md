@@ -35,3 +35,10 @@ The application is built with a TypeScript, React, Express, PostgreSQL stack, ut
 - **TanStack Query:** Data fetching and caching for the frontend.
 - **Passport.js:** Authentication middleware.
 - **bcrypt:** For password hashing.
+
+## Admin Panel
+- **Route:** `/admin` (frontend) with `/api/admin/*` backend routes
+- **Files:** `server/adminRoutes.ts` (backend), `client/src/pages/admin.tsx` (frontend)
+- **Access Control:** Requires Replit OAuth login (local auth accounts are blocked). Admin email(s) configured via `ADMIN_EMAILS` env var (comma-separated).
+- **Features:** Dashboard with user/character/campaign/party stats, paginated database table browser with sensitive column redaction, read-only SQL query console (SELECT only, 10s timeout, keyword blacklist).
+- **Security:** `requireAdmin` middleware checks auth provider + email allowlist. Password hashes are redacted in all views. SQL queries restricted to SELECT with statement timeout and multi-statement blocking.

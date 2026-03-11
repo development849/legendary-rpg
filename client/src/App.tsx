@@ -14,6 +14,7 @@ import GameSessionPage from "@/pages/game-session";
 import CharacterSheetPage from "@/pages/character-sheet";
 import LobbyPage from "@/pages/lobby";
 import AppearanceEditorPage from "@/pages/appearance-editor";
+import AdminPage from "@/pages/admin";
 import logoPath from "@assets/legendary-logo-transparent.png";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -90,6 +91,7 @@ function Router() {
       <Route path="/campaigns/new" component={() => <ProtectedRoute component={CreateCampaignPage} />} />
       <Route path="/lobby/:partyId" component={({ params }: any) => <ProtectedRoute component={LobbyPage} partyId={params.partyId} />} />
       <Route path="/play/:partyId" component={({ params }: any) => <ProtectedRoute component={GameSessionPage} partyId={params.partyId} />} />
+      <Route path="/admin" component={() => <ProtectedRoute component={AdminPage} />} />
       <Route component={() => <Redirect to="/" />} />
     </Switch>
   );

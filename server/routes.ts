@@ -15,6 +15,7 @@ import {
 } from "./storage";
 import { rollDice, parseDieString, enforceHandLimits } from "./gameEngine";
 import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, generateLocationMap, isLocationMapGenerating, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
+import { registerAdminRoutes } from "./adminRoutes";
 import { db } from "./db";
 import { characters, characters as charsTable, locationScenes, locationMaps, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -53,6 +54,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Auth — Local email/password
   setupLocalAuth(app);
   registerLocalAuthRoutes(app);
+
+  // Admin panel routes
+  registerAdminRoutes(app);
 
   // Unified /api/auth/user — works for both local and Replit auth
   app.get("/api/auth/user", requireAuth, async (req: any, res) => {

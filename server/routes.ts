@@ -494,7 +494,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!campaign) return res.status(404).json({ error: "Not found" });
       if (campaign.ownerId !== userId) return res.status(403).json({ error: "Forbidden" });
 
-      const { contentRating, noRomance, noHorror, fadeToBlack, gmMode, themes } = req.body;
+      const { contentRating, noRomance, noHorror, fadeToBlack, gmMode, themes, npcControl } = req.body;
       const updates: any = {};
       if (contentRating !== undefined) updates.contentRating = contentRating;
       if (noRomance !== undefined) updates.noRomance = noRomance;
@@ -502,6 +502,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (fadeToBlack !== undefined) updates.fadeToBlack = fadeToBlack;
       if (gmMode !== undefined) updates.gmMode = gmMode;
       if (themes !== undefined) updates.themes = themes;
+      if (npcControl !== undefined && (npcControl === "gm" || npcControl === "player")) updates.npcControl = npcControl;
 
       const updated = await updateCampaign(req.params.id, updates);
       res.json(updated);

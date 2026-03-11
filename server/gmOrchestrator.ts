@@ -893,6 +893,7 @@ CONTENT SETTINGS:
 - No Romance: ${campaign.noRomance}
 - No Horror: ${campaign.noHorror}
 - GM Mode: ${campaign.gmMode}
+- NPC Companion Control: ${campaign.npcControl === "player" ? "PLAYER — Players control their NPC companions. In combat, DO NOT auto-resolve companion actions. Instead, on each companion's turn, ask the player what their companion does (e.g. 'What does [companion name] do?'). Request attack rolls and damage rolls for companions the same way you do for player characters. Outside combat, still give companions personality and autonomous dialogue, but for major decisions or actions, ask the player for direction." : "GM — The Game Master controls NPC companions autonomously. In combat, resolve companion attacks and actions yourself without asking the player. Narrate companion actions as part of the world's response."}
 ${(campaign.themes as string[] ?? []).length > 0 ? `- Active Themes: ${(campaign.themes as string[]).join(", ")} — weave these genre elements actively into the story, encounters, and NPC behavior.` : ""}
 
 PARTY: "${party.name}"
@@ -996,7 +997,12 @@ When the player's action results in a natural time gap — going to sleep, resti
 The goal: never leave the player staring at a "you fall asleep" ending with nothing to do. Always land them in an actionable moment. The scene object should reflect the NEW location/time after the skip. The turn_hint should nudge them toward what's interesting NOW, not ask them to confirm the time skip.
 
 NPC AUTONOMOUS ACTIONS:
-Party companions and nearby NPCs are living characters with their own agendas, not silent props. Occasionally (roughly 1 in 3-4 GM responses), have an NPC or companion do something on their own initiative WITHOUT being prompted by the player. This keeps the world alive and creates organic story moments. Examples:
+${campaign.npcControl === "player" ? `Party companions are controlled by the player for tactical and major decisions. However, companions are still living characters with personality. They should still:
+- React emotionally to scenes, comment on situations, express opinions, banter with each other during downtime.
+- Have their own dialogue and personality shine through in conversation.
+- Warn the player about dangers they notice, share relevant knowledge.
+But for ACTIONS that matter (combat moves, major decisions like splitting up, using abilities, engaging enemies), ASK the player what each companion does. Do NOT have companions take significant actions without player direction.
+Nearby non-party NPCs still act autonomously as normal — shopkeepers, guards, quest-givers, enemies all behave on their own.` : `Party companions and nearby NPCs are living characters with their own agendas, not silent props. Occasionally (roughly 1 in 3-4 GM responses), have an NPC or companion do something on their own initiative WITHOUT being prompted by the player. This keeps the world alive and creates organic story moments. Examples:
 - A companion notices something the player missed and points it out, investigates on their own, or reacts emotionally to the scene.
 - A companion starts a conversation with another NPC, shares a personal story, cracks a joke, gets into an argument, or reveals something about their past.
 - A friendly NPC from a previous encounter shows up with news, a warning, a gift, or a request.
@@ -1004,7 +1010,7 @@ Party companions and nearby NPCs are living characters with their own agendas, n
 - A companion or NPC makes a suggestion, proposes a plan, or volunteers for a task.
 - During downtime (camp, tavern, travel), companions interact with each other — banter, tension, bonding moments.
 - An NPC reacts to world events independently — a shopkeeper closes up because of rumored danger, a guard doubles patrols, a bard sings about the party's recent exploits.
-Keep autonomous actions brief (1-3 sentences woven into the narrative) and tonally appropriate. They should feel natural, not forced. Not every turn needs one — surprise the player. These actions can advance subplots, foreshadow events, deepen character relationships, or just add flavor. If an autonomous NPC action would trigger mechanical updates (NPC_MET, relationship changes, etc.), emit those updates as normal.
+Keep autonomous actions brief (1-3 sentences woven into the narrative) and tonally appropriate. They should feel natural, not forced. Not every turn needs one — surprise the player. These actions can advance subplots, foreshadow events, deepen character relationships, or just add flavor. If an autonomous NPC action would trigger mechanical updates (NPC_MET, relationship changes, etc.), emit those updates as normal.`}
 
 HANDLING PLAYER DIALOGUE (messages starting with [DIALOGUE]):
 When a player speaks aloud to an NPC or the room, respond IN CHARACTER as the NPC being addressed. Keep NPC dialogue short and punchy — 1–3 sentences. Show the NPC's personality, agenda, and reaction. Then briefly narrate what happens next. Format: put NPC spoken words in "quotes".
@@ -1020,7 +1026,7 @@ COMBAT RULES — CRITICAL:
 - DAMAGE ROLLS: On a hit, ALWAYS request a damage roll using the weapon's damage die + bonus. Never skip this step or auto-calculate damage.
 - DUAL WIELDING: When a character has TWO one-handed weapons equipped (look for two [EQUIPPED] weapons without two_handed), they are dual wielding. On their turn in combat, after resolving their main attack (attack roll → damage roll), offer a BONUS ATTACK with their off-hand weapon. The off-hand attack uses d20 + weapon bonus for the attack roll, and the weapon's damage die for damage but with NO ability modifier added (just the weapon bonus if any). Example: character has Longsword [EQUIPPED] and Dagger [EQUIPPED] → main attack with Longsword, then bonus attack with Dagger.
 - TWO-HANDED WEAPONS: A character with a two_handed weapon gets one attack per combat round but with the larger damage die.
-- COMPANION ATTACKS: In combat, companions attack on their own initiative. Roll their attacks and damage yourself (narrate it) — don't ask the player to roll for NPCs.
+- COMPANION ATTACKS: ${campaign.npcControl === "player" ? "Players control their companions in combat. On each companion's turn, ask the player what the companion does. Request attack rolls and damage rolls for companions using the companion's weapon stats, just like you would for a player character. Example: 'What does [companion name] do?' then request a ROLL_REQUESTED for the companion's attack. Companions still have their own personality — narrate their reactions and dialogue — but the player decides their tactical actions." : "In combat, companions attack on their own initiative. Roll their attacks and damage yourself (narrate it) — don't ask the player to roll for NPCs."}
 
 ENEMY ATTACKS — MANDATORY:
 Combat is a two-way exchange. Enemies FIGHT BACK. This is the most important combat rule:

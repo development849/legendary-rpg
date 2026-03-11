@@ -185,6 +185,7 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
   const [rating, setRating] = useState(campaign.contentRating ?? "pg13");
   const [noRomance, setNoRomance] = useState(campaign.noRomance ?? false);
   const [noHorror, setNoHorror] = useState(campaign.noHorror ?? false);
+  const [npcControl, setNpcControl] = useState(campaign.npcControl ?? "gm");
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -193,10 +194,10 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
       const res = await fetch(`/api/campaigns/${campaign.id}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentRating: rating, noRomance, noHorror }),
+        body: JSON.stringify({ contentRating: rating, noRomance, noHorror, npcControl }),
       });
       if (!res.ok) throw new Error("Failed to save");
-      toast({ title: "Settings updated", description: "Content settings will apply from the next GM response.", variant: "success" as any });
+      toast({ title: "Settings updated", description: "Settings will apply from the next GM response.", variant: "success" as any });
       onSaved();
     } catch {
       toast({ title: "Save failed", variant: "destructive" });
@@ -210,31 +211,61 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
     { key: "noHorror", label: "No Horror", desc: "Avoid disturbing content", value: noHorror, set: setNoHorror },
   ];
 
+  const NPC_CONTROL_OPTIONS = [
+    { id: "gm", label: "GM Controls", desc: "The Game Master decides companion actions in combat and exploration. NPCs act autonomously." },
+    { id: "player", label: "Player Controls", desc: "Players direct their companions' actions. The GM will ask what each companion does on their turn." },
+  ];
+
   return (
     <div className="border-b border-border bg-card/95 backdrop-blur-sm px-4 py-4 space-y-4 z-30 relative">
       <div className="flex items-center justify-between">
         <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
-          <Shield className="w-3.5 h-3.5 text-primary" /> Content Settings
+          <Shield className="w-3.5 h-3.5 text-primary" /> Campaign Settings
         </p>
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose} data-testid="button-close-settings">
           <X className="w-3.5 h-3.5" />
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        {CONTENT_RATINGS.map(r => (
-          <button
-            key={r.id}
-            onClick={() => setRating(r.id)}
-            data-testid={`button-rating-${r.id}`}
-            className={`p-3 rounded-md border text-left transition-all ${
-              rating === r.id ? "border-primary bg-primary/10" : "border-border bg-secondary/30 hover:bg-secondary/50"
-            }`}
-          >
-            <p className={`font-sans font-semibold text-xs tracking-wide ${rating === r.id ? "text-primary" : ""}`}>{r.label}</p>
-            <p className="text-muted-foreground text-[10px] font-serif mt-0.5 leading-snug">{r.desc}</p>
-          </button>
-        ))}
+      <div>
+        <p className="text-[10px] font-sans tracking-widest text-muted-foreground uppercase mb-1.5">Content Rating</p>
+        <div className="grid grid-cols-3 gap-2">
+          {CONTENT_RATINGS.map(r => (
+            <button
+              key={r.id}
+              onClick={() => setRating(r.id)}
+              data-testid={`button-rating-${r.id}`}
+              className={`p-3 rounded-md border text-left transition-all ${
+                rating === r.id ? "border-primary bg-primary/10" : "border-border bg-secondary/30 hover:bg-secondary/50"
+              }`}
+            >
+              <p className={`font-sans font-semibold text-xs tracking-wide ${rating === r.id ? "text-primary" : ""}`}>{r.label}</p>
+              <p className="text-muted-foreground text-[10px] font-serif mt-0.5 leading-snug">{r.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-sans tracking-widest text-muted-foreground uppercase mb-1.5">NPC Companion Control</p>
+        <div className="grid grid-cols-2 gap-2">
+          {NPC_CONTROL_OPTIONS.map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => setNpcControl(opt.id)}
+              data-testid={`button-npc-control-${opt.id}`}
+              className={`p-3 rounded-md border text-left transition-all ${
+                npcControl === opt.id ? "border-primary bg-primary/10" : "border-border bg-secondary/30 hover:bg-secondary/50"
+              }`}
+            >
+              <p className={`font-sans font-semibold text-xs tracking-wide flex items-center gap-1 ${npcControl === opt.id ? "text-primary" : ""}`}>
+                {opt.id === "gm" ? <Brain className="w-3 h-3" /> : <Users className="w-3 h-3" />}
+                {opt.label}
+              </p>
+              <p className="text-muted-foreground text-[10px] font-serif mt-0.5 leading-snug">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-x-6 gap-y-2">

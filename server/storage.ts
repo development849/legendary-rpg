@@ -80,6 +80,7 @@ export async function createCampaign(ownerId: string, data: {
   themes?: string[];
   contentRating?: string; noRomance?: boolean; noHorror?: boolean;
   fadeToBlack?: boolean; gmMode?: string; stylePack?: string;
+  npcControl?: string;
 }): Promise<Campaign> {
   const [campaign] = await db.insert(campaigns).values({
     ownerId,
@@ -93,6 +94,7 @@ export async function createCampaign(ownerId: string, data: {
     fadeToBlack: data.fadeToBlack,
     gmMode: data.gmMode,
     stylePack: data.stylePack,
+    npcControl: data.npcControl,
   }).returning();
   return campaign;
 }
@@ -102,7 +104,7 @@ export async function getCampaign(id: string): Promise<Campaign | undefined> {
   return campaign;
 }
 
-export async function updateCampaign(id: string, data: Partial<{ contentRating: string; noRomance: boolean; noHorror: boolean; fadeToBlack: boolean; gmMode: string; themes: string[] }>): Promise<Campaign | undefined> {
+export async function updateCampaign(id: string, data: Partial<{ contentRating: string; noRomance: boolean; noHorror: boolean; fadeToBlack: boolean; gmMode: string; themes: string[]; npcControl: string }>): Promise<Campaign | undefined> {
   const [updated] = await db.update(campaigns).set(data).where(eq(campaigns.id, id)).returning();
   return updated;
 }

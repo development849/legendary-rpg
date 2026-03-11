@@ -52,6 +52,7 @@ export const campaigns = pgTable("campaigns", {
   noHorror: boolean("no_horror").notNull().default(false),
   fadeToBlack: boolean("fade_to_black").notNull().default(true),
   gmMode: text("gm_mode").notNull().default("balanced"),
+  npcControl: text("npc_control").notNull().default("gm"),
   stylePack: text("style_pack").notNull().default("luminous_painterly_fantasy"),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").default(sql`NOW()`).notNull(),

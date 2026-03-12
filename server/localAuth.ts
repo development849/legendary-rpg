@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { Strategy as LocalStrategy } from "passport-local";
 import passport from "passport";
@@ -8,6 +9,30 @@ import { eq, or } from "drizzle-orm";
 import { z } from "zod";
 
 const SALT_ROUNDS = 12;
+
+const pendingTokens = new Map<string, { userId: string; email: string; expiresAt: number }>();
+const TOKEN_TTL_MS = 30_000;
+
+function createSessionToken(userId: string, email: string): string {
+  const token = crypto.randomBytes(32).toString("hex");
+  pendingTokens.set(token, { userId, email, expiresAt: Date.now() + TOKEN_TTL_MS });
+  return token;
+}
+
+function consumeSessionToken(token: string): { userId: string; email: string } | null {
+  const entry = pendingTokens.get(token);
+  if (!entry) return null;
+  pendingTokens.delete(token);
+  if (Date.now() > entry.expiresAt) return null;
+  return entry;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, entry] of pendingTokens) {
+    if (now > entry.expiresAt) pendingTokens.delete(token);
+  }
+}, 60_000);
 
 export const registerSchema = z.object({
   username: z.string()
@@ -105,19 +130,15 @@ export function registerLocalAuthRoutes(app: Express) {
         })
         .returning();
 
-      req.login({ id: newUser.id, email: newUser.email, provider: "local" }, (err) => {
-        if (err) return res.status(500).json({ error: "Login after registration failed." });
-        req.session.save((saveErr) => {
-          if (saveErr) return res.status(500).json({ error: "Session save error." });
-          res.status(201).json({
-            user: {
-              id: newUser.id,
-              email: newUser.email,
-              username: newUser.username,
-              firstName: newUser.firstName,
-            },
-          });
-        });
+      const sessionToken = createSessionToken(newUser.id, newUser.email);
+      res.status(201).json({
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          username: newUser.username,
+          firstName: newUser.firstName,
+        },
+        sessionToken,
       });
     } catch (err: any) {
       console.error("Registration error:", err);
@@ -138,28 +159,44 @@ export function registerLocalAuthRoutes(app: Express) {
       if (err) return res.status(500).json({ error: "Authentication error." });
       if (!user) return res.status(401).json({ error: info?.message ?? "Invalid credentials." });
 
-      req.login(user, (loginErr) => {
-        if (loginErr) return res.status(500).json({ error: "Session error." });
+      const sessionToken = createSessionToken(user.id, user.email);
 
-        req.session.save((saveErr) => {
-          if (saveErr) return res.status(500).json({ error: "Session save error." });
-
-          db.select().from(users).where(eq(users.id, user.id))
-            .then(([dbUser]) => {
-              if (!dbUser) return res.status(500).json({ error: "User not found after login." });
-              res.json({
-                user: {
-                  id: dbUser.id,
-                  email: dbUser.email,
-                  username: dbUser.username,
-                  firstName: dbUser.firstName,
-                },
-              });
-            })
-            .catch(() => res.status(500).json({ error: "Failed to fetch user data." }));
-        });
-      });
+      db.select().from(users).where(eq(users.id, user.id))
+        .then(([dbUser]) => {
+          if (!dbUser) return res.status(500).json({ error: "User not found." });
+          res.json({
+            user: {
+              id: dbUser.id,
+              email: dbUser.email,
+              username: dbUser.username,
+              firstName: dbUser.firstName,
+            },
+            sessionToken,
+          });
+        })
+        .catch(() => res.status(500).json({ error: "Failed to fetch user data." }));
     })(req, res, next);
+  });
+
+  app.get("/api/auth/establish-session", (req, res) => {
+    const token = req.query.token as string;
+    const redirect = (req.query.redirect as string) || "/dashboard";
+
+    if (!token) return res.redirect("/auth?error=missing_token");
+
+    const entry = consumeSessionToken(token);
+    if (!entry) return res.redirect("/auth?error=invalid_token");
+
+    const safeRedirect = redirect.startsWith("/") ? redirect : "/dashboard";
+
+    req.login({ id: entry.userId, email: entry.email, provider: "local" }, (loginErr) => {
+      if (loginErr) return res.redirect("/auth?error=session_failed");
+
+      req.session.save((saveErr) => {
+        if (saveErr) return res.redirect("/auth?error=session_failed");
+        res.redirect(safeRedirect);
+      });
+    });
   });
 
   app.post("/api/auth/logout-local", (req, res) => {

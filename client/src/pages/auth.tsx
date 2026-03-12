@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, Scroll, Users, Sparkles, CheckCircle2, Sword } from "lucide-react";
 import logoPath from "@assets/legendary-logo-transparent.png";
 
@@ -85,7 +84,6 @@ export default function AuthPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const registerForm = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -98,21 +96,6 @@ export default function AuthPage() {
   });
 
   const watchPassword = registerForm.watch("password");
-
-  async function verifySession(): Promise<any | null> {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        if (attempt > 0) await new Promise(r => setTimeout(r, 400 * attempt));
-        const check = await fetch("/api/auth/user", { credentials: "include" });
-        if (check.ok) {
-          const verified = await check.json();
-          queryClient.setQueryData(["/api/auth/user"], verified);
-          return verified;
-        }
-      } catch {}
-    }
-    return null;
-  }
 
   async function onRegister(data: RegisterForm) {
     try {
@@ -140,13 +123,12 @@ export default function AuthPage() {
         return;
       }
 
-      const verified = await verifySession();
-      if (!verified) {
-        toast({ title: "Session error", description: "Account created but session could not be established. Please sign in.", variant: "destructive" });
+      if (body.sessionToken) {
+        window.location.href = `/api/auth/establish-session?token=${encodeURIComponent(body.sessionToken)}&redirect=/dashboard`;
         return;
       }
-      toast({ title: "Welcome to Legendary℠!", description: `Your account has been created, ${data.displayName}.`, variant: "success" as any });
-      navigate("/dashboard");
+
+      toast({ title: "Session error", description: "Account created but session could not be established. Please sign in.", variant: "destructive" });
     } catch {
       toast({ title: "Network error", description: "Could not connect. Please try again.", variant: "destructive" });
     }
@@ -168,13 +150,12 @@ export default function AuthPage() {
         return;
       }
 
-      const verified = await verifySession();
-      if (!verified) {
-        toast({ title: "Session error", description: "Signed in but session could not be established. Please try again.", variant: "destructive" });
+      if (body.sessionToken) {
+        window.location.href = `/api/auth/establish-session?token=${encodeURIComponent(body.sessionToken)}&redirect=/dashboard`;
         return;
       }
-      toast({ title: "Welcome back!", description: `Signed in as ${body.user.firstName || body.user.username}.`, variant: "success" as any });
-      navigate("/dashboard");
+
+      toast({ title: "Session error", description: "Signed in but session could not be established. Please try again.", variant: "destructive" });
     } catch {
       toast({ title: "Network error", description: "Could not connect. Please try again.", variant: "destructive" });
     }

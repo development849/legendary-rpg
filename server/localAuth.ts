@@ -107,13 +107,16 @@ export function registerLocalAuthRoutes(app: Express) {
 
       req.login({ id: newUser.id, email: newUser.email, provider: "local" }, (err) => {
         if (err) return res.status(500).json({ error: "Login after registration failed." });
-        res.status(201).json({
-          user: {
-            id: newUser.id,
-            email: newUser.email,
-            username: newUser.username,
-            firstName: newUser.firstName,
-          },
+        req.session.save((saveErr) => {
+          if (saveErr) return res.status(500).json({ error: "Session save error." });
+          res.status(201).json({
+            user: {
+              id: newUser.id,
+              email: newUser.email,
+              username: newUser.username,
+              firstName: newUser.firstName,
+            },
+          });
         });
       });
     } catch (err: any) {
@@ -135,17 +138,25 @@ export function registerLocalAuthRoutes(app: Express) {
       if (err) return res.status(500).json({ error: "Authentication error." });
       if (!user) return res.status(401).json({ error: info?.message ?? "Invalid credentials." });
 
-      req.login(user, async (loginErr) => {
+      req.login(user, (loginErr) => {
         if (loginErr) return res.status(500).json({ error: "Session error." });
 
-        const [dbUser] = await db.select().from(users).where(eq(users.id, user.id));
-        res.json({
-          user: {
-            id: dbUser?.id,
-            email: dbUser?.email,
-            username: dbUser?.username,
-            firstName: dbUser?.firstName,
-          },
+        req.session.save((saveErr) => {
+          if (saveErr) return res.status(500).json({ error: "Session save error." });
+
+          db.select().from(users).where(eq(users.id, user.id))
+            .then(([dbUser]) => {
+              if (!dbUser) return res.status(500).json({ error: "User not found after login." });
+              res.json({
+                user: {
+                  id: dbUser.id,
+                  email: dbUser.email,
+                  username: dbUser.username,
+                  firstName: dbUser.firstName,
+                },
+              });
+            })
+            .catch(() => res.status(500).json({ error: "Failed to fetch user data." }));
         });
       });
     })(req, res, next);

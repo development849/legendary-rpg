@@ -37,5 +37,7 @@ export async function getCurrentUser(req: Request): Promise<any | null> {
   const userId = getUserId(req);
   if (!userId) return null;
   const [dbUser] = await db.select().from(users).where(eq(users.id, userId));
-  return dbUser ?? null;
+  if (!dbUser) return null;
+  const { passwordHash, ...safeUser } = dbUser;
+  return safeUser;
 }

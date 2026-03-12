@@ -1,9 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
+import { clearSessionId } from "@/lib/queryClient";
+
+function getSessionHeaders(): Record<string, string> {
+  try {
+    const sid = localStorage.getItem("legendaryrpg_sid");
+    if (sid) return { "X-Session-Id": sid };
+  } catch {}
+  return {};
+}
 
 async function fetchUser(): Promise<User | null> {
   const response = await fetch("/api/auth/user", {
     credentials: "include",
+    headers: getSessionHeaders(),
   });
 
   if (response.status === 401) {
@@ -18,16 +28,15 @@ async function fetchUser(): Promise<User | null> {
 }
 
 async function performLogout(): Promise<void> {
-  const user = await fetchUser();
-  if (!user) {
-    window.location.href = "/";
-    return;
-  }
+  const headers = getSessionHeaders();
 
   const localRes = await fetch("/api/auth/logout-local", {
     method: "POST",
     credentials: "include",
+    headers,
   });
+
+  clearSessionId();
 
   if (localRes.ok) {
     window.location.href = "/auth";

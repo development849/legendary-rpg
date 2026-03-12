@@ -65,6 +65,18 @@ async function upsertUser(claims: any) {
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", true);
+
+  app.use((req, _res, next) => {
+    const headerSid = req.headers["x-session-id"] as string | undefined;
+    if (headerSid && (!req.headers.cookie || !req.headers.cookie.includes("legendaryrpg.sid"))) {
+      const existing = req.headers.cookie || "";
+      req.headers.cookie = existing
+        ? `${existing}; legendaryrpg.sid=${encodeURIComponent(headerSid)}`
+        : `legendaryrpg.sid=${encodeURIComponent(headerSid)}`;
+    }
+    next();
+  });
+
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());

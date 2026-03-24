@@ -218,9 +218,13 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
                 <div className="space-y-2">
                   {members.map((member: any) => (
                     <div key={member.id} className="flex items-center gap-3 py-2" data-testid={`member-${member.userId}`}>
-                      <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center">
-                        <Sword className="w-4 h-4 text-primary" />
-                      </div>
+                      {member.character?.profilePicture ? (
+                        <img src={member.character.profilePicture} alt={member.character.name} className="w-8 h-8 rounded-md object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center flex-shrink-0">
+                          <Sword className="w-4 h-4 text-primary" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="font-serif text-sm font-medium truncate">{member.character?.name ?? "Unknown"}</p>
                         <p className="text-xs text-muted-foreground capitalize">{member.character?.race} {member.character?.class}</p>

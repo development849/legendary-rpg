@@ -195,8 +195,13 @@ export default function LandingPage() {
       </div>
 
       {/* Footer */}
-      <div className="text-center py-6 text-muted-foreground/30 text-xs font-sans tracking-widest">
-        LEGENDARY RPG&#8480; &middot; THE LIVING CHRONICLE &middot; POWERED BY AI
+      <div className="text-center py-6 text-xs font-sans tracking-widest space-y-1">
+        <div className="text-muted-foreground/30">
+          LEGENDARY RPG&#8480; &middot; THE LIVING CHRONICLE &middot; POWERED BY AI
+        </div>
+        <div className="text-muted-foreground/20">
+          A LEAP GAMES PRODUCTION
+        </div>
       </div>
     </div>
   );

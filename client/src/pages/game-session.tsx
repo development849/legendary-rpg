@@ -20,6 +20,20 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import WorldMap from "@/components/WorldMap";
 
+function AuthImg({ src, alt, className, onClick, "data-testid": testId }: { src: string; alt: string; className?: string; onClick?: (e: React.MouseEvent) => void; "data-testid"?: string }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let revoke = "";
+    fetch(src, { credentials: "include" })
+      .then(r => { if (r.ok) return r.blob(); throw new Error("load failed"); })
+      .then(b => { const u = URL.createObjectURL(b); revoke = u; setBlobUrl(u); })
+      .catch(() => setBlobUrl(null));
+    return () => { if (revoke) URL.revokeObjectURL(revoke); };
+  }, [src]);
+  if (!blobUrl) return null;
+  return <img src={blobUrl} alt={alt} className={className} onClick={onClick} data-testid={testId} />;
+}
+
 interface GameSessionPageProps {
   partyId: string;
 }
@@ -1494,7 +1508,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                   data-testid={`button-expand-companion-${npc.id}`}
                                 >
                                   {npc.hasPortrait ? (
-                                    <img
+                                    <AuthImg
                                       src={`/api/npcs/${npc.id}/portrait`}
                                       alt={npc.name}
                                       className="w-8 h-8 rounded object-cover object-top flex-shrink-0 border border-amber-700/30 cursor-pointer hover:ring-1 hover:ring-amber-500/50 transition-all"
@@ -1520,7 +1534,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                 {npcExpanded && (
                                   <div className="space-y-2 pt-2 border-t border-amber-700/30">
                                     {npc.hasPortrait && (
-                                      <img src={`/api/npcs/${npc.id}/portrait`} alt={npc.name} className="w-full rounded-md object-cover object-top border border-amber-700/30 max-h-48" />
+                                      <AuthImg src={`/api/npcs/${npc.id}/portrait`} alt={npc.name} className="w-full rounded-md object-cover object-top border border-amber-700/30 max-h-48" />
                                     )}
                                     {/* Combat stats bar */}
                                     <div className="flex items-center gap-2 flex-wrap">
@@ -2645,7 +2659,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         <div className="flex items-start gap-2">
                           <div className="flex-shrink-0">
                             {npc.hasPortrait ? (
-                              <img
+                              <AuthImg
                                 src={`/api/npcs/${npc.id}/portrait`}
                                 alt={npc.name}
                                 className={`${compact ? "w-10 h-10" : "w-12 h-12"} rounded object-cover object-top border border-current/20 cursor-pointer hover:ring-1 hover:ring-primary/50 transition-all`}
@@ -3290,12 +3304,21 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           data-testid="overlay-portrait"
         >
           <div className="relative max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={expandedPortrait.url}
-              alt={expandedPortrait.name}
-              className="w-full rounded-lg object-cover border-2 border-border shadow-2xl"
-              data-testid="img-expanded-portrait"
-            />
+            {expandedPortrait.url.startsWith("/api/") ? (
+              <AuthImg
+                src={expandedPortrait.url}
+                alt={expandedPortrait.name}
+                className="w-full rounded-lg object-cover border-2 border-border shadow-2xl"
+                data-testid="img-expanded-portrait"
+              />
+            ) : (
+              <img
+                src={expandedPortrait.url}
+                alt={expandedPortrait.name}
+                className="w-full rounded-lg object-cover border-2 border-border shadow-2xl"
+                data-testid="img-expanded-portrait"
+              />
+            )}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent rounded-b-lg px-4 py-3">
               <div className="flex items-end justify-between gap-2">
                 <div>

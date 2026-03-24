@@ -36,6 +36,17 @@ The application is built with a TypeScript, React, Express, PostgreSQL stack, ut
 - **Passport.js:** Authentication middleware.
 - **bcrypt:** For password hashing.
 
+## GM Streaming Architecture
+- **Narrative filtering:** The GM orchestrator (`gmOrchestrator.ts`) streams only the narrative text to the client. Raw JSON blocks containing `proposed_updates` (XP_GRANTED, GOLD_CHANGED, SITUATION_UPDATED, etc.), `dice_requests`, and `quick_actions` are intercepted server-side and never shown in the chat dialogue.
+- **Detection:** The streaming filter looks for ```` ```json ```` fences or `{"narrative":` patterns to detect JSON blocks. Only narrative prose is streamed via SSE chunks. Updates are sent via the `done` SSE event and WebSocket broadcasts.
+- **Saved messages:** Chat messages in the database store only the clean narrative, not the raw GPT response with JSON blocks. Updates are preserved in the message `metadata` field.
+
+## Session Persistence (Safari Fix)
+- **Approach:** Login returns a `signedSessionId` in the JSON body, stored in `localStorage` under key `legendaryrpg_sid`.
+- **Global fetch interceptor:** `client/src/main.tsx` patches `window.fetch` to automatically add `X-Session-Id` header to all `/api/` requests.
+- **Server middleware:** `replitAuth.ts` header injection middleware reads `X-Session-Id` and injects it as a cookie before express-session processes it.
+- **Auth verification:** After login/register, the frontend verifies the session works by calling GET `/api/auth/user` before navigating to the dashboard.
+
 ## Admin Panel
 - **Route:** `/admin` (frontend) with `/api/admin/*` backend routes
 - **Files:** `server/adminRoutes.ts` (backend), `client/src/pages/admin.tsx` (frontend)

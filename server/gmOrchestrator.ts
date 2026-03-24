@@ -1267,8 +1267,49 @@ export async function runGM(
     { role: "user", content: userMessage },
   ];
 
-  // Stream the response
+  // Stream the response — only send narrative to client, not raw JSON/updates
   let fullText = "";
+  let streamedNarrative = "";
+  let inJsonBlock = false;
+
+  function extractAndStreamNarrative(chunk: string) {
+    fullText += chunk;
+
+    if (inJsonBlock) return;
+
+    const remaining = fullText.slice(streamedNarrative.length);
+
+    const fenceIdx = remaining.indexOf("```json");
+    const structuredJsonPattern = /\{\s*"narrative"\s*:/;
+    const structuredMatch = remaining.match(structuredJsonPattern);
+    const structuredIdx = structuredMatch ? remaining.indexOf(structuredMatch[0]) : -1;
+
+    let jsonStart = -1;
+    if (fenceIdx >= 0 && structuredIdx >= 0) {
+      jsonStart = Math.min(fenceIdx, structuredIdx);
+    } else if (fenceIdx >= 0) {
+      jsonStart = fenceIdx;
+    } else if (structuredIdx >= 0) {
+      jsonStart = structuredIdx;
+    }
+
+    if (jsonStart >= 0) {
+      const narrativePart = remaining.slice(0, jsonStart).replace(/```\s*$/, "").replace(/\n+$/, "");
+      if (narrativePart) {
+        onChunk(narrativePart);
+        streamedNarrative += remaining.slice(0, jsonStart);
+      }
+      inJsonBlock = true;
+    } else {
+      const safeEnd = remaining.length - 20;
+      if (safeEnd > 0) {
+        const safePart = remaining.slice(0, safeEnd);
+        onChunk(safePart);
+        streamedNarrative += safePart;
+      }
+    }
+  }
+
   try {
     const stream = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -1281,12 +1322,10 @@ export async function runGM(
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content ?? "";
       if (delta) {
-        fullText += delta;
-        onChunk(delta);
+        extractAndStreamNarrative(delta);
       }
     }
   } catch (err: any) {
-    // Fallback to non-streaming if stream fails
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages,
@@ -1295,13 +1334,11 @@ export async function runGM(
       temperature: 0.8,
     });
     fullText = response.choices[0]?.message?.content ?? "";
-    onChunk(fullText);
   }
 
   // Parse the GM response
   let parsed: any = null;
   try {
-    // Extract JSON from the response (may be wrapped in ```json blocks)
     const jsonMatch = fullText.match(/```json\s*([\s\S]*?)\s*```/) ||
                       fullText.match(/(\{[\s\S]*\})/);
     if (jsonMatch) {
@@ -1309,6 +1346,30 @@ export async function runGM(
     }
   } catch (_) {
     // Not valid JSON - treat entire response as narrative
+  }
+
+  // Extract clean narrative — never include JSON/updates in client-visible content
+  let cleanNarrative: string;
+  if (parsed?.narrative) {
+    cleanNarrative = parsed.narrative;
+  } else {
+    let stripped = fullText;
+    const fenceMatch = stripped.match(/```json\s*([\s\S]*?)\s*```/);
+    if (fenceMatch) {
+      stripped = stripped.slice(0, stripped.indexOf(fenceMatch[0])).trim();
+    } else {
+      const structMatch = stripped.match(/\{\s*"narrative"\s*:/);
+      if (structMatch) {
+        stripped = stripped.slice(0, stripped.indexOf(structMatch[0])).trim();
+      }
+    }
+    cleanNarrative = stripped;
+  }
+
+  // If we held back any narrative during streaming, flush it now
+  if (!inJsonBlock && streamedNarrative.length < fullText.length) {
+    const unsentNarrative = cleanNarrative.slice(streamedNarrative.length);
+    if (unsentNarrative) onChunk(unsentNarrative);
   }
 
   const updates = parsed?.proposed_updates ?? [];
@@ -1410,7 +1471,7 @@ export async function runGM(
   }
 
   const turnHint = parsed?.turn_hint ?? null;
-  onDone(fullText, updates, parsed?.dice_requests ?? [], parsed?.quick_actions ?? [], turnHint, levelUps);
+  onDone(cleanNarrative, updates, parsed?.dice_requests ?? [], parsed?.quick_actions ?? [], turnHint, levelUps);
 }
 
 export function isCoinItem(item: any): boolean {

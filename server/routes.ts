@@ -277,6 +277,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.patch("/api/characters/:id/name", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const char = await getCharacter(req.params.id);
+      if (!char) return res.status(404).json({ error: "Not found" });
+      if (char.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+      const { name } = req.body;
+      if (typeof name !== "string" || !name.trim()) return res.status(400).json({ error: "Name required" });
+      const updated = await updateCharacter(req.params.id, { name: name.trim() } as any);
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to rename character" });
+    }
+  });
+
   app.patch("/api/characters/:id/portrait", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
@@ -498,8 +513,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!campaign) return res.status(404).json({ error: "Not found" });
       if (campaign.ownerId !== userId) return res.status(403).json({ error: "Forbidden" });
 
-      const { contentRating, noRomance, noHorror, fadeToBlack, gmMode, themes, npcControl } = req.body;
+      const { contentRating, noRomance, noHorror, fadeToBlack, gmMode, themes, npcControl, name } = req.body;
       const updates: any = {};
+      if (typeof name === "string" && name.trim()) updates.name = name.trim();
       if (contentRating !== undefined) updates.contentRating = contentRating;
       if (noRomance !== undefined) updates.noRomance = noRomance;
       if (noHorror !== undefined) updates.noHorror = noHorror;

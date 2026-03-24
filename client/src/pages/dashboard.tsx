@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -6,8 +6,9 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Scroll, Target, Star, Flame, Music, Trash2 } from "lucide-react";
+import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Scroll, Target, Star, Flame, Music, Trash2, Pencil } from "lucide-react";
 import FriendsPanel from "@/components/FriendsPanel";
+import { apiRequest } from "@/lib/queryClient";
 import type { Character } from "@shared/schema";
 import logoPath from "@assets/legendary-logo-transparent.png";
 
@@ -39,6 +40,34 @@ export default function DashboardPage() {
 
   const [confirmDelete, setConfirmDelete] = useState<{ type: "character" | "campaign"; id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState<{ type: "character" | "campaign"; id: string; name: string } | null>(null);
+  const [editName, setEditName] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editing]);
+
+  async function handleRename() {
+    if (!editing || !editName.trim() || editName.trim() === editing.name) {
+      setEditing(null);
+      return;
+    }
+    try {
+      const endpoint = editing.type === "character"
+        ? `/api/characters/${editing.id}/name`
+        : `/api/campaigns/${editing.id}/settings`;
+      await apiRequest("PATCH", endpoint, { name: editName.trim() });
+      queryClient.invalidateQueries({ queryKey: [editing.type === "character" ? "/api/characters" : "/api/parties"] });
+      toast({ title: "Renamed", description: `Updated to "${editName.trim()}"` });
+    } catch {
+      toast({ title: "Error", description: "Failed to rename", variant: "destructive" });
+    }
+    setEditing(null);
+  }
 
   async function handleDelete() {
     if (!confirmDelete) return;
@@ -206,7 +235,20 @@ export default function DashboardPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-sans font-semibold tracking-wide truncate">{char.name}</span>
+                            {editing?.type === "character" && editing.id === char.id ? (
+                              <input
+                                ref={editInputRef}
+                                className="font-sans font-semibold tracking-wide bg-transparent border-b border-primary outline-none px-0 py-0 text-sm w-32"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                onBlur={handleRename}
+                                onKeyDown={(e) => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") setEditing(null); }}
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                data-testid={`input-rename-character-${char.id}`}
+                              />
+                            ) : (
+                              <span className="font-sans font-semibold tracking-wide truncate">{char.name}</span>
+                            )}
                             <Badge variant="secondary" className="text-xs capitalize">
                               Lv.{char.level} {char.class}
                             </Badge>
@@ -224,6 +266,19 @@ export default function DashboardPage() {
                             <span className="text-xs text-muted-foreground">{char.currentHp}/{char.maxHp} HP</span>
                           </div>
                         </div>
+                        <button
+                          className="p-1.5 rounded hover:bg-secondary/80 text-muted-foreground/30 hover:text-foreground transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                          data-testid={`button-rename-character-${char.id}`}
+                          title="Rename character"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditing({ type: "character", id: char.id, name: char.name });
+                            setEditName(char.name);
+                          }}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground/30 hover:text-destructive transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
                           data-testid={`button-delete-character-${char.id}`}
@@ -300,7 +355,20 @@ export default function DashboardPage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-sans font-semibold tracking-wide truncate">{party.campaign?.name ?? party.name}</span>
+                          {editing?.type === "campaign" && editing.id === (party.campaign?.id ?? party.campaignId) ? (
+                            <input
+                              ref={editInputRef}
+                              className="font-sans font-semibold tracking-wide bg-transparent border-b border-primary outline-none px-0 py-0 text-sm w-40"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              onBlur={handleRename}
+                              onKeyDown={(e) => { if (e.key === "Enter") handleRename(); if (e.key === "Escape") setEditing(null); }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                              data-testid={`input-rename-campaign-${party.id}`}
+                            />
+                          ) : (
+                            <span className="font-sans font-semibold tracking-wide truncate">{party.campaign?.name ?? party.name}</span>
+                          )}
                           <Badge
                             variant={party.status === "active" ? "default" : "secondary"}
                             className="text-xs capitalize"
@@ -312,6 +380,19 @@ export default function DashboardPage() {
                           {party.name} · Code: {party.inviteCode}
                         </p>
                       </div>
+                      <button
+                        className="p-1.5 rounded hover:bg-secondary/80 text-muted-foreground/30 hover:text-foreground transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                        data-testid={`button-rename-campaign-${party.id}`}
+                        title="Rename campaign"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setEditing({ type: "campaign", id: party.campaign?.id ?? party.campaignId, name: party.campaign?.name ?? party.name });
+                          setEditName(party.campaign?.name ?? party.name);
+                        }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground/30 hover:text-destructive transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
                         data-testid={`button-delete-campaign-${party.id}`}

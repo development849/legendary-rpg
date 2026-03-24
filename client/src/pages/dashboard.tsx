@@ -291,12 +291,16 @@ export default function DashboardPage() {
                       className="group flex items-center gap-4 p-4 rounded-md border border-border bg-card hover-elevate cursor-pointer transition-all duration-200"
                       data-testid={`card-party-${party.id}`}
                     >
-                      <div className="flex-shrink-0 w-10 h-10 rounded-md bg-secondary flex items-center justify-center text-primary">
-                        <Users className="w-5 h-5" />
-                      </div>
+                      {party.thumbnail ? (
+                        <img src={party.thumbnail} alt={party.campaign?.name ?? party.name} className="flex-shrink-0 w-10 h-10 rounded-md object-cover" data-testid={`img-campaign-thumbnail-${party.id}`} />
+                      ) : (
+                        <div className="flex-shrink-0 w-10 h-10 rounded-md bg-secondary flex items-center justify-center text-primary">
+                          <Users className="w-5 h-5" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-sans font-semibold tracking-wide truncate">{party.name}</span>
+                          <span className="font-sans font-semibold tracking-wide truncate">{party.campaign?.name ?? party.name}</span>
                           <Badge
                             variant={party.status === "active" ? "default" : "secondary"}
                             className="text-xs capitalize"
@@ -305,7 +309,7 @@ export default function DashboardPage() {
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground font-serif mt-0.5 truncate">
-                          {party.campaign?.name ?? "Campaign"} · Code: {party.inviteCode}
+                          {party.name} · Code: {party.inviteCode}
                         </p>
                       </div>
                       <button

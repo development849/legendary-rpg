@@ -219,7 +219,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
                   {members.map((member: any) => (
                     <div key={member.id} className="flex items-center gap-3 py-2" data-testid={`member-${member.userId}`}>
                       {member.character?.profilePicture ? (
-                        <img src={member.character.profilePicture} alt={member.character.name} className="w-8 h-8 rounded-md object-cover flex-shrink-0" />
+                        <img src={member.character.profilePicture} alt={member.character.name} className="w-8 h-8 rounded-md object-cover flex-shrink-0" data-testid={`img-member-portrait-${member.userId}`} />
                       ) : (
                         <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center flex-shrink-0">
                           <Sword className="w-4 h-4 text-primary" />

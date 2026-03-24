@@ -1,7 +1,7 @@
 import { db } from "./db";
 import {
   characters, campaigns, parties, partyMembers, chatMessages,
-  gameEvents, worldState, sceneSummaries, arcs, friendships, users,
+  gameEvents, worldState, sceneSummaries, arcs, friendships, users, locationScenes,
   type Character, type InsertCharacter,
   type Campaign, type InsertCampaign,
   type Party, type InsertParty,
@@ -157,7 +157,12 @@ export async function getUserParties(userId: string): Promise<any[]> {
     const [p] = await db.select().from(parties).where(eq(parties.id, pid));
     if (p) {
       const [c] = await db.select().from(campaigns).where(eq(campaigns.id, p.campaignId));
-      result.push({ ...p, campaign: c });
+      const [scene] = await db.select({ imageData: locationScenes.imageData })
+        .from(locationScenes)
+        .where(eq(locationScenes.partyId, pid))
+        .orderBy(locationScenes.createdAt)
+        .limit(1);
+      result.push({ ...p, campaign: c, thumbnail: scene?.imageData ?? null });
     }
   }
   return result;

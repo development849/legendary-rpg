@@ -318,6 +318,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [sending, setSending] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [stalled, setStalled] = useState(false);
+  const lastSentRef = useRef<{ content: string; playerName?: string; mode?: "action" | "dialogue" | "ooc" } | null>(null);
+  const streamTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [quickActions, setQuickActions] = useState<string[]>(QUICK_ACTIONS_DEFAULT);
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [showCharacters, setShowCharacters] = useState(false);
@@ -627,10 +630,34 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     recognition.start();
   }
 
+  function clearStreamTimeout() {
+    if (streamTimeoutRef.current) { clearTimeout(streamTimeoutRef.current); streamTimeoutRef.current = null; }
+  }
+  function resetStreamTimeout() {
+    clearStreamTimeout();
+    streamTimeoutRef.current = setTimeout(() => {
+      setStalled(true);
+      setIsStreaming(false);
+      setSending(false);
+      setStreamingContent("");
+      abortRef.current?.abort();
+      toast({ title: "Connection lost", description: "The GM response stalled. Tap retry to resend.", variant: "destructive" });
+    }, 30000);
+  }
+
+  function retryLastMessage() {
+    const last = lastSentRef.current;
+    if (!last) return;
+    setStalled(false);
+    setMessages(prev => prev.filter(m => !m.id.startsWith("opt-")));
+    sendAction(last.content, last.playerName, last.mode);
+  }
+
   async function sendAction(content: string, playerName?: string, modeOverride?: "action" | "dialogue" | "ooc") {
     if (!content.trim() || sending) return;
 
     setSending(true);
+    setStalled(false);
     setStreamingContent("");
 
     const name = playerName ?? partyData?.members?.find((m: any) => m.userId === user?.id)?.character?.name ?? "Adventurer";
@@ -650,6 +677,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
       setMessages(prev => [...prev, optimistic]);
       setInput("");
     }
+
+    lastSentRef.current = { content, playerName, mode };
 
     // OOC: simple POST, no streaming, no GM response
     if (mode === "ooc") {
@@ -671,6 +700,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
     setIsStreaming(true);
     abortRef.current = new AbortController();
+    resetStreamTimeout();
 
     try {
       const res = await fetch(`/api/parties/${partyId}/action`, {
@@ -692,6 +722,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        resetStreamTimeout();
         buf += decoder.decode(value, { stream: true });
         const lines = buf.split("\n");
         buf = lines.pop() || "";
@@ -700,7 +731,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           try {
             const evt = JSON.parse(line.slice(6));
             if (evt.type === "error") {
-              const errMsg = evt.error || "GM failed to respond";
+              clearStreamTimeout();
+              setStalled(true);
+              const errMsg = evt.error || "GM failed to respond. Tap retry to resend.";
               toast({ title: "Connection lost", description: errMsg, variant: "destructive" });
               setIsStreaming(false);
               setStreamingContent("");
@@ -711,6 +744,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               accumulated += evt.content;
               setStreamingContent(accumulated);
             } else if (evt.type === "done") {
+              clearStreamTimeout();
+              lastSentRef.current = null;
               setStreamingContent("");
               setIsStreaming(false);
               queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
@@ -751,15 +786,18 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         }
       }
     } catch (e: any) {
+      clearStreamTimeout();
       if (e.name !== "AbortError") {
+        setStalled(true);
         const desc = e.message?.includes("Failed to fetch") || e.message === "Request failed"
-          ? "The GM couldn't respond. Try again."
-          : (e.message || "The GM couldn't respond. Try again.");
+          ? "The GM couldn't respond. Tap retry to resend."
+          : (e.message || "The GM couldn't respond. Tap retry to resend.");
         toast({ title: "Connection lost", description: desc, variant: "destructive" });
         setIsStreaming(false);
         setStreamingContent("");
       }
     } finally {
+      clearStreamTimeout();
       setSending(false);
       setIsStreaming(false);
       inputRef.current?.focus();
@@ -1241,20 +1279,31 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 </Button>
 
-                {/* Send button */}
-                <Button
-                  onClick={() => sendAction(input)}
-                  disabled={!input.trim() || sending}
-                  size="icon"
-                  className="h-11 w-11 flex-shrink-0"
-                  data-testid="button-send-action"
-                >
-                  {sending ? (
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </Button>
+                {/* Send / Retry button */}
+                {stalled && lastSentRef.current ? (
+                  <Button
+                    onClick={retryLastMessage}
+                    size="icon"
+                    className="h-11 w-11 flex-shrink-0 bg-destructive hover:bg-destructive/90"
+                    data-testid="button-retry-action"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => sendAction(input)}
+                    disabled={!input.trim() || sending}
+                    size="icon"
+                    className="h-11 w-11 flex-shrink-0"
+                    data-testid="button-send-action"
+                  >
+                    {sending ? (
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           </div>

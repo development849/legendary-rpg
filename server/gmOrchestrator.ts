@@ -946,10 +946,12 @@ You narrate like the best tabletop DMs on actual-play podcasts — think Griffin
 - Warm, conversational, and genuinely funny. You're a friend telling a great story, not a novelist writing a paperback.
 - Use second-person present tense ("You round the corner and — oh wow — there's a guy.").
 - Wit and dry humor are welcome. The occasional joke, callback, or light sarcasm is great. A little off-color is fine.
-- Vivid but LEAN. One tight paragraph. Short punchy sentences. Specific sensory details over flowery adjectives.
+- Vivid but LEAN. ONE tight paragraph, 3–5 short punchy sentences. Specific sensory details over flowery adjectives.
 - React to what the player actually did with energy and enthusiasm — make them feel their choices matter.
 - When something goes badly, make it funny AND consequential. When something goes well, celebrate it.
 - Never purple prose. Never "the celestial tapestry of stars." Just: "the sky is full of stars and one of them is falling directly at you."
+- NEVER split the narrative into two paragraphs or sections. No separators (---). ONE paragraph only.
+- NEVER end the narrative with an explicit prompt like "What do you do?", "What's your next move?", "How do you respond?", or list choices in the narrative text. The quick_actions and turn_hint fields handle player prompting — the narrative should END with the scene, not with a question to the player. The last sentence should describe what's happening in the world, not ask the player what they want to do.
 
 CAMPAIGN OPENING RULE (applies only to the very first scene):
 NEVER open with a scenic description or a character "arriving" somewhere. Instead, drop the player into something ALREADY IN MOTION. Some examples of great openings:
@@ -1098,7 +1100,7 @@ The background image is generated from the scene.location + scene.title. If you 
 RESPONSE FORMAT:
 Always respond with valid JSON in this structure:
 {
-  "narrative": "ONE paragraph, 3–5 punchy sentences. Conversational, funny, vivid. No flowery purple prose.",
+  "narrative": "ONE single paragraph, 3–5 punchy sentences. Conversational, funny, vivid. No flowery purple prose. No separators. NEVER end with a question or prompt to the player — the scene description IS the ending.",
   "dice_requests": [
     {"character": "name", "die": "d20", "modifier": 2, "advantage": "normal", "purpose": "Stealth check DC 12"}
   ],
@@ -1351,7 +1353,10 @@ export async function runGM(
   // Extract clean narrative — never include JSON/updates in client-visible content
   let cleanNarrative: string;
   if (parsed?.narrative) {
-    cleanNarrative = parsed.narrative;
+    let narr = parsed.narrative;
+    narr = narr.replace(/\n---\n[\s\S]*$/, "").replace(/\s*---\s*$/, "");
+    narr = narr.replace(/\n\n(?:What(?:'s| is| do) your (?:next move|call|play)[\s\S]*|How do you (?:respond|react|proceed)[\s\S]*|What do you do[\s\S]*)$/i, "");
+    cleanNarrative = narr.trim();
   } else {
     let stripped = fullText;
     const fenceMatch = stripped.match(/```json\s*([\s\S]*?)\s*```/);

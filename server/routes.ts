@@ -513,7 +513,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!campaign) return res.status(404).json({ error: "Not found" });
       if (campaign.ownerId !== userId) return res.status(403).json({ error: "Forbidden" });
 
-      const { contentRating, noRomance, noHorror, fadeToBlack, gmMode, themes, npcControl, name } = req.body;
+      const { contentRating, noRomance, noHorror, fadeToBlack, gmMode, themes, npcControl, name, physicalDice } = req.body;
       const updates: any = {};
       if (typeof name === "string" && name.trim()) updates.name = name.trim();
       if (contentRating !== undefined) updates.contentRating = contentRating;
@@ -523,6 +523,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (gmMode !== undefined) updates.gmMode = gmMode;
       if (themes !== undefined) updates.themes = themes;
       if (npcControl !== undefined && (npcControl === "gm" || npcControl === "player")) updates.npcControl = npcControl;
+      if (physicalDice !== undefined) updates.physicalDice = !!physicalDice;
 
       const updated = await updateCampaign(req.params.id, updates);
       res.json(updated);

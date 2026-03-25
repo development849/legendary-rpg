@@ -91,6 +91,41 @@ const QUICK_ACTIONS_DEFAULT = [
   "Make camp and rest",
 ];
 
+function PhysicalDiceInput({ promptKey, req, modStr, onSubmit }: { promptKey: string; req: any; modStr: string; onSubmit: (total: number) => void }) {
+  const [val, setVal] = useState("");
+  const modifier = req.modifier ?? 0;
+  const rawRoll = parseInt(val);
+  const total = !isNaN(rawRoll) ? rawRoll + modifier : NaN;
+
+  return (
+    <div className="flex items-center gap-1.5" data-testid={`physical-dice-${promptKey}`}>
+      <input
+        type="number"
+        inputMode="numeric"
+        placeholder="Roll"
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        className="w-14 h-7 text-center text-xs font-mono bg-amber-950/40 border border-amber-700/50 rounded text-amber-200 placeholder:text-amber-700/60 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+        data-testid={`input-physical-roll-${promptKey}`}
+        onKeyDown={e => { if (e.key === "Enter" && !isNaN(total)) onSubmit(total); }}
+      />
+      {modifier !== 0 && val && !isNaN(rawRoll) && (
+        <span className="text-[10px] text-amber-400/70 font-mono whitespace-nowrap">{modStr}={total}</span>
+      )}
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 px-2 text-xs border-amber-700/50 text-amber-300 hover:bg-amber-900/30 hover:text-amber-200"
+        disabled={isNaN(total) || val === ""}
+        data-testid={`button-submit-physical-${promptKey}`}
+        onClick={() => onSubmit(total)}
+      >
+        Submit
+      </Button>
+    </div>
+  );
+}
+
 function DiceRoller() {
   const { toast } = useToast();
   const [die, setDie] = useState("d20");
@@ -201,6 +236,7 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
   const [noRomance, setNoRomance] = useState(campaign.noRomance ?? false);
   const [noHorror, setNoHorror] = useState(campaign.noHorror ?? false);
   const [npcControl, setNpcControl] = useState(campaign.npcControl ?? "gm");
+  const [physicalDice, setPhysicalDice] = useState(campaign.physicalDice ?? false);
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -209,7 +245,7 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
       const res = await fetch(`/api/campaigns/${campaign.id}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentRating: rating, noRomance, noHorror, npcControl }),
+        body: JSON.stringify({ contentRating: rating, noRomance, noHorror, npcControl, physicalDice }),
       });
       if (!res.ok) throw new Error("Failed to save");
       toast({ title: "Settings updated", description: "Settings will apply from the next GM response.", variant: "success" as any });
@@ -224,6 +260,7 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
   const toggles = [
     { key: "noRomance", label: "No Romance", desc: "Exclude romantic subplots", value: noRomance, set: setNoRomance },
     { key: "noHorror", label: "No Horror", desc: "Avoid disturbing content", value: noHorror, set: setNoHorror },
+    { key: "physicalDice", label: "Physical Dice", desc: "Enter roll results manually", value: physicalDice, set: setPhysicalDice },
   ];
 
   const NPC_CONTROL_OPTIONS = [
@@ -434,6 +471,25 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           if (Array.isArray(savedQa) && savedQa.length > 0) setQuickActions(savedQa);
           const savedTh = lastGm?.metadata?.turnHint;
           if (savedTh?.character) setTurnHint(savedTh);
+
+          const preRolled: Record<string, boolean> = {};
+          const lastGmId = lastGm?.id;
+          for (const m of data) {
+            if (m.role !== "gm") continue;
+            const diceReqs: any[] = m.metadata?.diceRequests ?? [];
+            if (diceReqs.length === 0) continue;
+            if (m.id === lastGmId) {
+              const hasPlayerResponseAfter = data.some(
+                (pm: ChatMsg) => pm.role === "player" && new Date(pm.createdAt) > new Date(m.createdAt)
+              );
+              if (hasPlayerResponseAfter) {
+                diceReqs.forEach((_: any, i: number) => { preRolled[`${m.id}-${i}`] = true; });
+              }
+            } else {
+              diceReqs.forEach((_: any, i: number) => { preRolled[`${m.id}-${i}`] = true; });
+            }
+          }
+          if (Object.keys(preRolled).length > 0) setRolledPrompts(prev => ({ ...prev, ...preRolled }));
         }
         setMessagesLoaded(true);
       })
@@ -817,6 +873,14 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const campaign = partyData?.campaign;
   const myMember = members.find((m: any) => m.userId === user?.id);
 
+  const usePhysicalDice = campaign?.physicalDice ?? false;
+
+  const hasPendingDice = messages.some(m => {
+    if (m.role !== "gm") return false;
+    const diceReqs: any[] = m.metadata?.diceRequests ?? [];
+    return diceReqs.some((_: any, i: number) => !rolledPrompts[`${m.id}-${i}`]);
+  });
+
   const classColors: Record<string, string> = {
     fighter: "text-red-400", rogue: "text-emerald-400",
     wizard: "text-violet-400", cleric: "text-amber-400",
@@ -900,6 +964,24 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                       </div>
                       {alreadyRolled ? (
                         <span className="text-xs text-muted-foreground/40 italic px-2">Rolled ✓</span>
+                      ) : usePhysicalDice ? (
+                        <PhysicalDiceInput
+                          promptKey={promptKey}
+                          req={req}
+                          modStr={modStr}
+                          onSubmit={(total: number) => {
+                            setRolledPrompts(prev => ({ ...prev, [promptKey]: true }));
+                            const dcMatch = req.purpose?.match(/dc\s*(\d+)/i);
+                            const dc = dcMatch ? parseInt(dcMatch[1]) : null;
+                            const dcText = dc ? ` vs DC ${dc}` : "";
+                            const outcome = dc ? (total >= dc ? " — SUCCESS" : " — FAILURE") : "";
+                            sendAction(
+                              `[ROLL RESULT] ${req.character ?? "Character"} — ${req.purpose}: rolled ${total} [physical dice] on ${req.die ?? "d20"}${modStr}${dcText}${outcome}`,
+                              undefined,
+                              "action"
+                            );
+                          }}
+                        />
                       ) : (
                         <Button
                           size="sm"
@@ -1201,7 +1283,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   <button
                     key={action}
                     onClick={() => sendAction(action)}
-                    disabled={sending}
+                    disabled={sending || (hasPendingDice && !usePhysicalDice)}
                     data-testid={`button-quick-action`}
                     className="flex-shrink-0 text-xs font-serif italic text-foreground px-3 py-1.5 rounded-full border border-border/80 bg-background/60 hover:border-primary hover:bg-primary/10 hover:text-primary transition-all whitespace-nowrap"
                   >
@@ -1261,7 +1343,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         : "border-border focus:ring-ring"
                     }`}
                     placeholder={
-                      inputMode === "dialogue"
+                      hasPendingDice && !usePhysicalDice
+                        ? "Roll the dice above before continuing..."
+                        : inputMode === "dialogue"
                         ? `"What do you say aloud?" — your character speaks...`
                         : inputMode === "ooc"
                         ? "(( Out of character — visible to party, not the GM ))"
@@ -1272,7 +1356,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     onKeyDown={handleKeyDown}
                     rows={1}
                     style={{ minHeight: "44px", maxHeight: "120px" }}
-                    disabled={isStreaming}
+                    disabled={isStreaming || (hasPendingDice && !usePhysicalDice)}
                     data-testid="input-action"
                   />
                 </div>
@@ -1303,7 +1387,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 ) : (
                   <Button
                     onClick={() => sendAction(input)}
-                    disabled={!input.trim() || sending}
+                    disabled={!input.trim() || sending || (hasPendingDice && !usePhysicalDice)}
                     size="icon"
                     className="h-11 w-11 flex-shrink-0"
                     data-testid="button-send-action"

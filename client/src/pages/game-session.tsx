@@ -9,13 +9,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Sword, ArrowLeft, Dices, Users, Heart, Send, ChevronDown, ChevronRight,
+  Sword, Dices, Users, Heart, Send, ChevronDown, ChevronRight,
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
-  Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy,
+  Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy, LogOut, Menu,
   Download, Share2, Maximize2, Minimize2, List, Map as MapIcon, RefreshCw, Loader2,
   ClipboardList, AlertTriangle, Clock, Target
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import WorldMap from "@/components/WorldMap";
@@ -1019,9 +1020,19 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
       {/* Header */}
       <header className="flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-sm z-40">
         <div className="flex items-center gap-3 px-4 h-12">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="h-8 w-8" data-testid="button-back">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-menu">
+                <Menu className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => navigate("/dashboard")} className="text-destructive focus:text-destructive" data-testid="menu-leave-campaign">
+                <LogOut className="w-4 h-4 mr-2" />
+                Leave Campaign
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Scroll className="w-4 h-4 text-primary" />
           <div className="flex-1 min-w-0">
             <p className="font-sans font-bold tracking-wider text-sm truncate">{campaign?.name ?? party?.name ?? "Adventure"}</p>

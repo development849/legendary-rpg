@@ -857,7 +857,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         <div key={msg.id} className="space-y-2" data-testid={`message-gm-${msg.id}`}>
           <div className="flex items-center gap-2">
             <Scroll className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-            <span className="text-xs font-sans tracking-widest text-primary uppercase flex-1">The Chronicle</span>
+            <span className="text-xs font-sans tracking-widest text-primary uppercase flex-1" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>The Chronicle</span>
           </div>
           <div className="narrative-bg rounded-md p-4 prose-fantasy text-foreground/90">
             <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-p:my-2">
@@ -981,10 +981,10 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-sans tracking-wide mb-1 flex items-center gap-1">
+            <p className="text-xs text-muted-foreground font-sans tracking-wide mb-1 flex items-center gap-1" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
               <MessageCircle className="w-3 h-3 text-primary/60" /> {playerName}
             </p>
-            <p className="font-serif text-foreground/90 text-sm leading-relaxed italic border-l-2 border-primary/40 pl-3">
+            <p className="font-serif text-foreground text-sm leading-relaxed italic border-l-2 border-primary/40 pl-3" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
               "{msg.content}"
             </p>
           </div>
@@ -1008,8 +1008,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-muted-foreground font-sans tracking-wide mb-1">{playerName}</p>
-          <p className="font-serif text-foreground/80 text-sm leading-relaxed">{msg.content}</p>
+          <p className="text-xs text-muted-foreground font-sans tracking-wide mb-1" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>{playerName}</p>
+          <p className="font-serif text-foreground text-sm leading-relaxed" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>{msg.content}</p>
         </div>
       </div>
     );
@@ -1088,7 +1088,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 transition: "background-image 1.2s ease-in-out",
               }}
             >
-              <div className="absolute inset-0 bg-background/82" />
+              <div className="absolute inset-0 bg-background/90" />
             </div>
           )}
           {/* Subtle shimmer while background is generating */}
@@ -1122,7 +1122,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Scroll className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                      <span className="text-xs font-sans tracking-widest text-primary uppercase">The Chronicle</span>
+                      <span className="text-xs font-sans tracking-widest text-primary uppercase" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>The Chronicle</span>
                       <div className="flex gap-1">
                         {[0, 1, 2].map(i => (
                           <div key={i} className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
@@ -1158,11 +1158,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             const myChar = myMember?.character;
             const isMyTurn = myChar && turnHint.character.toLowerCase() === myChar.name.toLowerCase();
             return (
-              <div className={`flex-shrink-0 px-4 relative z-10 border-t ${
+              <div className={`flex-shrink-0 px-4 relative z-10 border-t backdrop-blur-sm ${
                 isMyTurn
-                  ? "py-3 bg-primary/15 border-primary/40 animate-pulse"
-                  : "py-2 bg-muted/50 border-border/40"
-              }`}>
+                  ? "py-3 bg-primary/20 border-primary/40 animate-pulse"
+                  : "py-2 bg-card/80 border-border/40"
+              }`} style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
                 <div className="max-w-3xl mx-auto flex items-center gap-3" data-testid="turn-hint-banner">
                   <div className={`flex items-center justify-center rounded-full flex-shrink-0 ${
                     isMyTurn ? "w-8 h-8 bg-primary text-primary-foreground" : "w-6 h-6 bg-muted-foreground/20 text-muted-foreground"

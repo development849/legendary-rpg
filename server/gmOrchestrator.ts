@@ -837,7 +837,12 @@ Inventory: ${(() => {
   }).join(", ");
 })()}
 Conditions: ${((c.conditions as any[]) || []).join(", ") || "none"}
-Abilities: ${(c.abilities as any[]).map((a: any) => a.name).join(", ")}
+Abilities: ${(c.abilities as any[]).map((a: any) => {
+  const parts = [a.name];
+  if (a.usesMax > 0) parts.push(`[${a.usesLeft}/${a.usesMax} uses, ${a.recharge}]`);
+  else if (a.recharge && a.recharge !== "at-will") parts.push(`[${a.recharge}]`);
+  return parts.join(" ");
+}).join(", ")}
 Skills: ${((c.skills as any[]) || []).map((s: any) => `${s.name} (${s.mechanicalEffect})`).join(", ") || "none"}
 Achievements: ${((c.achievements as any[]) || []).map((a: any) => `${a.title} [${a.category}]`).join(", ") || "none"}${c.backstory ? `\nBackstory: ${c.backstory}` : ""}
 `.trim()).join("\n\n");
@@ -1062,8 +1067,12 @@ Abilities have a "recharge" field that defines when they become available again 
 - "per-rest": Recharges after a short rest or long rest. This is the standard limited-use cadence. When a character takes a short rest, all per-rest abilities reset to full uses. When a character takes a long rest, per-rest abilities ALSO reset.
 - "per-day": Recharges only after a LONG rest (full night's sleep). Short rests do NOT restore per-day abilities. These are powerful abilities meant to be used sparingly — once per in-game day.
 - "per-session": Recharges at the START of each play session. These are narrative/social abilities (background abilities like Street Network, Noble Authority, Champion's Welcome). The GM should allow one use early in a session, then decline further uses until a new session begins.
-When tracking ability uses: check the "recharge" field AND "usesLeft" on each ability. If usesLeft is 0 and the recharge condition has NOT been met, the ability is unavailable — tell the player they've already used it and what they need to do to get it back (rest, finish combat, etc.). When the recharge condition IS met, reset usesLeft to usesMax.
-IMPORTANT: "per-rest" and "per-day" abilities with usesMax > 0 should have their usesLeft tracked carefully. When narrating a rest, explicitly mention that spent abilities have been restored alongside HP/MP recovery.
+ABILITY USAGE TRACKING — MANDATORY:
+When a character uses an ability that has usesMax > 0 (shown as [X/Y uses] in their character sheet above), you MUST emit ABILITY_USED with the ability's id. Check the character's ability list — if usesLeft is 0, the ability is UNAVAILABLE. Tell the player they've used all charges and what they need to do to recharge (rest, long rest, etc.). Do NOT let a character use an ability with 0 uses remaining.
+When a character rests (short rest, long rest, sleeps overnight), emit ABILITIES_RECHARGED for EACH character who rested:
+- Short rest / rest → recharge_type: "per-rest" (resets all per-rest abilities to usesMax)
+- Long rest / full night's sleep → recharge_type: "per-day" (resets all per-day AND per-rest abilities to usesMax)
+CRITICAL: Every time a limited-use ability (usesMax > 0) is used in the narrative, ABILITY_USED is MANDATORY. Without it, the character sheet will still show full charges, confusing the player. This is as important as HP_CHANGED for damage.
 
 MAGIC & SPELLCASTING — CRITICAL:
 Characters with MP (Magic Points) can cast spells. MP is shown in the character sheet above. Spellcasting rules:
@@ -1124,6 +1133,8 @@ Always respond with valid JSON in this structure:
     {"type": "ITEM_REMOVED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "item_name": "Rusty Dagger", "qty": 1, "reason": "Sold to blacksmith"},
     {"type": "GOLD_CHANGED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "delta": -3, "reason": "Bought a roasted chicken for 3gp"},
     {"type": "NPC_MET", "name": "Marta", "pronouns": "she/her", "role": "black market fence", "description": "nervous middle-aged woman, quick darting eyes, smells of tallow", "location": "Dockside Tavern back room", "relationship": "neutral", "notes": "Runs stolen goods. Owes money to the Crimson Hand.", "replaces": null},
+    {"type": "ABILITY_USED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "ability_id": "rage", "reason": "Gustaf enters a rage"},
+    {"type": "ABILITIES_RECHARGED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "recharge_type": "per-rest", "reason": "Short rest completed"},
     {"type": "PLOT_FACT_SET", "key": "bandit_hideout", "value": "the old mill on the eastern road, three miles from Thornwick"},
     {"type": "PLOT_FACT_SET", "key": "reward_offered", "value": "200 gold from Mayor Aldren for proof the bandits are stopped"},
     {"type": "SITUATION_UPDATED", "character_id": "USE_THE_CHARACTER_ID_FROM_CHARACTER_SHEET", "location": "The Dockside Tavern", "situation": "Negotiating with the fence about the stolen ledger. Tension is high.", "active_npcs": [{"name": "Marta", "role": "fence, nervous"}], "companions": ["Other character names sharing this scene"]},
@@ -1200,6 +1211,7 @@ Step 7 — Companions: Check TWO things:
    Did an NPC leave? → NPC_LEFT_PARTY required.
 Step 8 — XP: Did the party defeat an enemy, complete an objective, finish a quest, or accomplish something meaningful? → XP_GRANTED required for each participating character. This is mandatory — no meaningful accomplishment goes unrewarded.
 Step 8b — MP: Did any character cast a spell this turn? → MP_CHANGED required with a NEGATIVE delta matching the spell tier cost. Did a character rest, drink a mana potion, or otherwise recover MP? → MP_CHANGED required with a POSITIVE delta. Did a character use a scroll? → NO MP cost, but ITEM_REMOVED required for the scroll.
+Step 8d — Abilities: Did any character use a limited-use ability (one with usesMax > 0, shown as [X/Y uses] in their sheet)? → ABILITY_USED required with the ability_id. Check their usesLeft first — if 0, the ability is UNAVAILABLE, narrate the failure. Did a character rest? → ABILITIES_RECHARGED required for each resting character (recharge_type "per-rest" for short rests, "per-day" for long rests/sleep).
 Step 8c — Achievements: Did a character join a guild, earn an honorary title, complete a major quest milestone, accomplish a notable combat feat, discover something significant, or receive formal recognition? → ACHIEVEMENT_EARNED required. Categories: "guild" (guild memberships/ranks), "title" (honorary titles, knighthoods, formal recognition), "quest" (major quest completions, story milestones), "combat" (notable combat feats — first boss kill, survived impossible odds), "exploration" (discovered hidden places, mapped unknown territory), "social" (earned trust of a faction, brokered peace, formed alliances). Example: {"type": "ACHIEVEMENT_EARNED", "character_id": "USE_THE_CHARACTER_ID", "title": "Member of the Gildhaven Merchants Guild", "category": "guild", "description": "Registered as an official member of the prestigious Merchants Guild of Gildhaven"}. Check the character's Achievements list — do NOT duplicate existing entries.
 Step 9 — Recipes & Enchantments: Did the player learn a spell, enchantment, potion recipe, crafting formula, or technique — by ANY means (reading a scroll, studying a tome, being taught by an NPC, discovering ancient runes, experimenting)? → RECIPE_DISCOVERED required. This includes enchantments learned from scrolls — if a scroll teaches how to enchant a ring, weapon, or any item, that IS a recipe and MUST be emitted as RECIPE_DISCOVERED with ingredients needed to perform the enchantment. The scroll teaches the KNOWLEDGE; the recipe tracks what materials are needed to actually DO it. Include a clear name, description of the result, and a list of ingredients with quantities. The player can track these in their Codex and see which ingredients they've collected. Give each ingredient a specific, findable name. Recipes should have 2–5 ingredients that feel thematic and achievable through gameplay (e.g. "Boar Tusk", "Fire Opal", "Moonpetal Flower", "Arcane Dust", "Troll Blood"). If the source was a scroll/tome, include the base item to enchant as one of the ingredients (e.g. "Plain Gold Ring", "Iron Longsword").
 Step 10 — Shopping: Did the player ask (via action OR dialogue) to browse, see, buy, trade, look at wares, or shop from a merchant/vendor/shopkeeper? → SHOP_OPENED required. Generate a thematic inventory of 6–12 items the merchant would realistically stock, with appropriate prices in gp. CRITICAL: Every weapon and armor piece you mention or describe in the narrative MUST appear in the SHOP_OPENED inventory array — do NOT describe items in dialogue that aren't purchasable. A blacksmith should stock mostly weapons and armor; an alchemist should stock potions and reagents; a general merchant should have a broad mix. Every item MUST include a "description" field — a brief 1-sentence flavor text explaining what it does or its magical effect. For weapons/armor this can be short ("A sturdy steel blade"), but for accessories, tools, and magical items the description is ESSENTIAL (e.g. "Grants +1 to all perception checks", "Can hold 500 lbs of items while weighing only 5 lbs"). Include full item properties (damage for weapons, ac/ac_bonus+slot for armor, heal for potions, etc). Set prices based on rarity: common 5–25gp, uncommon 25–100gp, rare 100–500gp, epic 500–2000gp. The player's client will open an interactive shop menu — do NOT handle individual buy/sell transactions in the narrative. Just describe the shop scene and emit SHOP_OPENED. The player will buy/sell through the shop UI.
@@ -1593,6 +1605,45 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
               partyId, campaignId, eventType: "MP_CHANGED", actorId: "gm",
               payload: { character_id: update.character_id, delta: update.delta, new_mp: newMp, reason: update.reason },
             });
+          }
+          break;
+        }
+        case "ABILITY_USED": {
+          const char = await resolveCharacter(update.character_id, partyId);
+          if (char) {
+            const abilities = [...(char.abilities as any[])];
+            const idx = abilities.findIndex((a: any) => a.id === update.ability_id);
+            if (idx >= 0 && abilities[idx].usesMax > 0 && abilities[idx].usesLeft > 0) {
+              abilities[idx] = { ...abilities[idx], usesLeft: abilities[idx].usesLeft - 1 };
+              await db.update(characters).set({ abilities }).where(eq(characters.id, char.id));
+              console.log(`[GM] ${char.name} used ability "${abilities[idx].name}" — ${abilities[idx].usesLeft}/${abilities[idx].usesMax} uses remaining`);
+            }
+          }
+          break;
+        }
+        case "ABILITIES_RECHARGED": {
+          const char = await resolveCharacter(update.character_id, partyId);
+          if (char) {
+            const rechargeType = update.recharge_type ?? "per-rest";
+            const abilities = (char.abilities as any[]).map((a: any) => {
+              if (a.usesMax <= 0) return a;
+              if (rechargeType === "per-day") {
+                if (a.recharge === "per-rest" || a.recharge === "per-day" || a.recharge === "per-encounter") {
+                  return { ...a, usesLeft: a.usesMax };
+                }
+              } else if (rechargeType === "per-rest") {
+                if (a.recharge === "per-rest" || a.recharge === "per-encounter") {
+                  return { ...a, usesLeft: a.usesMax };
+                }
+              } else if (rechargeType === "per-encounter") {
+                if (a.recharge === "per-encounter") {
+                  return { ...a, usesLeft: a.usesMax };
+                }
+              }
+              return a;
+            });
+            await db.update(characters).set({ abilities }).where(eq(characters.id, char.id));
+            console.log(`[GM] ${char.name} abilities recharged (${rechargeType})`);
           }
           break;
         }

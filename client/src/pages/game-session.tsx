@@ -1170,7 +1170,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 transition: "background-image 1.2s ease-in-out",
               }}
             >
-              <div className="absolute inset-0 bg-background/90" />
+              <div className="absolute inset-0 bg-background/60" />
             </div>
           )}
           {/* Subtle shimmer while background is generating */}

@@ -980,6 +980,7 @@ YOUR ROLE:
 1. Narrate outcomes in ONE tight paragraph (3–5 sentences max). Fun, punchy, never flowery.
 2. Respond to what the [ACTING NOW] player ACTUALLY did — be specific, reactive, and enthusiastic
 3. When rules apply (checks, combat, saves), call for dice rolls by putting entries in the "dice_requests" array. NEVER mention rolling in the narrative text — no "Rolling to determine...", "Let's see the roll...", "Time to roll..." — the dice UI handles that automatically. PREFER ONE ROLL AT A TIME — request the most important/primary check first. If multiple checks are genuinely simultaneous (e.g. initiative rolls for different characters in combat), you may include them, but the UI will present them sequentially. Avoid requesting two rolls for the same character in one response — instead, resolve the first roll, then request the next one in your follow-up.
+   NEVER include meta/system commentary in the narrative. No "Updating your inventory...", "Adding items...", "Stand by", "One moment", "Processing...", "Applying changes...", "Hang tight" or any variation. The narrative is ONLY for story — all mechanical updates happen silently through proposed_updates. The player should never see behind-the-scenes text about what the system is doing.
 4. Propose state changes using structured updates
 5. Keep track of continuity - never contradict established facts; always respect PARTY STATUS
 6. Use humor, callbacks, and personality to make the world feel alive
@@ -1337,7 +1338,11 @@ export async function runGM(
       const separatorIdx = remaining.indexOf("\n---");
       const doubleNewline = remaining.indexOf("\n\n");
       const dashOnly = remaining.indexOf("---");
-      const cutoff = [separatorIdx, doubleNewline, dashOnly].filter(i => i >= 0).sort((a, b) => a - b)[0] ?? -1;
+      const metaTextMatch = remaining.match(/(?:Updating|Adding|Removing|Checking|Processing|Adjusting|Modifying|Applying|Granting|Recording)\s/i);
+      const metaIdx = metaTextMatch ? remaining.indexOf(metaTextMatch[0]) : -1;
+      const standByMatch = remaining.match(/(?:Stand by|One moment|Please wait|Hang tight|Just a moment|Working on|Hold on)/i);
+      const standByIdx = standByMatch ? remaining.indexOf(standByMatch[0]) : -1;
+      const cutoff = [separatorIdx, doubleNewline, dashOnly, metaIdx, standByIdx].filter(i => i >= 0).sort((a, b) => a - b)[0] ?? -1;
       if (cutoff >= 0) {
         const narrativePart = remaining.slice(0, cutoff);
         if (narrativePart) {
@@ -1404,6 +1409,10 @@ export async function runGM(
     narr = narr.replace(/\s+(?:What do you do\??|What's your (?:next )?move\??|How do you (?:respond|react|proceed)\??|What will you do\??|Do you .{5,80}\??)$/i, "");
     narr = narr.replace(/\s*Rolling to (?:determine|check|see|resolve)[\s\S]*$/i, "");
     narr = narr.replace(/\s*(?:Let's see|Time to roll|Let's roll)[\s\S]*$/i, "");
+    narr = narr.replace(/\s*(?:Updating|Adding|Removing|Checking|Processing|Adjusting|Modifying|Applying|Granting|Recording)[\s\S]*?(?:inventory|equipment|stats?|gold|items?|loot|character|spoils|rewards?|changes?)[\s\S]*$/i, "");
+    narr = narr.replace(/\s*(?:Stand by|One moment|Please wait|Hang tight|Just a moment|Working on|Hold on)[\s\S]*$/i, "");
+    narr = narr.replace(/^\s*---\s*/, "");
+    narr = narr.replace(/\s*---\s*$/, "");
     cleanNarrative = narr.trim();
   } else {
     let stripped = fullText;

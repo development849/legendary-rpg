@@ -916,9 +916,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         }
       } catch (_) {}
       narrative = narrative.replace(/\s*---[\s\S]*$/s, "");
+      narrative = narrative.replace(/^\s*---\s*/, "");
       narrative = narrative.replace(/\n\n[\s\S]*$/s, "");
       narrative = narrative.replace(/\s+(?:What do you do\??|What's your (?:next )?move\??|How do you (?:respond|react|proceed)\??|What will you do\??|Do you .{5,80}\??)$/i, "");
       narrative = narrative.replace(/\s*Rolling to (?:determine|check|see|resolve)[\s\S]*$/i, "");
+      narrative = narrative.replace(/\s*(?:Updating|Adding|Removing|Checking|Processing|Adjusting|Modifying|Applying|Granting|Recording)[\s\S]*?(?:inventory|equipment|stats?|gold|items?|loot|character|spoils|rewards?|changes?)[\s\S]*$/i, "");
+      narrative = narrative.replace(/\s*(?:Stand by|One moment|Please wait|Hang tight|Just a moment|Working on|Hold on)[\s\S]*$/i, "");
       narrative = narrative.trim();
 
       return (
@@ -1222,8 +1225,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                             if (narrativeMatch) text = narrativeMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
                           } catch (_) {}
                           text = text.replace(/\s*---[\s\S]*$/s, "");
+                          text = text.replace(/^\s*---\s*/, "");
                           text = text.replace(/\n\n[\s\S]*$/s, "");
                           text = text.replace(/\s*Rolling to (?:determine|check|see|resolve)[\s\S]*$/i, "");
+                          text = text.replace(/\s*(?:Updating|Adding|Removing|Checking|Processing|Adjusting|Modifying|Applying|Granting|Recording)[\s\S]*?(?:inventory|equipment|stats?|gold|items?|loot|character|spoils|rewards?|changes?)[\s\S]*$/i, "");
+                          text = text.replace(/\s*(?:Stand by|One moment|Please wait|Hang tight|Just a moment|Working on|Hold on)[\s\S]*$/i, "");
                           text = text.trim();
                           return text ? <p className="font-serif leading-relaxed text-foreground/85 my-1">{text}</p> : null;
                         })()}

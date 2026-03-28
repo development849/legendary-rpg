@@ -1439,24 +1439,27 @@ export async function runGM(
   const updates = parsed?.proposed_updates ?? [];
 
   // Safety net: detect gold/coin acquisition in narrative without a GOLD_CHANGED update
-  // Only fires for clear "found/picked up/looted" language, NOT for distributing/splitting/paying
   const narrative = parsed?.narrative ?? "";
-  const goldAcquisitionPattern = /\b(?:found?|pick(?:ed|s)?\s+up|loot(?:ed|s)?|discover(?:ed|s)?|collect(?:ed|s)?|grab(?:bed|s)?)\b[^.]*?\b(\d+)\s*(?:gold|gp|coins?)\b/i;
-  const simpleGoldFound = /\b(\d+)\s*(?:gold|gp|coins?)\b/i;
-  const distributionPattern = /\b(?:divid|split|distribut|shar(?:e|ing)|gave|paid|spent|cost|buy|bought|hand(?:ed|s)?\s+over)\b/i;
-  const hasGoldAcquisition = goldAcquisitionPattern.test(narrative);
   const hasGoldUpdate = updates.some((u: any) => u.type === "GOLD_CHANGED");
+  const distributionPattern = /\b(?:divid|split|distribut|shar(?:e|ing)|gave|paid|spent|cost|buy|bought|hand(?:ed|s)?\s+over|shop|merchant|vendor|price|priced)\b/i;
   const isDistribution = distributionPattern.test(narrative);
-  if (hasGoldAcquisition && !hasGoldUpdate && !isDistribution && ctx.actingCharacterId) {
-    const goldAmountMatch = narrative.match(simpleGoldFound);
-    const amount = goldAmountMatch ? parseInt(goldAmountMatch[1]) : 5;
-    console.log(`[GM Safety Net] Narrative mentions finding ${amount}gp but no GOLD_CHANGED emitted. Auto-injecting for character ${ctx.actingCharacterId}`);
-    updates.push({
-      type: "GOLD_CHANGED",
-      character_id: ctx.actingCharacterId,
-      delta: amount,
-      reason: "Coins found (auto-detected from narrative)",
-    });
+
+  if (!hasGoldUpdate && !isDistribution && ctx.actingCharacterId) {
+    const goldMentionPattern = /\b(\d+)\s*(?:gold|gp|coins?|copper|silver|pieces?)\b/i;
+    const goldContextPattern = /\b(?:found?|pick(?:ed|s)?\s+up|loot(?:ed|s)?|discover(?:ed|s)?|collect(?:ed|s)?|grab(?:bed|s)?|open(?:ed|s)?|contain(?:s|ed)?|inside|within|stash|pile|pouch|bag|chest|hoard|treasure|reward(?:ed)?|earn(?:ed|s)?|receive[ds]?|pocket(?:ed|s)?|scoop(?:ed|s)?|take(?:s)?|took|claim(?:ed|s)?)\b/i;
+    const goldMentionMatch = narrative.match(goldMentionPattern);
+    const hasGoldContext = goldContextPattern.test(narrative);
+
+    if (goldMentionMatch && hasGoldContext) {
+      const amount = parseInt(goldMentionMatch[1]) || 5;
+      console.log(`[GM Safety Net] Narrative mentions ${amount} gold/coins with acquisition context but no GOLD_CHANGED emitted. Auto-injecting for character ${ctx.actingCharacterId}`);
+      updates.push({
+        type: "GOLD_CHANGED",
+        character_id: ctx.actingCharacterId,
+        delta: amount,
+        reason: "Coins found (auto-detected from narrative)",
+      });
+    }
   }
 
   // Process updates

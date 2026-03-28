@@ -402,29 +402,35 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const item = inv[itemIndex];
-      if (item.type !== "weapon" && item.type !== "armor" && item.type !== "jewelry") {
+      const equippableTypes = new Set(["weapon", "armor", "jewelry", "accessory", "ring", "amulet", "necklace"]);
+      if (!equippableTypes.has(item.type)) {
         return res.status(400).json({ error: "Only weapons, armor, and jewelry can be equipped" });
       }
 
-      if (equipped && (item.type === "armor" || item.type === "jewelry")) {
+      const isJewelryLike = (t: string) => ["jewelry", "accessory", "ring", "amulet", "necklace"].includes(t);
+
+      if (equipped && (item.type === "armor" || isJewelryLike(item.type))) {
         const getEquipSlot = (it: any): string | null => {
           if (it.properties?.slot) return it.properties.slot;
           if (it.type === "armor" && it.properties?.ac) return "body";
           if (it.type === "armor" && it.properties?.ac_bonus) return null;
+          if (it.type === "amulet" || it.type === "necklace") return "necklace";
+          if (it.type === "ring") return "ring";
+          if (isJewelryLike(it.type)) return "accessory";
           return null;
         };
         const effectiveSlot = getEquipSlot(item);
 
         if (effectiveSlot === "ring") {
-          const equippedRings = inv.filter((it: any, idx: number) => idx !== itemIndex && it.equipped && it.type === "jewelry" && it.properties?.slot === "ring");
+          const equippedRings = inv.filter((it: any, idx: number) => idx !== itemIndex && it.equipped && (isJewelryLike(it.type) || it.type === "armor") && getEquipSlot(it) === "ring");
           if (equippedRings.length >= 2) {
-            const oldestRingIdx = inv.findIndex((it: any) => it.equipped && it.type === "jewelry" && it.properties?.slot === "ring");
+            const oldestRingIdx = inv.findIndex((it: any) => it.equipped && (isJewelryLike(it.type) || it.type === "armor") && getEquipSlot(it) === "ring");
             if (oldestRingIdx >= 0) inv[oldestRingIdx] = { ...inv[oldestRingIdx], equipped: false };
           }
         } else if (effectiveSlot) {
           inv.forEach((it: any, idx: number) => {
             if (idx === itemIndex || !it.equipped) return;
-            if (it.type !== "armor" && it.type !== "jewelry") return;
+            if (it.type !== "armor" && !isJewelryLike(it.type)) return;
             if (getEquipSlot(it) === effectiveSlot) {
               inv[idx] = { ...inv[idx], equipped: false };
             }

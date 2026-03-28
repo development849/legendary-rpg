@@ -1846,8 +1846,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                       if (item.properties?.ac_bonus) return "off-hand";
                       if (item.properties?.ac) return "body";
                     }
-                    if (item.type === "jewelry") {
-                      return item.properties?.slot === "necklace" ? "necklace" : "ring";
+                    if (item.type === "jewelry" || item.type === "accessory" || item.type === "ring" || item.type === "amulet" || item.type === "necklace") {
+                      const slot = item.properties?.slot;
+                      if (slot) return slot;
+                      if (item.type === "necklace" || item.type === "amulet") return "necklace";
+                      if (item.type === "ring") return "ring";
+                      return "accessory";
                     }
                     return null;
                   };
@@ -1874,7 +1878,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     return parts.length > 0 ? parts.join(" · ") : null;
                   };
 
-                  const canEquip = (item: any) => item.type === "weapon" || item.type === "armor" || item.type === "jewelry";
+                  const equippableTypes = new Set(["weapon", "armor", "jewelry", "accessory", "ring", "amulet", "necklace"]);
+                  const canEquip = (item: any) => equippableTypes.has(item.type);
 
                   const rarityColors: Record<string, string> = {
                     common: "text-zinc-400 border-zinc-500/30 bg-zinc-500/10",

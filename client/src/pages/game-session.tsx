@@ -902,7 +902,6 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     }
 
     if (isGM) {
-      // Parse JSON to extract narrative and dice requests
       let narrative = msg.content;
       let diceRequests: any[] = msg.metadata?.diceRequests ?? [];
       try {
@@ -916,6 +915,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           }
         }
       } catch (_) {}
+      narrative = narrative.replace(/\s*---[\s\S]*$/s, "");
+      narrative = narrative.replace(/\n\n[\s\S]*$/s, "");
+      narrative = narrative.replace(/\s+(?:What do you do\??|What's your (?:next )?move\??|How do you (?:respond|react|proceed)\??|What will you do\??|Do you .{5,80}\??)$/i, "");
+      narrative = narrative.replace(/\s*Rolling to (?:determine|check|see|resolve)[\s\S]*$/i, "");
+      narrative = narrative.trim();
 
       return (
         <div key={msg.id} className="space-y-2" data-testid={`message-gm-${msg.id}`}>
@@ -925,9 +929,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           </div>
           <div className="narrative-bg rounded-md p-4 prose-fantasy text-foreground/90">
             <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-p:my-2">
-              {narrative.split("\n").map((line: string, i: number) => (
-                line ? <p key={i} className="font-serif leading-relaxed text-foreground/85 my-1.5">{line}</p> : <br key={i} />
-              ))}
+              <p className="font-serif leading-relaxed text-foreground/85 my-1.5">{narrative}</p>
             </div>
           </div>
           {diceRequests.length > 0 && (() => {
@@ -1214,15 +1216,16 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     <div className="narrative-bg rounded-md p-4">
                       <div className="prose prose-invert prose-sm max-w-none">
                         {(() => {
-                          // Try to extract narrative from partial JSON
                           let text = streamingContent;
                           try {
                             const narrativeMatch = text.match(/"narrative"\s*:\s*"([\s\S]*?)(?:"|$)/);
                             if (narrativeMatch) text = narrativeMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
                           } catch (_) {}
-                          return text.split("\n").map((line: string, i: number) => (
-                            line ? <p key={i} className="font-serif leading-relaxed text-foreground/85 my-1">{line}</p> : <br key={i} />
-                          ));
+                          text = text.replace(/\s*---[\s\S]*$/s, "");
+                          text = text.replace(/\n\n[\s\S]*$/s, "");
+                          text = text.replace(/\s*Rolling to (?:determine|check|see|resolve)[\s\S]*$/i, "");
+                          text = text.trim();
+                          return text ? <p className="font-serif leading-relaxed text-foreground/85 my-1">{text}</p> : null;
                         })()}
                         <span className="cursor-blink" />
                       </div>

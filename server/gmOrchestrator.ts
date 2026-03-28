@@ -1336,7 +1336,8 @@ export async function runGM(
     } else {
       const separatorIdx = remaining.indexOf("\n---");
       const doubleNewline = remaining.indexOf("\n\n");
-      const cutoff = separatorIdx >= 0 ? separatorIdx : doubleNewline >= 0 ? doubleNewline : -1;
+      const dashOnly = remaining.indexOf("---");
+      const cutoff = [separatorIdx, doubleNewline, dashOnly].filter(i => i >= 0).sort((a, b) => a - b)[0] ?? -1;
       if (cutoff >= 0) {
         const narrativePart = remaining.slice(0, cutoff);
         if (narrativePart) {
@@ -1345,7 +1346,7 @@ export async function runGM(
         }
         inJsonBlock = true;
       } else {
-        const safeEnd = remaining.length - 20;
+        const safeEnd = remaining.length - 40;
         if (safeEnd > 0) {
           const safePart = remaining.slice(0, safeEnd);
           onChunk(safePart);

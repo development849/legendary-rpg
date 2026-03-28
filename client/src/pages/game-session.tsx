@@ -1830,6 +1830,12 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     weapon: "weapon", armor: "armor", jewelry: "jewelry", consumable: "consumable",
                     tool: "tool", treasure: "treasure", currency: "treasure",
                     accessory: "jewelry", ring: "jewelry", amulet: "jewelry", necklace: "jewelry",
+                    bracelet: "jewelry", trinket: "jewelry", pendant: "jewelry", brooch: "jewelry",
+                    circlet: "jewelry", crown: "jewelry", tiara: "jewelry",
+                    wondrous: "jewelry", shell: "jewelry",
+                    belt: "armor", cloak: "armor", cape: "armor",
+                    boots: "armor", gloves: "armor", gauntlets: "armor",
+                    helm: "armor", helmet: "armor", hat: "armor", headband: "armor",
                     key: "tool", document: "tool", map: "tool",
                     misc: "other", item: "other", resource: "other", material: "other",
                     artifact: "treasure", relic: "treasure", gem: "treasure", loot: "treasure",
@@ -1902,8 +1908,13 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     return parts.length > 0 ? parts.join(" · ") : null;
                   };
 
-                  const equippableTypes = new Set(["weapon", "armor", "jewelry", "accessory", "ring", "amulet", "necklace"]);
-                  const canEquip = (item: any) => equippableTypes.has(item.type);
+                  const equippableTypes = new Set(["weapon", "armor", "jewelry", "accessory", "ring", "amulet", "necklace", "bracelet", "trinket", "wondrous", "shell", "pendant", "brooch", "circlet", "crown", "tiara", "belt", "cloak", "cape", "boots", "gloves", "gauntlets", "helm", "helmet", "hat", "headband"]);
+                  const equippableCategories = new Set(["weapon", "armor", "jewelry"]);
+                  const canEquip = (item: any) => {
+                    if (equippableTypes.has(item.type)) return true;
+                    const mappedType = typeMap[item.type ?? "other"] ?? "other";
+                    return equippableCategories.has(mappedType);
+                  };
 
                   const rarityColors: Record<string, string> = {
                     common: "text-zinc-400 border-zinc-500/30 bg-zinc-500/10",

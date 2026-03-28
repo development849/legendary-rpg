@@ -36,7 +36,9 @@ export async function generateLocationBackground(
       ? ` Campaign theme (secondary context only): ${campaignSetting.slice(0, 80)}.`
       : "";
 
-    const prompt = `Wide cinematic fantasy environment painting of "${sceneTitle || locationName}".${descPart} The scene is set at "${locationName}". Paint exactly what this location looks like — if it is a city, market, forest, cave, etc., depict THAT environment faithfully.${settingPart} Environment only, no people or characters in frame. Landscape orientation, immersive wide shot. ${STYLE_PROMPT}`;
+    const isShopOrIndoor = /shop|store|market|stall|wares|wonders|emporium|bazaar|inn|tavern|smithy|forge|library|temple|guild|hall/i.test(sceneTitle || locationName);
+    const shopHint = isShopOrIndoor ? " This is an INTERIOR scene — show the inside of the building/shop with shelves, goods, and atmospheric lighting. Do NOT show underwater or ocean scenes even if the name sounds aquatic — it is a land-based shop." : "";
+    const prompt = `Wide cinematic fantasy environment painting of "${sceneTitle || locationName}".${descPart} The scene is set at "${locationName}".${shopHint} Paint exactly what this location looks like — if it is a shop, show its interior; if it is a city, market, forest, cave, etc., depict THAT environment faithfully. Do NOT assume underwater setting unless the scene explicitly says "underwater" or "submerged".${settingPart} Environment only, no people or characters in frame. Landscape orientation, immersive wide shot. ${STYLE_PROMPT}`;
 
     const parts: any[] = await getStyleRefParts();
     parts.push({ text: prompt });

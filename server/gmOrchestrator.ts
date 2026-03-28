@@ -1651,16 +1651,22 @@ export function consolidateCoins(inv: any[]): any[] {
   for (let i = 0; i < inv.length; i++) {
     const item = inv[i];
     if (!isCoinItem(item)) continue;
-    const hasValue = typeof item.properties?.value === "number";
-    if (hasValue) {
-      const qty = item.qty ?? 1;
-      const val = (item.properties?.value ?? 0) * qty;
-      totalGold += val;
-      if (firstPouchIdx === -1) {
-        firstPouchIdx = i;
-      } else {
-        toRemove.push(i);
+    const val = typeof item.properties?.value === "number" ? item.properties.value : 0;
+    const qty = item.qty ?? 1;
+    totalGold += val * qty;
+
+    // Also try to parse gold amount from name like "Coin Pouch (10gp)" or "10 Gold Coins"
+    if (val === 0) {
+      const nameMatch = (item.name || "").match(/(\d+)\s*(?:gp|gold)/i);
+      if (nameMatch) {
+        totalGold += parseInt(nameMatch[1], 10) * qty;
       }
+    }
+
+    if (firstPouchIdx === -1) {
+      firstPouchIdx = i;
+    } else {
+      toRemove.push(i);
     }
   }
 
@@ -1907,7 +1913,8 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
             );
             const delta = update.delta ?? 0;
             if (pouchIdx >= 0) {
-              const newValue = Math.max(0, inv[pouchIdx].properties.value + delta);
+              const currentValue = typeof inv[pouchIdx].properties?.value === "number" ? inv[pouchIdx].properties.value : 0;
+              const newValue = Math.max(0, currentValue + delta);
               if (newValue === 0) {
                 inv.splice(pouchIdx, 1);
               } else {

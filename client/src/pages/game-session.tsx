@@ -2926,11 +2926,20 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         const myMember = members.find((m: any) => m.userId === user?.id);
         const char = myMember?.character;
         const playerItems: any[] = char?.inventory ?? [];
-        const playerGold = playerItems.find((i: any) => {
+        const playerGold = playerItems.reduce((sum: number, i: any) => {
           const coinTypes = ["treasure", "currency"];
           const coinPat = /coin|gold|silver|copper|money|gp\b|pouch/i;
-          return coinTypes.includes(i.type) && (typeof i.properties?.value === "number" || coinPat.test(i.name || ""));
-        })?.properties?.value ?? 0;
+          if (coinTypes.includes(i.type) && (typeof i.properties?.value === "number" || coinPat.test(i.name || ""))) {
+            let val = typeof i.properties?.value === "number" ? i.properties.value : 0;
+            if (val === 0) {
+              const nameMatch = (i.name || "").match(/(\d+)\s*(?:gp|gold)/i);
+              if (nameMatch) val = parseInt(nameMatch[1], 10);
+            }
+            const qty = i.qty ?? 1;
+            return sum + (val * qty);
+          }
+          return sum;
+        }, 0);
 
         const sellableItems = playerItems
           .map((item: any, idx: number) => ({ item, idx }))

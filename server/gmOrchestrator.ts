@@ -1729,6 +1729,55 @@ export async function runGM(
     }
   }
 
+  // Shop safety net: if the player asked to shop/browse/buy and narrative mentions wares/items
+  // but the GM forgot to emit SHOP_OPENED, auto-generate shop inventory
+  const hasShopUpdate = updates.some((u: any) => u.type === "SHOP_OPENED");
+  if (!hasShopUpdate) {
+    const shopIntent = /\b(?:look at (?:his |her |their )?wares|browse|shop|buy|purchase|see (?:what|your|his|her|their) (?:wares|goods|items|stock|inventory)|what.*(?:for sale|selling|have to sell)|show me (?:your|the) (?:wares|goods|items))\b/i;
+    const narrShopHints = /\b(?:wares|goods|stock|inventory|display|for sale|merchandise|treasures|trinkets|weapons|armor|potions|items|collection|assortment)\b/i;
+    const playerAskedToShop = shopIntent.test(ctx.playerIntent);
+    const narrativeDescribesShop = narrShopHints.test(cleanNarrative);
+
+    if (playerAskedToShop && narrativeDescribesShop) {
+      console.log(`[GM] Shop safety net: player asked "${ctx.playerIntent}" and narrative describes shop items, but GM forgot SHOP_OPENED. Generating shop inventory...`);
+      try {
+        const openai = (await import("openai")).default;
+        const client = new openai({
+          apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+          baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        });
+        const merchantName = (() => {
+          const npcInNarr = updates.find((u: any) => u.type === "NPC_MET" && /merchant|shopkeep|vendor|trader/i.test(u.role || ""));
+          if (npcInNarr) return npcInNarr.name;
+          const nameMatch = cleanNarrative.match(/\b([A-Z][a-z]{3,}(?:'[a-z]+)?)\b/);
+          return nameMatch?.[1] ?? "Merchant";
+        })();
+        const shopGenResponse = await client.chat.completions.create({
+          model: "gpt-4o-mini",
+          temperature: 0.7,
+          max_tokens: 1500,
+          messages: [{
+            role: "system",
+            content: `Generate a JSON array of 6-10 shop items for a fantasy RPG merchant named "${merchantName}". Context: ${cleanNarrative.slice(0, 300)}. Each item: {"name": string, "type": "weapon"|"armor"|"consumable"|"accessory"|"tool"|"jewelry", "rarity": "common"|"uncommon"|"rare", "price": number (gp), "description": string (1 sentence), "properties": object}. For weapons include damage. For armor include ac/ac_bonus and slot. For consumables include heal or effect. Prices: common 5-25, uncommon 25-100, rare 100-500. Return ONLY the JSON array, no markdown.`
+          }],
+        });
+        const itemsRaw = shopGenResponse.choices[0]?.message?.content?.trim() ?? "[]";
+        const shopItems = JSON.parse(itemsRaw.replace(/^```json?\s*/i, "").replace(/```\s*$/i, ""));
+        if (Array.isArray(shopItems) && shopItems.length > 0) {
+          updates.push({
+            type: "SHOP_OPENED",
+            merchant_name: merchantName,
+            shop_flavor: cleanNarrative.slice(0, 150),
+            inventory: shopItems,
+          });
+          console.log(`[GM] Shop safety net: generated ${shopItems.length} items for ${merchantName}`);
+        }
+      } catch (shopErr) {
+        console.error("[GM] Shop safety net failed:", shopErr);
+      }
+    }
+  }
+
   const turnHint = parsed?.turn_hint ?? null;
   onDone(cleanNarrative, updates, diceRequests, parsed?.quick_actions ?? [], turnHint, levelUps);
 }

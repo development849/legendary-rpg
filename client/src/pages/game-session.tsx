@@ -2986,15 +2986,42 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           .filter(({ item }) => !(["treasure", "currency"].includes(item.type) && /^coin\s*pouch/i.test(item.name || "")));
 
         const getSellPrice = (item: any): number => {
-          const val = item.properties?.value;
-          if (typeof val === "number") return Math.max(1, Math.floor(val * 0.5));
+          const val = item.properties?.value ?? item.properties?.gold_value;
+          if (typeof val === "number" && val > 0) return Math.max(1, Math.floor(val * 0.5));
           if (typeof item.price === "number" && item.price > 0) return Math.max(1, Math.floor(item.price * 0.25));
+
+          const nameAndDesc = ((item.name || "") + " " + (item.description || "")).toLowerCase();
+          const hasPreciousContent = /pearl|gem|jewel|diamond|ruby|sapphire|emerald|opal|topaz|amethyst|crystal|gold coin|silver coin|platinum/i.test(nameAndDesc);
+
+          const goldMatch = nameAndDesc.match(/(\d+)\s*(?:gold|gp|coin)/i);
+          if (goldMatch) {
+            const parsed = parseInt(goldMatch[1], 10);
+            if (parsed > 0) return Math.max(1, Math.floor(parsed * 0.5 * (item.qty ?? 1)));
+          }
+
+          const preciousUnitValues: Record<string, number> = {
+            pearl: 50, diamond: 200, ruby: 150, sapphire: 150, emerald: 150,
+            opal: 75, topaz: 50, amethyst: 50, gem: 50, jewel: 75, platinum: 100,
+          };
+          for (const [stone, unitVal] of Object.entries(preciousUnitValues)) {
+            const stoneRegex = new RegExp(`(\\d+)\\s*(?:lustrous\\s+|gleaming\\s+|polished\\s+)?${stone}`, "i");
+            const stoneMatch = nameAndDesc.match(stoneRegex);
+            if (stoneMatch) {
+              const count = parseInt(stoneMatch[1], 10);
+              if (count > 0) return Math.max(1, Math.floor(count * unitVal * 0.5 * (item.qty ?? 1)));
+            }
+            if (nameAndDesc.includes(stone) && !stoneMatch) {
+              return Math.max(1, Math.floor(unitVal * 0.5 * (item.qty ?? 1)));
+            }
+          }
+
           const rarityBase: Record<string, number> = { common: 5, uncommon: 25, rare: 100, epic: 400, legendary: 1000 };
-          const typeBonus: Record<string, number> = { weapon: 1.2, armor: 1.3, jewelry: 1.1, accessory: 1.0, consumable: 0.6, tool: 0.5, document: 0.3, misc: 0.3, item: 0.3 };
+          const typeBonus: Record<string, number> = { weapon: 1.2, armor: 1.3, jewelry: 1.1, accessory: 1.0, consumable: 0.6, tool: 0.5, document: 0.3, misc: 0.3, item: 0.3, treasure: 1.0, currency: 1.0, resource: 0.5, material: 0.5, artifact: 1.5, relic: 1.5 };
           const base = rarityBase[item.rarity ?? "common"] ?? 5;
           const tMult = typeBonus[item.type] ?? 0.5;
           const bonus = item.properties?.bonus ?? 0;
-          return Math.max(1, Math.floor((base * tMult + bonus * 15) * 0.25 * (item.qty ?? 1)));
+          const preciousBonus = hasPreciousContent ? 2.0 : 1.0;
+          return Math.max(1, Math.floor((base * tMult * preciousBonus + bonus * 15) * 0.25 * (item.qty ?? 1)));
         };
 
         const formatItemProps = (p: any) => {

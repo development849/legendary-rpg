@@ -1504,26 +1504,59 @@ export async function runGM(
       "forest", "mountain", "river", "ocean", "island", "village", "castle", "tower", "cave",
       "tavern", "market", "harbor", "bridge", "gate", "wall", "door", "room", "hall",
       "warrior", "knight", "ranger", "wizard", "rogue", "cleric", "paladin", "druid",
-      "dwarf", "human", "triton", "gnome", "halfling",
+      "dwarf", "human", "triton", "gnome", "halfling", "elf", "orc", "goblin", "troll",
+      "barbarian", "sorcerer", "warlock", "bard", "monk", "fighter", "artificer",
+      "acolyte", "merchant", "guardian", "captain", "elder", "chief", "king", "queen",
+      "prince", "princess", "lord", "lady", "sir", "master", "keeper", "warden",
+      "traveler", "stranger", "adventurer", "champion", "hero", "villain", "creature",
+      "beast", "monster", "spirit", "ghost", "demon", "angel", "giant", "titan",
+      "friend", "tavern", "inn", "guild", "temple", "shrine", "altar", "throne",
+      "pearlhaven", "stormshard", "dockside", "thalmerith",
+      "shall", "these", "those", "whose", "whom", "except", "either", "neither",
+      "several", "various", "different", "similar", "certain", "special", "entire",
+      "perfect", "complete", "general", "common", "normal", "usual", "typical",
+      "natural", "physical", "mental", "emotional", "spiritual", "divine", "sacred",
+      "growing", "glowing", "burning", "rising", "falling", "running", "standing",
+      "sitting", "looking", "speaking", "walking", "moving", "turning", "reaching",
+      "holding", "waiting", "watching", "fighting", "healing", "casting", "wielding",
+      "wearing", "carrying", "leading", "following", "entering", "leaving", "crossing",
+      "pausing", "nodding", "shaking", "pointing", "waving", "smiling", "frowning",
+      "laughing", "whispering", "shouting", "speaking", "asking", "answering", "telling",
+      "showing", "opening", "closing", "breaking", "building", "creating", "destroying",
+      "knowing", "thinking", "feeling", "seeing", "hearing", "touching", "tasting",
+      "having", "making", "taking", "giving", "getting", "setting", "putting", "letting",
+      "coming", "going", "bringing", "sending", "keeping", "starting", "stopping",
+      "grand", "great", "small", "young", "ancient", "though", "because", "during",
+      "within", "without", "toward", "towards", "between", "among", "despite",
+      "further", "whether", "already", "merely", "simply", "hardly", "nearly",
+      "clearly", "likely", "roughly", "fairly", "surely", "barely", "mostly",
+      "really", "truly", "quite", "rather", "about", "under", "inside", "outside",
+      "forge", "wares", "stall", "counter", "trail", "path", "road", "street",
+      "rest", "sleep", "camp", "fire", "water", "food", "drink", "gold", "copper",
+      "iron", "steel", "bronze", "mithril", "adamantine", "leather", "cloth", "chain",
+      "plate", "scale", "bone", "horn", "fang", "claw", "tail", "wing",
+      "stormbringer", "legend", "trial", "quest", "journey", "adventure", "tale",
+      "story", "battle", "fight", "war", "peace", "victory", "defeat", "death",
+      "life", "power", "strength", "wisdom", "courage", "honor", "glory", "fate",
     ]);
 
-    // Find capitalized words that look like proper names (not at start of sentence)
-    const namePattern = /(?<=[.!?]\s+\w[^.!?]*\s|[,;:]\s|—\s|"\s*)([A-Z][a-z]{2,}(?:'[a-z]+)?)/g;
-    // Also find names at dialogue attribution: "text," Name says / Name's
-    const dialogueNamePattern = /[""][^""]*[""],?\s+([A-Z][a-z]{2,}(?:'[a-z]+)?)\s+(?:says?|rumbles?|whispers?|growls?|speaks?|asks?|replies?|responds?|murmurs?|shouts?|exclaims?|announces?|declares?|commands?|orders?)/g;
-    // Also: Name's (possessive indicates a named character)
-    const possessivePattern = /([A-Z][a-z]{2,}(?:'[a-z]+)?)'s\s/g;
+    const wsState = (worldSnap?.state as any) ?? {};
+    const locationNames = new Set<string>();
+    for (const loc of (wsState.locations ?? [])) {
+      if (loc.name) for (const w of loc.name.split(/\s+/)) locationNames.add(w.toLowerCase());
+    }
+    if (wsState.currentLocation) for (const w of wsState.currentLocation.split(/\s+/)) locationNames.add(w.toLowerCase());
+    const campaignTitle = (await db.select({ name: campaigns.name }).from(campaigns).where(eq(campaigns.id, ctx.campaignId)).limit(1))?.[0]?.name ?? "";
+    if (campaignTitle) for (const w of campaignTitle.split(/\s+/)) locationNames.add(w.toLowerCase());
 
-    const englishWordsNotNames = /^(Alright|Maybe|Perhaps|Indeed|However|Actually|Certainly|Absolutely|Exactly|Obviously|Clearly|Finally|Suddenly|Quickly|Slowly|Carefully|Quietly|Welcome|Farewell|Goodbye|Greetings|Enough|Another|Already|Always|Never|Nothing|Something|Everything|Someone|Everyone|Anyone|Nobody|Whatever|Wherever|Whenever|Whoever|Interesting|Dangerous|Beautiful|Powerful|Ancient|Mysterious|Strange|Careful|Incredible|Impossible|Excellent|Terrible|Wonderful|Remarkable|Crimson|Golden|Silver|Shadow|Darkness|Lightning|Forest|Mountain|River|Ocean|Island|Village|Castle|Tower|Cave|Tavern|Market|Harbor|Bridge|Forward|Behind|Beneath|Beyond|Between|Through|Around|Across|Against|Along|Above|Below|Before|After|Besides|Continue|Proceed|Approach|Return|Retreat|Attack|Defend|Guard|Watch|Listen|Look|Inspect|Examine|Search|Thanks|Sorry|Please|Well|Right|Good|Great|Fine|Come|Gone|Lost|Found|Take|Give|Make|Made|Back|Down|Away|Near|Far|High|Low|Old|New|Dark|Bright|Heavy|Light|Hard|Soft|Long|Short|Thick|Thin|Wide|Narrow|Full|Empty|Dead|Alive|True|False|Real|Fake|Safe|Free|Rich|Poor|Warm|Cold|Calm|Wild|Deep|Flat|Sharp|Brave|Bold|Wise|Fair|Foul|Grim|Keen|Vast|Dire|Rare|Pure|Raw|Mere|Sure|Glad|Kind|Pale|Worn|Dense|Fierce|Grand|Proud|Swift|Stern|Faint|Crude|Brisk|Deft|Sly|Shy|Dry|Wet|Hot|Big|Red|Blue|Green|Black|White|Grey|Gray|Brown|Yellow|Pink|Purple|Orange|Just|Also|Much|More|Most|Less|Last|Next|Same|Other|Many|Such|Own|Half|Whole|Both|Either|Neither|Again|Often|Though|While|Since|Until|Unless|Because|Despite|During|Whether|Rather|Quite|Almost|Nearly|Likely|Merely|Hardly|Roughly|Simply|Truly|Fairly|Surely|Barely|Mostly|Really|About|Where|Which|There|These|Those|Under|Within|Without|Toward|Once|Upon|Like|Over|Further|Further|Hence|Thus|Inside|Outside)$/;
+    const allCapWords = /\b([A-Z][a-z]{2,}(?:'[a-z]+)?)\b/g;
 
     const detectedNames = new Set<string>();
     let match;
-    for (const pattern of [namePattern, dialogueNamePattern, possessivePattern]) {
-      while ((match = pattern.exec(narrative)) !== null) {
-        const name = match[1];
-        if (name && name.length >= 3 && !commonWords.has(name.toLowerCase()) && !englishWordsNotNames.test(name)) {
-          detectedNames.add(name);
-        }
+    while ((match = allCapWords.exec(narrative)) !== null) {
+      const name = match[1];
+      if (name && name.length >= 3 && !commonWords.has(name.toLowerCase()) && !locationNames.has(name.toLowerCase())) {
+        detectedNames.add(name);
       }
     }
 

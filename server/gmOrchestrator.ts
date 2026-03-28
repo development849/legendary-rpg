@@ -1490,6 +1490,21 @@ export async function runGM(
       "as", "if", "or", "so", "yet", "just", "still", "even", "only", "very", "too",
       "stormbringer", "game", "master", "player", "character", "dungeon",
       "seek", "keep", "sunken", "temple", "beware", "allies", "storm", "deep",
+      "alright", "maybe", "perhaps", "indeed", "however", "actually", "certainly",
+      "absolutely", "exactly", "obviously", "clearly", "finally", "suddenly", "quickly",
+      "slowly", "carefully", "quietly", "forward", "behind", "beneath", "beyond", "between",
+      "through", "around", "across", "against", "along", "above", "below", "before", "after",
+      "welcome", "hello", "farewell", "goodbye", "greetings", "thanks", "sorry",
+      "enough", "another", "already", "always", "never", "nothing", "something", "everything",
+      "someone", "everyone", "anyone", "nobody", "whatever", "wherever", "whenever", "whoever",
+      "interesting", "dangerous", "beautiful", "powerful", "ancient", "mysterious", "strange",
+      "careful", "incredible", "impossible", "excellent", "terrible", "wonderful", "remarkable",
+      "crimson", "golden", "silver", "shadow", "shadows", "darkness", "light", "lightning",
+      "dragon", "sword", "shield", "armor", "weapon", "magic", "spell", "potion", "scroll",
+      "forest", "mountain", "river", "ocean", "island", "village", "castle", "tower", "cave",
+      "tavern", "market", "harbor", "bridge", "gate", "wall", "door", "room", "hall",
+      "warrior", "knight", "ranger", "wizard", "rogue", "cleric", "paladin", "druid",
+      "dwarf", "human", "triton", "gnome", "halfling",
     ]);
 
     // Find capitalized words that look like proper names (not at start of sentence)
@@ -1499,12 +1514,14 @@ export async function runGM(
     // Also: Name's (possessive indicates a named character)
     const possessivePattern = /([A-Z][a-z]{2,}(?:'[a-z]+)?)'s\s/g;
 
+    const englishWordsNotNames = /^(Alright|Maybe|Perhaps|Indeed|However|Actually|Certainly|Absolutely|Exactly|Obviously|Clearly|Finally|Suddenly|Quickly|Slowly|Carefully|Quietly|Welcome|Farewell|Goodbye|Greetings|Enough|Another|Already|Always|Never|Nothing|Something|Everything|Someone|Everyone|Anyone|Nobody|Whatever|Wherever|Whenever|Whoever|Interesting|Dangerous|Beautiful|Powerful|Ancient|Mysterious|Strange|Careful|Incredible|Impossible|Excellent|Terrible|Wonderful|Remarkable|Crimson|Golden|Silver|Shadow|Darkness|Lightning|Forest|Mountain|River|Ocean|Island|Village|Castle|Tower|Cave|Tavern|Market|Harbor|Bridge|Forward|Behind|Beneath|Beyond|Between|Through|Around|Across|Against|Along|Above|Below|Before|After|Besides|Continue|Proceed|Approach|Return|Retreat|Attack|Defend|Guard|Watch|Listen|Look|Inspect|Examine|Search|Thanks|Sorry|Please|Well|Right|Good|Great|Fine|Come|Gone|Lost|Found|Take|Give|Make|Made|Back|Down|Away|Near|Far|High|Low|Old|New|Dark|Bright|Heavy|Light|Hard|Soft|Long|Short|Thick|Thin|Wide|Narrow|Full|Empty|Dead|Alive|True|False|Real|Fake|Safe|Free|Rich|Poor|Warm|Cold|Calm|Wild|Deep|Flat|Sharp|Brave|Bold|Wise|Fair|Foul|Grim|Keen|Vast|Dire|Rare|Pure|Raw|Mere|Sure|Glad|Kind|Pale|Worn|Dense|Fierce|Grand|Proud|Swift|Stern|Faint|Crude|Brisk|Deft|Sly|Shy|Dry|Wet|Hot|Big|Red|Blue|Green|Black|White|Grey|Gray|Brown|Yellow|Pink|Purple|Orange|Just|Also|Much|More|Most|Less|Last|Next|Same|Other|Many|Such|Own|Half|Whole|Both|Either|Neither|Again|Often|Though|While|Since|Until|Unless|Because|Despite|During|Whether|Rather|Quite|Almost|Nearly|Likely|Merely|Hardly|Roughly|Simply|Truly|Fairly|Surely|Barely|Mostly|Really|About|Where|Which|There|These|Those|Under|Within|Without|Toward|Once|Upon|Like|Over|Further|Further|Hence|Thus|Inside|Outside)$/;
+
     const detectedNames = new Set<string>();
     let match;
     for (const pattern of [namePattern, dialogueNamePattern, possessivePattern]) {
       while ((match = pattern.exec(narrative)) !== null) {
         const name = match[1];
-        if (name && name.length >= 3 && !commonWords.has(name.toLowerCase())) {
+        if (name && name.length >= 3 && !commonWords.has(name.toLowerCase()) && !englishWordsNotNames.test(name)) {
           detectedNames.add(name);
         }
       }

@@ -2838,6 +2838,13 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     return latestB - latestA;
                   });
 
+                  const handleDeleteNpc = async (npcId: string) => {
+                    try {
+                      await apiRequest("DELETE", `/api/npcs/${npcId}`);
+                      queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/npcs`] });
+                    } catch {}
+                  };
+
                   const renderNpc = (npc: any, compact = false) => {
                     const rel = npc.relationship ?? "neutral";
                     const colorCls = npc.isPartyMember
@@ -2845,6 +2852,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                       : (relColor[rel] ?? relColor.neutral);
                     const notesText = npc.notes ?? "";
                     const truncNotes = notesText.length > MAX_NOTES ? notesText.substring(0, MAX_NOTES) + "..." : notesText;
+                    const isAutoDetected = notesText.includes("Auto-detected from narrative");
                     return (
                       <div key={npc.id} data-testid={`card-npc-${npc.id}`} className={`rounded-md border p-2.5 space-y-1 ${colorCls}`}>
                         <div className="flex items-start gap-2">
@@ -2875,6 +2883,14 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                 <span className={`text-[9px] px-1 py-0.5 rounded font-medium uppercase tracking-wide whitespace-nowrap border ${relColor[rel] ?? relColor.neutral}`}>
                                   {rel}
                                 </span>
+                                <button
+                                  data-testid={`btn-delete-npc-${npc.id}`}
+                                  className="text-[9px] px-1 py-0.5 rounded border border-red-800/40 bg-red-950/30 text-red-400/60 hover:text-red-300 hover:bg-red-900/40 transition-colors"
+                                  title="Remove this character"
+                                  onClick={() => handleDeleteNpc(npc.id)}
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
                               </div>
                             </div>
                             {npc.role && (

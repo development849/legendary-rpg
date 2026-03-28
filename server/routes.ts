@@ -1071,6 +1071,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) { res.status(500).json({ error: "Failed to get NPC log" }); }
   });
 
+  app.delete("/api/npcs/:id", requireAuth, async (req: any, res) => {
+    try {
+      const { npcLog } = await import("@shared/schema");
+      const [npc] = await db.select({ id: npcLog.id, partyId: npcLog.partyId })
+        .from(npcLog).where(eq(npcLog.id, req.params.id)).limit(1);
+      if (!npc) return res.status(404).json({ error: "NPC not found" });
+      const userId = getUserId(req)!;
+      const members = await getPartyMembers(npc.partyId);
+      if (!members.some((m: any) => m.userId === userId)) {
+        return res.status(403).json({ error: "Not a member of this party" });
+      }
+      await db.delete(npcLog).where(eq(npcLog.id, req.params.id));
+      res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: "Failed to delete NPC" }); }
+  });
+
   app.get("/api/npcs/:id/portrait", requireAuth, async (req: any, res) => {
     try {
       const { npcLog } = await import("@shared/schema");

@@ -2986,9 +2986,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           .filter(({ item }) => !(["treasure", "currency"].includes(item.type) && /^coin\s*pouch/i.test(item.name || "")));
 
         const getSellPrice = (item: any): number => {
+          const isValuable = ["treasure", "currency", "gem", "loot"].includes(item.type);
+
           const val = item.properties?.value ?? item.properties?.gold_value;
-          if (typeof val === "number" && val > 0) return Math.max(1, Math.floor(val * 0.5));
-          if (typeof item.price === "number" && item.price > 0) return Math.max(1, Math.floor(item.price * 0.25));
+          if (typeof val === "number" && val > 0) return Math.max(1, Math.floor(val * (isValuable ? 1.0 : 0.5)));
+          if (typeof item.price === "number" && item.price > 0) return Math.max(1, Math.floor(item.price * (isValuable ? 0.75 : 0.25)));
 
           const nameAndDesc = ((item.name || "") + " " + (item.description || "")).toLowerCase();
           const hasPreciousContent = /pearl|gem|jewel|diamond|ruby|sapphire|emerald|opal|topaz|amethyst|crystal|gold coin|silver coin|platinum/i.test(nameAndDesc);
@@ -2996,7 +2998,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           const goldMatch = nameAndDesc.match(/(\d+)\s*(?:gold|gp|coin)/i);
           if (goldMatch) {
             const parsed = parseInt(goldMatch[1], 10);
-            if (parsed > 0) return Math.max(1, Math.floor(parsed * 0.5 * (item.qty ?? 1)));
+            if (parsed > 0) return Math.max(1, parsed * (item.qty ?? 1));
           }
 
           const preciousUnitValues: Record<string, number> = {
@@ -3008,10 +3010,10 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             const stoneMatch = nameAndDesc.match(stoneRegex);
             if (stoneMatch) {
               const count = parseInt(stoneMatch[1], 10);
-              if (count > 0) return Math.max(1, Math.floor(count * unitVal * 0.5 * (item.qty ?? 1)));
+              if (count > 0) return Math.max(1, count * unitVal * (item.qty ?? 1));
             }
             if (nameAndDesc.includes(stone) && !stoneMatch) {
-              return Math.max(1, Math.floor(unitVal * 0.5 * (item.qty ?? 1)));
+              return Math.max(1, unitVal * (item.qty ?? 1));
             }
           }
 
@@ -3021,7 +3023,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           const tMult = typeBonus[item.type] ?? 0.5;
           const bonus = item.properties?.bonus ?? 0;
           const preciousBonus = hasPreciousContent ? 2.0 : 1.0;
-          return Math.max(1, Math.floor((base * tMult * preciousBonus + bonus * 15) * 0.25 * (item.qty ?? 1)));
+          const sellMult = isValuable ? 0.75 : 0.25;
+          return Math.max(1, Math.floor((base * tMult * preciousBonus + bonus * 15) * sellMult * (item.qty ?? 1)));
         };
 
         const formatItemProps = (p: any) => {
@@ -3263,7 +3266,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               </div>
 
               <div className="px-4 py-2.5 border-t border-border flex-shrink-0">
-                <p className="text-[10px] text-muted-foreground text-center font-serif italic">Sell prices are roughly 25-50% of item value. Equipped items must be unequipped first.</p>
+                <p className="text-[10px] text-muted-foreground text-center font-serif italic">Valuables sell at full value. Equipment sells at 25-50%. Equipped items must be unequipped first.</p>
               </div>
             </div>
           </div>

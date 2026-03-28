@@ -1599,23 +1599,123 @@ export async function runGM(
       return { pronouns, role, description: description || `Character encountered in the narrative`, relationship };
     };
 
+    const newNpcNames: string[] = [];
     for (const name of detectedNames) {
       const lower = name.toLowerCase();
       if (!knownNpcNames.has(lower) && !partyCharNames.has(lower) && !pendingNpcNames.has(lower)) {
-        const details = inferNpcDetails(name, narrative);
-        console.log(`[GM Safety Net] Named character "${name}" in narrative but not in known NPCs. Auto-generating NPC_MET (role: ${details.role}, pronouns: ${details.pronouns}).`);
-        updates.push({
-          type: "NPC_MET",
-          name,
-          pronouns: details.pronouns,
-          role: details.role,
-          description: details.description,
-          location: (worldSnap?.state as any)?.currentLocation ?? "",
-          relationship: details.relationship,
-          notes: `Auto-detected from narrative.`,
-          replaces: null,
-        });
+        newNpcNames.push(name);
         pendingNpcNames.add(lower);
+      }
+    }
+
+    if (newNpcNames.length > 0) {
+      try {
+        const openai = (await import("openai")).default;
+        const client = new openai({
+          apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+          baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        });
+        const npcGenResponse = await client.chat.completions.create({
+          model: "gpt-4o-mini",
+          temperature: 0.6,
+          max_tokens: 800,
+          messages: [{
+            role: "system",
+            content: `Extract NPC details from this RPG narrative for these characters: ${newNpcNames.join(", ")}. Narrative: "${narrative.slice(0, 600)}". Return a JSON array where each element has: {"name": string, "pronouns": "he/him"|"she/her"|"they/them", "role": string (e.g. "merchant", "blacksmith", "guard captain", "innkeeper", "mage", "noble"), "description": string (1-2 sentences describing appearance/personality based on narrative), "relationship": "friendly"|"neutral"|"hostile"}. Be specific — use context clues from the narrative to infer role and write a vivid description. Return ONLY the JSON array.`
+          }],
+        });
+        const npcRaw = npcGenResponse.choices[0]?.message?.content?.trim() ?? "[]";
+        const npcDetails = JSON.parse(npcRaw.replace(/^```json?\s*/i, "").replace(/```\s*$/i, ""));
+        const detailsMap = new Map<string, any>();
+        if (Array.isArray(npcDetails)) {
+          for (const d of npcDetails) detailsMap.set((d.name || "").toLowerCase(), d);
+        }
+        for (const name of newNpcNames) {
+          const ai = detailsMap.get(name.toLowerCase());
+          const fallback = inferNpcDetails(name, narrative);
+          const details = ai ? {
+            pronouns: ai.pronouns || fallback.pronouns,
+            role: ai.role || fallback.role,
+            description: ai.description || fallback.description,
+            relationship: ai.relationship || fallback.relationship,
+          } : fallback;
+          console.log(`[GM Safety Net] Named character "${name}" — AI-enriched NPC_MET (role: ${details.role}, pronouns: ${details.pronouns}).`);
+          updates.push({
+            type: "NPC_MET",
+            name,
+            pronouns: details.pronouns,
+            role: details.role,
+            description: details.description,
+            location: (worldSnap?.state as any)?.currentLocation ?? "",
+            relationship: details.relationship,
+            notes: "",
+            replaces: null,
+          });
+        }
+      } catch (npcAiErr) {
+        console.error("[GM] NPC AI enrichment failed, using fallback:", npcAiErr);
+        for (const name of newNpcNames) {
+          const details = inferNpcDetails(name, narrative);
+          updates.push({
+            type: "NPC_MET",
+            name,
+            pronouns: details.pronouns,
+            role: details.role,
+            description: details.description,
+            location: (worldSnap?.state as any)?.currentLocation ?? "",
+            relationship: details.relationship,
+            notes: "",
+            replaces: null,
+          });
+        }
+      }
+    }
+
+    // Enrich existing NPCs that have placeholder data
+    for (const npc of npcs) {
+      const lower = npc.name.toLowerCase();
+      if (knownNpcNames.has(lower) && narrative.toLowerCase().includes(lower)) {
+        const needsEnrichment = npc.role === "unknown" || npc.description === "Named character mentioned in narrative" || (npc.notes || "").includes("GM forgot to emit") || (npc.notes || "").includes("Auto-detected");
+        if (needsEnrichment) {
+          try {
+            const openai = (await import("openai")).default;
+            const client = new openai({
+              apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+              baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+            });
+            const enrichResponse = await client.chat.completions.create({
+              model: "gpt-4o-mini",
+              temperature: 0.6,
+              max_tokens: 300,
+              messages: [{
+                role: "system",
+                content: `Extract NPC details for "${npc.name}" from this RPG narrative: "${narrative.slice(0, 600)}". Return JSON: {"pronouns": "he/him"|"she/her"|"they/them", "role": string (e.g. "merchant", "guard captain", "blacksmith"), "description": string (1-2 vivid sentences about appearance and personality), "relationship": "friendly"|"neutral"|"hostile"}. Return ONLY the JSON object.`
+              }],
+            });
+            const enrichRaw = enrichResponse.choices[0]?.message?.content?.trim() ?? "{}";
+            const enriched = JSON.parse(enrichRaw.replace(/^```json?\s*/i, "").replace(/```\s*$/i, ""));
+            const fallback = inferNpcDetails(npc.name, narrative);
+            await db.update(npcLog).set({
+              pronouns: enriched.pronouns || fallback.pronouns,
+              role: enriched.role || fallback.role,
+              description: enriched.description || fallback.description,
+              relationship: enriched.relationship || fallback.relationship,
+              notes: "",
+              updatedAt: new Date(),
+            }).where(eq(npcLog.id, npc.id));
+            console.log(`[GM Safety Net] Enriched existing NPC "${npc.name}" — role: ${enriched.role || fallback.role}`);
+          } catch (enrichErr) {
+            const fallback = inferNpcDetails(npc.name, narrative);
+            await db.update(npcLog).set({
+              pronouns: fallback.pronouns,
+              role: fallback.role,
+              description: fallback.description,
+              relationship: fallback.relationship,
+              notes: "",
+              updatedAt: new Date(),
+            }).where(eq(npcLog.id, npc.id));
+          }
+        }
       }
     }
   }

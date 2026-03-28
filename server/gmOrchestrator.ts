@@ -14,6 +14,7 @@ export async function generateLocationBackground(
   locationName: string,
   sceneTitle: string,
   campaignSetting: string,
+  locationDescription?: string,
 ): Promise<void> {
   try {
     const bgKey = sceneTitle || locationName;
@@ -28,11 +29,14 @@ export async function generateLocationBackground(
       httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
     });
 
-    const settingContext = campaignSetting
-      ? `within the setting: ${campaignSetting.slice(0, 120)}`
-      : "in a rich fantasy world";
+    const descPart = locationDescription
+      ? ` Scene details: ${locationDescription.slice(0, 200)}.`
+      : "";
+    const settingPart = campaignSetting
+      ? ` Campaign theme (secondary context only): ${campaignSetting.slice(0, 80)}.`
+      : "";
 
-    const prompt = `Wide cinematic fantasy environment painting of "${locationName}" — ${sceneTitle} — ${settingContext}. Environment only, no people or characters in frame. Landscape orientation, immersive wide shot. ${STYLE_PROMPT}`;
+    const prompt = `Wide cinematic fantasy environment painting of "${sceneTitle || locationName}".${descPart} The scene is set at "${locationName}". Paint exactly what this location looks like — if it is a city, market, forest, cave, etc., depict THAT environment faithfully.${settingPart} Environment only, no people or characters in frame. Landscape orientation, immersive wide shot. ${STYLE_PROMPT}`;
 
     const parts: any[] = await getStyleRefParts();
     parts.push({ text: prompt });
@@ -1551,6 +1555,7 @@ export async function runGM(
         scene.location,
         sceneTitle,
         (campaign?.setting ?? "") + " " + (campaign?.description ?? ""),
+        scene.description ?? "",
       ).catch(console.error);
     } else {
       const titleChanged = existing.title !== sceneTitle;
@@ -1565,6 +1570,7 @@ export async function runGM(
           scene.location,
           sceneTitle,
           (campaign?.setting ?? "") + " " + (campaign?.description ?? ""),
+          scene.description ?? "",
         ).catch(console.error);
       }
     }

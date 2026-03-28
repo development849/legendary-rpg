@@ -644,11 +644,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const party = await getParty(req.params.id);
         const campaign = party ? await getCampaign(party.campaignId) : null;
         const settingCtx = [(campaign as any)?.setting ?? "", (campaign as any)?.description ?? ""].join(" ");
+
+        const locations: any[] = state.locations ?? [];
+        const locData = locations.find((l: any) => l.name === currentLocation);
+        const locDesc = locData?.description ?? "";
+
         generateLocationBackground(
           req.params.id,
           currentLocation,
           bgKey,
           settingCtx,
+          locDesc,
         ).catch(console.error);
         if (fallbackRow) {
           res.json({ pending: true, imageData: fallbackRow.imageData, locationName: bgKey });
@@ -658,6 +664,41 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
     } catch (e) {
       res.status(500).json({ error: "Failed to fetch scene background" });
+    }
+  });
+
+  app.post("/api/parties/:id/scene-background/regenerate", requireAuth, async (req: any, res) => {
+    try {
+      const partyId = req.params.id;
+      const userId = getUserId(req)!;
+      const members = await getPartyMembers(partyId);
+      if (!members.some((m: any) => m.userId === userId)) {
+        return res.status(403).json({ error: "Not a member of this party" });
+      }
+
+      const worldSnap = await getWorldState(partyId);
+      const state = (worldSnap?.state as any) ?? {};
+      const currentLocation: string = state.currentLocation ?? "";
+      const currentSceneTitle: string = state.currentSceneTitle ?? "";
+      if (!currentLocation) return res.json({ ok: false, error: "No location" });
+
+      const bgKey = currentSceneTitle || currentLocation;
+
+      await db.delete(locationScenes)
+        .where(and(eq(locationScenes.partyId, partyId), eq(locationScenes.locationName, bgKey)));
+
+      const party = await getParty(partyId);
+      const campaign = party ? await getCampaign(party.campaignId) : null;
+      const settingCtx = [(campaign as any)?.setting ?? "", (campaign as any)?.description ?? ""].join(" ");
+      const locations: any[] = state.locations ?? [];
+      const locData = locations.find((l: any) => l.name === currentLocation);
+      const locDesc = locData?.description ?? "";
+
+      generateLocationBackground(partyId, currentLocation, bgKey, settingCtx, locDesc).catch(console.error);
+
+      res.json({ ok: true, pending: true, locationName: bgKey });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to regenerate background" });
     }
   });
 

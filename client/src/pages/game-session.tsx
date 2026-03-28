@@ -1166,7 +1166,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           {/* Scene background */}
           {sceneBackground && (
             <div
-              className="absolute inset-0 z-0 pointer-events-none"
+              className="absolute inset-0 z-0"
               style={{
                 backgroundImage: `url(${sceneBackground})`,
                 backgroundSize: "cover",
@@ -1176,6 +1176,30 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               }}
             >
               <div className="absolute inset-0 bg-background/60" />
+              <button
+                className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-background/50 hover:bg-background/80 text-muted-foreground hover:text-foreground transition-colors"
+                title="Regenerate scene background"
+                data-testid="btn-regen-bg"
+                onClick={async () => {
+                  setBackgroundPending(true);
+                  try {
+                    await fetch(`/api/parties/${partyId}/scene-background/regenerate`, { method: "POST" });
+                    if (backgroundPollRef.current) clearInterval(backgroundPollRef.current);
+                    backgroundPollRef.current = setInterval(async () => {
+                      const r = await fetch(`/api/parties/${partyId}/scene-background`);
+                      if (!r.ok) return;
+                      const d = await r.json();
+                      if (d.imageData && !d.pending) {
+                        setSceneBackground(d.imageData);
+                        setBackgroundPending(false);
+                        if (backgroundPollRef.current) { clearInterval(backgroundPollRef.current); backgroundPollRef.current = null; }
+                      }
+                    }, 5000);
+                  } catch {}
+                }}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${backgroundPending ? "animate-spin" : ""}`} />
+              </button>
             </div>
           )}
           {/* Subtle shimmer while background is generating */}

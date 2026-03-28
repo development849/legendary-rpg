@@ -1462,6 +1462,70 @@ export async function runGM(
     }
   }
 
+  // Safety net: detect named NPCs in narrative that aren't in known NPCs and don't have NPC_MET updates
+  if (narrative) {
+    const knownNpcNames = new Set(npcs.map(n => n.name.toLowerCase()));
+    const partyCharNames = new Set(
+      (await db.select({ name: characters.name })
+        .innerJoin(partyMembers, eq(characters.id, partyMembers.characterId))
+        .from(characters)
+        .where(eq(partyMembers.partyId, ctx.partyId))
+      ).map(r => r.name.toLowerCase())
+    );
+    const pendingNpcNames = new Set(
+      updates.filter((u: any) => u.type === "NPC_MET").map((u: any) => (u.name ?? "").toLowerCase())
+    );
+
+    const commonWords = new Set([
+      "the", "and", "but", "for", "not", "you", "your", "his", "her", "its", "they", "them",
+      "with", "from", "into", "onto", "upon", "this", "that", "what", "when", "where", "who",
+      "how", "why", "will", "would", "could", "should", "have", "has", "had", "been", "being",
+      "are", "was", "were", "did", "does", "can", "may", "might", "must", "shall",
+      "here", "there", "then", "than", "each", "every", "some", "any", "all", "both",
+      "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+      "as", "if", "or", "so", "yet", "just", "still", "even", "only", "very", "too",
+      "stormbringer", "game", "master", "player", "character", "dungeon",
+      "seek", "keep", "sunken", "temple", "beware", "allies", "storm", "deep",
+    ]);
+
+    // Find capitalized words that look like proper names (not at start of sentence)
+    const namePattern = /(?<=[.!?]\s+\w[^.!?]*\s|[,;:]\s|—\s|"\s*)([A-Z][a-z]{2,}(?:'[a-z]+)?)/g;
+    // Also find names at dialogue attribution: "text," Name says / Name's
+    const dialogueNamePattern = /[""][^""]*[""],?\s+([A-Z][a-z]{2,}(?:'[a-z]+)?)\s+(?:says?|rumbles?|whispers?|growls?|speaks?|asks?|replies?|responds?|murmurs?|shouts?|exclaims?|announces?|declares?|commands?|orders?)/g;
+    // Also: Name's (possessive indicates a named character)
+    const possessivePattern = /([A-Z][a-z]{2,}(?:'[a-z]+)?)'s\s/g;
+
+    const detectedNames = new Set<string>();
+    let match;
+    for (const pattern of [namePattern, dialogueNamePattern, possessivePattern]) {
+      while ((match = pattern.exec(narrative)) !== null) {
+        const name = match[1];
+        if (name && name.length >= 3 && !commonWords.has(name.toLowerCase())) {
+          detectedNames.add(name);
+        }
+      }
+    }
+
+    for (const name of detectedNames) {
+      const lower = name.toLowerCase();
+      if (!knownNpcNames.has(lower) && !partyCharNames.has(lower) && !pendingNpcNames.has(lower)) {
+        console.log(`[GM Safety Net] Named character "${name}" in narrative but not in known NPCs. Auto-generating NPC_MET.`);
+        updates.push({
+          type: "NPC_MET",
+          name,
+          pronouns: "they/them",
+          role: "unknown",
+          description: `Named character mentioned in narrative`,
+          location: (worldSnap?.state as any)?.currentLocation ?? "",
+          relationship: "neutral",
+          notes: `Auto-detected from narrative. The GM forgot to emit NPC_MET.`,
+          replaces: null,
+        });
+        pendingNpcNames.add(lower);
+      }
+    }
+  }
+
   // Process updates
   const { levelUps } = await processUpdates(updates, ctx.partyId, ctx.campaignId);
 

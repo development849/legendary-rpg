@@ -103,10 +103,15 @@ app.use((req, res, next) => {
         const { npcLog } = await import("@shared/schema");
         const { db } = await import("./db");
         const { and, eq, like } = await import("drizzle-orm");
+        const { inArray, or } = await import("drizzle-orm");
+        const falsePositives = ["Alright", "See", "Maybe", "Perhaps", "Indeed", "However",
+          "Welcome", "Farewell", "Greetings", "Thanks", "Sorry", "Though", "Grand",
+          "Continue", "Proceed", "Approach", "Return", "Forward", "Behind"];
         const bogus = await db.delete(npcLog)
           .where(and(
-            eq(npcLog.role, "unknown"),
-            like(npcLog.notes, "%Auto-detected from narrative%"),
+            or(eq(npcLog.role, "unknown"), like(npcLog.description, "%Named character mentioned%")),
+            or(like(npcLog.notes, "%Auto-detected from narrative%"), like(npcLog.notes, "%GM forgot to emit NPC_MET%")),
+            inArray(npcLog.name, falsePositives),
           ))
           .returning({ id: npcLog.id, name: npcLog.name });
         if (bogus.length > 0) {

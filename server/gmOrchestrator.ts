@@ -1560,19 +1560,57 @@ export async function runGM(
       }
     }
 
+    const inferNpcDetails = (npcName: string, text: string): { pronouns: string; role: string; description: string; relationship: string } => {
+      const sentences = text.split(/[.!?]+/).filter(s => s.toLowerCase().includes(npcName.toLowerCase()));
+      const context = sentences.join(". ").toLowerCase();
+
+      let pronouns = "they/them";
+      if (/\b(he|him|his)\b/.test(context)) pronouns = "he/him";
+      else if (/\b(she|her|hers)\b/.test(context)) pronouns = "she/her";
+
+      let role = "unknown";
+      const rolePatterns: [RegExp, string][] = [
+        [/merchant|trader|shopkeep|vendor|sells|wares|goods|stall/i, "merchant"],
+        [/guard|guardian|protector|sentinel|warden|patrol/i, "guardian"],
+        [/elder|wise|sage|old man|old woman|ancient|advisor/i, "elder"],
+        [/innkeep|bartend|tavern.*keep|barkeep/i, "innkeeper"],
+        [/priest|cleric|healer|temple.*keep|acolyte/i, "priest"],
+        [/captain|commander|general|leader|chief/i, "captain"],
+        [/thief|rogue|bandit|smuggler|fence/i, "rogue"],
+        [/mage|wizard|sorcerer|witch|warlock|enchant/i, "mage"],
+        [/blacksmith|smith|forge|armorer/i, "blacksmith"],
+        [/king|queen|prince|princess|noble|lord|lady|duke|duchess/i, "noble"],
+        [/fisher|sailor|captain|navigator|mariner/i, "seafarer"],
+        [/mentor|teacher|trainer|master/i, "mentor"],
+      ];
+      for (const [pat, r] of rolePatterns) {
+        if (pat.test(context)) { role = r; break; }
+      }
+
+      let relationship = "neutral";
+      if (/friend|ally|warm|smile|kind|help|trust|welcome/i.test(context)) relationship = "friendly";
+      else if (/hostil|enemy|threat|attack|snarl|growl|aggressive/i.test(context)) relationship = "hostile";
+
+      const descSentence = sentences[0]?.trim() ?? "";
+      const description = descSentence.length > 120 ? descSentence.substring(0, 117) + "..." : descSentence;
+
+      return { pronouns, role, description: description || `Character encountered in the narrative`, relationship };
+    };
+
     for (const name of detectedNames) {
       const lower = name.toLowerCase();
       if (!knownNpcNames.has(lower) && !partyCharNames.has(lower) && !pendingNpcNames.has(lower)) {
-        console.log(`[GM Safety Net] Named character "${name}" in narrative but not in known NPCs. Auto-generating NPC_MET.`);
+        const details = inferNpcDetails(name, narrative);
+        console.log(`[GM Safety Net] Named character "${name}" in narrative but not in known NPCs. Auto-generating NPC_MET (role: ${details.role}, pronouns: ${details.pronouns}).`);
         updates.push({
           type: "NPC_MET",
           name,
-          pronouns: "they/them",
-          role: "unknown",
-          description: `Named character mentioned in narrative`,
+          pronouns: details.pronouns,
+          role: details.role,
+          description: details.description,
           location: (worldSnap?.state as any)?.currentLocation ?? "",
-          relationship: "neutral",
-          notes: `Auto-detected from narrative. The GM forgot to emit NPC_MET.`,
+          relationship: details.relationship,
+          notes: `Auto-detected from narrative.`,
           replaces: null,
         });
         pendingNpcNames.add(lower);

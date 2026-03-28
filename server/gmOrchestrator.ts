@@ -1117,8 +1117,8 @@ The scene.location field controls the background image the player sees. It MUST 
 - Party travels to a new town → scene.location = the new town/area
 The background image is generated from the scene.location + scene.title. If you don't update the location, the player will see the OLD background even though the story has moved on. Check the CURRENT LOCATION shown above — if your narrative ends somewhere different, the scene.location MUST be different.
 
-RESPONSE FORMAT:
-Always respond with valid JSON in this structure:
+RESPONSE FORMAT — CRITICAL:
+You MUST ALWAYS respond with valid JSON and NOTHING ELSE. No free-form text before or after the JSON. No markdown fencing. Your ENTIRE response must be a single JSON object. If you output anything outside of the JSON object, the system will break. NEVER write plain narrative text without wrapping it in the JSON structure below:
 {
   "narrative": "ONE compact paragraph, 2–4 punchy sentences, MAX 60 words. No line breaks, no separators, no trailing questions. End on the world, not a player prompt.",
   "dice_requests": [
@@ -1523,8 +1523,40 @@ export async function runGM(
     generateSummary(ctx.partyId, turnNum).catch(console.error);
   }
 
+  let diceRequests = parsed?.dice_requests ?? [];
+
+  // Safety net: if the narrative suggests a roll should happen but dice_requests is empty,
+  // generate a fallback dice request so the player isn't stuck
+  if (diceRequests.length === 0) {
+    const rawNarr = (parsed?.narrative ?? fullText).toLowerCase();
+    const rollIndicators = /\b(?:rolling to|roll for|rolls? (?:a |the )?d(?:20|ice)|attack roll|make (?:a |an )?(?:check|save|roll)|swing(?:s|ing)? (?:your|the|at)|hurl(?:s|ing)?|lunge(?:s|ing)?|strike(?:s|ing)? at|slash(?:es|ing)?|shoot(?:s|ing)?|fire(?:s|ing)? (?:your|an? |the )|thrust(?:s|ing)?|charge(?:s|ing)? (?:at|toward))\b/i;
+    const combatAction = /\b(?:attack|swing|strike|slash|stab|shoot|fire|hurl|throw|charge|lunge|smash|cleave)\b/i;
+    if (rollIndicators.test(rawNarr) || (combatAction.test(rawNarr) && /\b(?:aim|hit|miss|damage|weapon|sword|axe|bow|spear|blade)\b/i.test(rawNarr))) {
+      // Find the acting character
+      const partyChars = await db.select().from(characters)
+        .innerJoin(partyMembers, eq(characters.id, partyMembers.characterId))
+        .where(eq(partyMembers.partyId, ctx.partyId));
+      const actingChar = ctx.actingCharacterId
+        ? partyChars.find(r => r.characters.id === ctx.actingCharacterId)?.characters
+        : partyChars[0]?.characters;
+      if (actingChar) {
+        const weapons = ((actingChar.inventory as any[]) ?? []).filter((i: any) => i.type === "weapon" && i.equipped);
+        const weapon = weapons[0];
+        const modifier = weapon?.properties?.bonus ?? Math.floor(((actingChar.stats as any)?.might ?? 10 - 10) / 2);
+        diceRequests = [{
+          character: actingChar.name,
+          die: "d20",
+          modifier: modifier,
+          advantage: "normal",
+          purpose: `Attack roll${weapon ? ` with ${weapon.name}` : ""}`,
+        }];
+        console.log(`[GM] Safety net: auto-generated dice request for ${actingChar.name} — GM forgot to include dice_requests`);
+      }
+    }
+  }
+
   const turnHint = parsed?.turn_hint ?? null;
-  onDone(cleanNarrative, updates, parsed?.dice_requests ?? [], parsed?.quick_actions ?? [], turnHint, levelUps);
+  onDone(cleanNarrative, updates, diceRequests, parsed?.quick_actions ?? [], turnHint, levelUps);
 }
 
 export function isCoinItem(item: any): boolean {

@@ -1481,7 +1481,7 @@ export async function runGM(
     );
 
     const commonWords = new Set([
-      "the", "and", "but", "for", "not", "you", "your", "his", "her", "its", "they", "them",
+      "the", "and", "but", "for", "not", "you", "your", "his", "her", "its", "they", "them", "see",
       "with", "from", "into", "onto", "upon", "this", "that", "what", "when", "where", "who",
       "how", "why", "will", "would", "could", "should", "have", "has", "had", "been", "being",
       "are", "was", "were", "did", "does", "can", "may", "might", "must", "shall",
@@ -1549,13 +1549,13 @@ export async function runGM(
     const campaignTitle = (await db.select({ name: campaigns.name }).from(campaigns).where(eq(campaigns.id, ctx.campaignId)).limit(1))?.[0]?.name ?? "";
     if (campaignTitle) for (const w of campaignTitle.split(/\s+/)) locationNames.add(w.toLowerCase());
 
-    const allCapWords = /\b([A-Z][a-z]{2,}(?:'[a-z]+)?)\b/g;
+    const allCapWords = /\b([A-Z][a-z]{3,}(?:'[a-z]+)?)\b/g;
 
     const detectedNames = new Set<string>();
     let match;
     while ((match = allCapWords.exec(narrative)) !== null) {
       const name = match[1];
-      if (name && name.length >= 3 && !commonWords.has(name.toLowerCase()) && !locationNames.has(name.toLowerCase())) {
+      if (name && name.length >= 4 && !commonWords.has(name.toLowerCase()) && !locationNames.has(name.toLowerCase())) {
         detectedNames.add(name);
       }
     }

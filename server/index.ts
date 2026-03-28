@@ -97,8 +97,22 @@ app.use((req, res, next) => {
       host: "0.0.0.0",
       reusePort: true,
     },
-    () => {
+    async () => {
       log(`serving on port ${port}`);
+      try {
+        const { npcLog } = await import("@shared/schema");
+        const { db } = await import("./db");
+        const { and, eq, like } = await import("drizzle-orm");
+        const bogus = await db.delete(npcLog)
+          .where(and(
+            eq(npcLog.role, "unknown"),
+            like(npcLog.notes, "%Auto-detected from narrative%"),
+          ))
+          .returning({ id: npcLog.id, name: npcLog.name });
+        if (bogus.length > 0) {
+          log(`Cleaned up ${bogus.length} bogus auto-detected NPCs: ${bogus.map(b => b.name).join(", ")}`);
+        }
+      } catch (e) { /* ignore cleanup errors */ }
     },
   );
 })();

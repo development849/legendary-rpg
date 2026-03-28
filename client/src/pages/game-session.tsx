@@ -1183,7 +1183,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 onClick={async () => {
                   setBackgroundPending(true);
                   try {
-                    await fetch(`/api/parties/${partyId}/scene-background/regenerate`, { method: "POST" });
+                    await apiRequest("POST", `/api/parties/${partyId}/scene-background/regenerate`);
                     if (backgroundPollRef.current) clearInterval(backgroundPollRef.current);
                     backgroundPollRef.current = setInterval(async () => {
                       const r = await fetch(`/api/parties/${partyId}/scene-background`);

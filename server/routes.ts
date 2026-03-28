@@ -686,6 +686,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       await db.delete(locationScenes)
         .where(and(eq(locationScenes.partyId, partyId), eq(locationScenes.locationName, bgKey)));
+      if (bgKey !== currentLocation) {
+        await db.delete(locationScenes)
+          .where(and(eq(locationScenes.partyId, partyId), eq(locationScenes.locationName, currentLocation)));
+      }
 
       const party = await getParty(partyId);
       const campaign = party ? await getCampaign(party.campaignId) : null;

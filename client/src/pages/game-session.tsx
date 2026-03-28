@@ -1802,9 +1802,18 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                     weapon: "Weapons", armor: "Armor", jewelry: "Jewelry", consumable: "Consumables",
                     tool: "Tools", treasure: "Valuables", other: "Misc",
                   };
+                  const typeMap: Record<string, string> = {
+                    weapon: "weapon", armor: "armor", jewelry: "jewelry", consumable: "consumable",
+                    tool: "tool", treasure: "treasure", currency: "treasure",
+                    accessory: "jewelry", ring: "jewelry", amulet: "jewelry", necklace: "jewelry",
+                    key: "tool", document: "tool", map: "tool",
+                    misc: "other", item: "other", resource: "other", material: "other",
+                    artifact: "treasure", relic: "treasure", gem: "treasure", loot: "treasure",
+                  };
                   const grouped: Record<string, { item: any; originalIndex: number }[]> = {};
                   items.forEach((item, idx) => {
-                    const t = item.type ?? "other";
+                    const rawType = item.type ?? "other";
+                    const t = typeMap[rawType] ?? "other";
                     if (!grouped[t]) grouped[t] = [];
                     grouped[t].push({ item, originalIndex: idx });
                   });

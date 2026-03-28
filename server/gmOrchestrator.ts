@@ -1638,9 +1638,10 @@ export async function runGM(
 }
 
 export function isCoinItem(item: any): boolean {
+  if (/^coin\s*pouch/i.test(item.name || "")) return true;
   const coinTypes = ["treasure", "currency"];
-  const coinPattern = /coin|gold|silver|copper|money|gp\b|pouch.*coin|bag.*gold/i;
-  return coinTypes.includes(item.type) && (typeof item.properties?.value === "number" || coinPattern.test(item.name || ""));
+  const coinPattern = /\bcoin(?:s)?\b|\bgold\s*(?:coin|piece)|(?:\d+)\s*gp\b|\bmoney\b/i;
+  return coinTypes.includes(item.type) && (typeof item.properties?.value === "number" || typeof item.properties?.gold_value === "number" || coinPattern.test(item.name || ""));
 }
 
 export function consolidateCoins(inv: any[]): any[] {
@@ -1651,11 +1652,11 @@ export function consolidateCoins(inv: any[]): any[] {
   for (let i = 0; i < inv.length; i++) {
     const item = inv[i];
     if (!isCoinItem(item)) continue;
-    const val = typeof item.properties?.value === "number" ? item.properties.value : 0;
+    const val = typeof item.properties?.value === "number" ? item.properties.value
+      : typeof item.properties?.gold_value === "number" ? item.properties.gold_value : 0;
     const qty = item.qty ?? 1;
     totalGold += val * qty;
 
-    // Also try to parse gold amount from name like "Coin Pouch (10gp)" or "10 Gold Coins"
     if (val === 0) {
       const nameMatch = (item.name || "").match(/(\d+)\s*(?:gp|gold)/i);
       if (nameMatch) {

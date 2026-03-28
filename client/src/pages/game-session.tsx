@@ -2928,9 +2928,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         const playerItems: any[] = char?.inventory ?? [];
         const playerGold = playerItems.reduce((sum: number, i: any) => {
           const coinTypes = ["treasure", "currency"];
-          const coinPat = /coin|gold|silver|copper|money|gp\b|pouch/i;
-          if (coinTypes.includes(i.type) && (typeof i.properties?.value === "number" || coinPat.test(i.name || ""))) {
-            let val = typeof i.properties?.value === "number" ? i.properties.value : 0;
+          const coinPat = /coin|gold|silver|copper|money|gp\b/i;
+          const isCoinPouch = /^coin\s*pouch/i.test(i.name || "");
+          if (isCoinPouch || (coinTypes.includes(i.type) && coinPat.test(i.name || ""))) {
+            let val = typeof i.properties?.value === "number" ? i.properties.value
+              : typeof i.properties?.gold_value === "number" ? i.properties.gold_value : 0;
             if (val === 0) {
               const nameMatch = (i.name || "").match(/(\d+)\s*(?:gp|gold)/i);
               if (nameMatch) val = parseInt(nameMatch[1], 10);
@@ -2943,7 +2945,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
         const sellableItems = playerItems
           .map((item: any, idx: number) => ({ item, idx }))
-          .filter(({ item }) => !(["treasure", "currency"].includes(item.type) && /coin|gold|pouch/i.test(item.name || "")));
+          .filter(({ item }) => !(["treasure", "currency"].includes(item.type) && /^coin\s*pouch/i.test(item.name || "")));
 
         const getSellPrice = (item: any): number => {
           const val = item.properties?.value;

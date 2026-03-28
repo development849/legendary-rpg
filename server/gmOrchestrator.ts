@@ -1471,8 +1471,8 @@ export async function runGM(
     const knownNpcNames = new Set(npcs.map(n => n.name.toLowerCase()));
     const partyCharNames = new Set(
       (await db.select({ name: characters.name })
-        .innerJoin(partyMembers, eq(characters.id, partyMembers.characterId))
         .from(characters)
+        .innerJoin(partyMembers, eq(characters.id, partyMembers.characterId))
         .where(eq(partyMembers.partyId, ctx.partyId))
       ).map(r => r.name.toLowerCase())
     );

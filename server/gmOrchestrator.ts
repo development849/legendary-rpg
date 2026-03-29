@@ -1472,6 +1472,131 @@ export async function runGM(
     }
   }
 
+  {
+    try {
+      const knownNpcNames = new Set(npcs.map((n: any) => n.name.toLowerCase()));
+      const playerCharNames = new Set(chars.map((c: any) => c.name.toLowerCase()));
+      const existingUpdateNames = new Set(updates.filter((u: any) => u.type === "NPC_MET").map((u: any) => (u.name || "").toLowerCase()));
+
+      const BLOCKED_NAMES = new Set([
+        "seagull", "seagulls", "rat", "rats", "cat", "cats", "dog", "dogs",
+        "bird", "birds", "horse", "horses", "crow", "crows", "raven", "ravens",
+        "wolf", "wolves", "spider", "spiders", "bat", "bats", "snake", "snakes",
+        "adventurers", "guards", "soldiers", "villagers", "townspeople",
+        "merchants", "travelers", "travellers", "pirates", "bandits",
+        "peasants", "sailors", "patrons", "crowd", "onlookers", "bystanders",
+      ]);
+      const COMMON_WORDS = new Set([
+        "the", "this", "that", "then", "they", "them", "their", "there", "these", "those",
+        "with", "from", "into", "your", "you", "its", "his", "her", "she", "but", "and",
+        "for", "not", "are", "was", "has", "had", "have", "been", "will", "can",
+        "just", "more", "some", "when", "what", "where", "who", "how", "why",
+        "before", "after", "around", "behind", "above", "below", "under", "over",
+        "rolling", "attack", "check", "save", "turn", "round", "action",
+        "suddenly", "meanwhile", "however", "though", "although", "perhaps",
+        "tavern", "inn", "shop", "market", "temple", "guild", "castle", "tower",
+        "forest", "cave", "dungeon", "bridge", "port", "dock", "harbor", "harbour",
+        "first", "second", "third", "last", "next", "every", "each", "both",
+        "here", "very", "still", "also", "even", "well", "too", "now",
+      ]);
+
+      const actionVerbs = /^(?:says?|said|asks?|asked|replies?|replied|whispers?|whispered|shouts?|shouted|mutters?|muttered|growls?|growled|laughs?|laughed|smiles?|smiled|nods?|nodded|shakes?|shook|turns?|turned|looks?|looked|leans?|leaned|steps?|stepped|stands?|stood|sits?|sat|quirks?|quirked|raises?|raised|waves?|waved|grins?|grinned|chuckles?|chuckled|snorts?|snorted|sighs?|sighed|frowns?|frowned|gestures?|gestured|motions?|motioned|points?|pointed|crosses?|crossed|sets?|bows?|bowed|narrows?|narrowed|pauses?|paused|continues?|continued|explains?|explained|adds?|added|warns?|warned|offers?|offered|responds?|responded|announces?|announced|exclaims?|exclaimed|calls?|called|interrupts?|interrupted|declares?|declared|grumbles?|grumbled|speaks?|spoke|glances?|glanced|stares?|stared|watches?|watched|beckons?|beckoned|approaches?|approached|adjusts?|adjusted|examines?|examined|considers?|considered|holds?|held|places?|placed|reaches?|reached|pulls?|pulled|pushes?|pushed|opens?|opened|closes?|closed|draws?|drew|slides?|slid|drops?|dropped|picks?|picked|grabs?|grabbed|takes?|took|gives?|gave|hands?|handed|reveals?|revealed|introduces?|introduced|mentions?|mentioned|describes?|described|appears?|appeared|emerges?|emerged|arrives?|arrived|enters?|entered|exits?|exited|moves?|moved|walks?|walked|runs?|ran|rushes?|rushed|hurries?|hurried|strokes?|stroked|taps?|tapped|rubs?|rubbed|scratches?|scratched|snaps?|snapped|claps?|clapped|slaps?|slapped|pats?|patted|squints?|squinted|blinks?|blinked|winks?|winked|scoffs?|scoffed|sneers?|sneered|cackles?|cackled|roars?|roared|bellows?|bellowed|barks?|barked|hisses?|hissed|purrs?|purred|rumbles?|rumbled|snarls?|snarled|scowls?|scowled|beams?|beamed|smirks?|smirked|curtsies?|curtsied|kneels?|knelt|crouches?|crouched|ducks?|ducked|stretches?|stretched|flexes?|flexed|clenches?|clenched|unclenches?|unclenched|relaxes?|relaxed|tenses?|tensed|trembles?|trembled|shivers?|shivered|steadies?|steadied|braces?|braced|catches?|caught|tosses?|tossed|flips?|flipped|spins?|spun|twirls?|twirled|swings?|swung|sweeps?|swept|swipes?|swiped|jabs?|jabbed|pokes?|poked|nudges?|nudged|elbows?|elbowed|shoves?|shoved|yanks?|yanked|tugs?|tugged|drags?|dragged|lifts?|lifted|lowers?|lowered|tilts?|tilted)$/i;
+
+      const detectedNames = new Set<string>();
+
+      const nameVerbPattern = /\b([A-Z][a-z]{2,}(?:'[a-z]+)?)\s+([a-z]+)/g;
+      let match;
+      while ((match = nameVerbPattern.exec(cleanNarrative)) !== null) {
+        const name = match[1];
+        const verb = match[2];
+        if (actionVerbs.test(verb)) {
+          detectedNames.add(name);
+        }
+      }
+
+      const dialogueAttrPattern = /[,."!?']\s*([A-Z][a-z]{2,}(?:'[a-z]+)?)\s+(?:says?|said|asks?|asked|replies?|replied|whispers?|whispered|shouts?|shouted|mutters?|muttered|growls?|growled|responds?|responded|exclaims?|exclaimed|adds?|added|continues?|continued)/g;
+      while ((match = dialogueAttrPattern.exec(cleanNarrative)) !== null) {
+        detectedNames.add(match[1]);
+      }
+
+      const quotedSpeechPattern = /\b([A-Z][a-z]{2,}(?:'[a-z]+)?)\s*[:,]\s*["']/g;
+      while ((match = quotedSpeechPattern.exec(cleanNarrative)) !== null) {
+        detectedNames.add(match[1]);
+      }
+
+      const filteredNames = [...detectedNames].filter(name => {
+        const lower = name.toLowerCase();
+        if (lower.length < 3) return false;
+        if (COMMON_WORDS.has(lower)) return false;
+        if (BLOCKED_NAMES.has(lower)) return false;
+        if (knownNpcNames.has(lower)) return false;
+        if (playerCharNames.has(lower)) return false;
+        if (existingUpdateNames.has(lower)) return false;
+        return true;
+      });
+
+      if (filteredNames.length > 0) {
+        console.log(`[GM] NPC safety net: detected ${filteredNames.length} untracked NPC(s) in narrative: ${filteredNames.join(", ")}. Generating NPC details...`);
+        try {
+          const openai = (await import("openai")).default;
+          const client = new openai({
+            apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+            baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+          });
+          const npcGenResponse = await client.chat.completions.create({
+            model: "gpt-4o-mini",
+            temperature: 0.5,
+            max_tokens: 1500,
+            messages: [{
+              role: "system",
+              content: `You are extracting NPC details from a fantasy RPG narrative. Given the narrative text and a list of NPC names that appeared in it, generate a JSON array of NPC objects. Each NPC object must have: {"name": string, "pronouns": "he/him"|"she/her"|"they/them", "role": string (specific role like "dockside informant" or "grizzled tavern keeper", never "unknown"), "description": string (1-2 vivid sentences about appearance and personality based on the narrative), "location": string (where they were encountered), "relationship": "friendly"|"neutral"|"hostile", "notes": string (one concise sentence about their most important trait, secret, or agenda)}. Return ONLY the JSON array, no markdown fences.`
+            }, {
+              role: "user",
+              content: `Narrative:\n${cleanNarrative.slice(0, 1500)}\n\nNPC names to describe: ${filteredNames.join(", ")}`
+            }],
+          });
+          const npcRaw = npcGenResponse.choices[0]?.message?.content?.trim() ?? "[]";
+          const npcDetails = JSON.parse(npcRaw.replace(/^```json?\s*/i, "").replace(/```\s*$/i, ""));
+          if (Array.isArray(npcDetails)) {
+            for (const npc of npcDetails) {
+              if (npc.name && npc.role && npc.description) {
+                updates.push({
+                  type: "NPC_MET",
+                  name: npc.name,
+                  pronouns: npc.pronouns || "they/them",
+                  role: npc.role,
+                  description: npc.description,
+                  location: npc.location || "Unknown",
+                  relationship: npc.relationship || "neutral",
+                  notes: npc.notes || "Encountered in the narrative.",
+                  replaces: null,
+                });
+                console.log(`[GM] NPC safety net: auto-injected NPC_MET for "${npc.name}" (${npc.role})`);
+              }
+            }
+          }
+        } catch (npcGenErr) {
+          console.error("[GM] NPC safety net LLM call failed:", npcGenErr);
+          for (const name of filteredNames) {
+            updates.push({
+              type: "NPC_MET",
+              name,
+              pronouns: "they/them",
+              role: "unknown acquaintance",
+              description: `A character encountered in the narrative.`,
+              location: "Unknown",
+              relationship: "neutral",
+              notes: "Auto-detected from narrative (details pending).",
+              replaces: null,
+            });
+            console.log(`[GM] NPC safety net: auto-injected basic NPC_MET for "${name}" (LLM unavailable)`);
+          }
+        }
+      }
+    } catch (npcSafetyErr) {
+      console.error("[GM] NPC safety net error:", npcSafetyErr);
+    }
+  }
 
   // Process updates
   const { levelUps } = await processUpdates(updates, ctx.partyId, ctx.campaignId);

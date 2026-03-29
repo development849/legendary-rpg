@@ -1557,9 +1557,10 @@ export async function runGM(
           });
           const npcRaw = npcGenResponse.choices[0]?.message?.content?.trim() ?? "[]";
           const npcDetails = JSON.parse(npcRaw.replace(/^```json?\s*/i, "").replace(/```\s*$/i, ""));
+          const filteredNamesLower = new Set(filteredNames.map((n: string) => n.toLowerCase()));
           if (Array.isArray(npcDetails)) {
             for (const npc of npcDetails) {
-              if (npc.name && npc.role && npc.description) {
+              if (npc.name && npc.role && npc.description && filteredNamesLower.has(npc.name.toLowerCase())) {
                 updates.push({
                   type: "NPC_MET",
                   name: npc.name,

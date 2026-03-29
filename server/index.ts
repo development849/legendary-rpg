@@ -104,18 +104,21 @@ app.use((req, res, next) => {
         const { db } = await import("./db");
         const { and, eq, like } = await import("drizzle-orm");
         const { inArray, or } = await import("drizzle-orm");
-        const falsePositives = ["Alright", "See", "Maybe", "Perhaps", "Indeed", "However",
-          "Welcome", "Farewell", "Greetings", "Thanks", "Sorry", "Though", "Grand",
-          "Continue", "Proceed", "Approach", "Return", "Forward", "Behind"];
         const bogus = await db.delete(npcLog)
           .where(and(
-            or(eq(npcLog.role, "unknown"), like(npcLog.description, "%Named character mentioned%")),
-            or(like(npcLog.notes, "%Auto-detected from narrative%"), like(npcLog.notes, "%GM forgot to emit NPC_MET%")),
-            inArray(npcLog.name, falsePositives),
+            or(
+              like(npcLog.notes, "%Auto-detected from narrative%"),
+              like(npcLog.notes, "%GM forgot to emit NPC_MET%"),
+            ),
+            or(
+              eq(npcLog.role, "unknown"),
+              like(npcLog.description, "%Named character mentioned%"),
+              like(npcLog.description, "%Character encountered in the narrative%"),
+            ),
           ))
           .returning({ id: npcLog.id, name: npcLog.name });
         if (bogus.length > 0) {
-          log(`Cleaned up ${bogus.length} bogus auto-detected NPCs: ${bogus.map(b => b.name).join(", ")}`);
+          log(`Cleaned up ${bogus.length} auto-detected placeholder NPCs: ${bogus.map(b => b.name).join(", ")}`);
         }
       } catch (e) { /* ignore cleanup errors */ }
     },

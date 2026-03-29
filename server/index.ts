@@ -102,7 +102,19 @@ app.use((req, res, next) => {
       try {
         const { npcLog } = await import("@shared/schema");
         const { db } = await import("./db");
-        const { and, eq, like, isNull, inArray, or } = await import("drizzle-orm");
+        const { and, eq, like, isNull, inArray, or, sql } = await import("drizzle-orm");
+
+        const INVALID_NPC_NAMES = [
+          "seagull", "seagulls", "rat", "rats", "cat", "cats", "dog", "dogs",
+          "bird", "birds", "horse", "horses", "crow", "crows", "raven", "ravens",
+          "wolf", "wolves", "spider", "spiders", "bat", "bats", "snake", "snakes",
+          "adventurers", "guards", "soldiers", "villagers", "townspeople",
+          "merchants", "travelers", "travellers", "pirates", "bandits",
+          "peasants", "sailors", "patrons", "crowd", "onlookers", "bystanders",
+        ];
+        const bogus0 = await db.delete(npcLog)
+          .where(sql`lower(${npcLog.name}) IN (${sql.join(INVALID_NPC_NAMES.map(n => sql`${n}`), sql`, `)})`)
+          .returning({ id: npcLog.id, name: npcLog.name });
 
         const bogus1 = await db.delete(npcLog)
           .where(and(
@@ -144,7 +156,7 @@ app.use((req, res, next) => {
           ))
           .returning({ id: npcLog.id, name: npcLog.name });
 
-        const allBogus = [...bogus1, ...bogus2, ...bogus3];
+        const allBogus = [...bogus0, ...bogus1, ...bogus2, ...bogus3];
         const unique = [...new Map(allBogus.map(b => [b.id, b])).values()];
         if (unique.length > 0) {
           log(`Cleaned up ${unique.length} bogus NPCs: ${unique.map(b => b.name).join(", ")}`);

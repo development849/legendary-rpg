@@ -1968,7 +1968,6 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
             "adventurers", "guards", "soldiers", "villagers", "townspeople",
             "merchants", "travelers", "travellers", "pirates", "bandits",
             "peasants", "sailors", "patrons", "crowd", "onlookers", "bystanders",
-            "rusty",
           ]);
           if (BLOCKED_NPC_NAMES.has(name.toLowerCase())) {
             console.log(`[GM] Blocked NPC_MET for non-character name: "${name}"`);
@@ -1980,6 +1979,25 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
           if (locationPhrases.some(p => desc.includes(p)) && !desc.match(/\b(he|she|his|her|man|woman|boy|girl|dwarf|elf|gnome|orc)\b/)) {
             console.log(`[GM] Blocked NPC_MET for location/group description: "${name}" — "${update.description}"`);
             break;
+          }
+
+          try {
+            const knownLocations = await db.select({ locationName: locationScenes.locationName })
+              .from(locationScenes)
+              .where(eq(locationScenes.partyId, partyId));
+            const locationWords = new Set<string>();
+            const SKIP_WORDS = new Set(["the", "a", "an", "of", "and", "in", "at", "to", "on", "by"]);
+            for (const loc of knownLocations) {
+              for (const word of loc.locationName.toLowerCase().split(/\s+/)) {
+                if (word.length > 2 && !SKIP_WORDS.has(word)) locationWords.add(word);
+              }
+            }
+            if (locationWords.has(name.toLowerCase()) && !desc.match(/\b(he|she|his|her|man|woman|boy|girl|dwarf|elf|gnome|orc|human)\b/)) {
+              console.log(`[GM] Blocked NPC_MET — name "${name}" matches a known location word`);
+              break;
+            }
+          } catch (e) {
+            console.error(`[GM] Location-name NPC check error:`, e);
           }
 
           const replacesName = (update.replaces ?? "").trim();

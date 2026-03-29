@@ -102,18 +102,7 @@ app.use((req, res, next) => {
       try {
         const { npcLog } = await import("@shared/schema");
         const { db } = await import("./db");
-        const { and, eq, like, isNull, sql } = await import("drizzle-orm");
-        const { inArray, or } = await import("drizzle-orm");
-
-        const BLOCKED_NPC_NAMES = [
-          "seagull", "seagulls", "rat", "rats", "cat", "cats", "dog", "dogs",
-          "bird", "birds", "horse", "horses", "crow", "crows", "raven", "ravens",
-          "wolf", "wolves", "spider", "spiders", "bat", "bats", "snake", "snakes",
-          "adventurers", "guards", "soldiers", "villagers", "townspeople",
-          "merchants", "travelers", "travellers", "pirates", "bandits",
-          "peasants", "sailors", "patrons", "crowd", "onlookers", "bystanders",
-          "rusty",
-        ];
+        const { and, eq, like, isNull, inArray, or } = await import("drizzle-orm");
 
         const bogus1 = await db.delete(npcLog)
           .where(and(
@@ -129,21 +118,27 @@ app.use((req, res, next) => {
           ))
           .returning({ id: npcLog.id, name: npcLog.name });
 
+        const KNOWN_BAD_PARTY = "2952f487-3029-4ecb-a73a-59659b00a17d";
+        const KNOWN_BAD_NAMES = ["Seagull", "Rusty", "Adventurers"];
         const bogus2 = await db.delete(npcLog)
-          .where(sql`lower(${npcLog.name}) IN (${sql.join(BLOCKED_NPC_NAMES.map(n => sql`${n}`), sql`, `)})`)
+          .where(and(
+            eq(npcLog.partyId, KNOWN_BAD_PARTY),
+            inArray(npcLog.name, KNOWN_BAD_NAMES),
+          ))
           .returning({ id: npcLog.id, name: npcLog.name });
 
+        const GENERIC_ROLES = ["noble", "travellers", "travelers", "unknown", "citizen", "commoner"];
         const bogus3 = await db.delete(npcLog)
           .where(and(
             or(
               isNull(npcLog.notes),
               eq(npcLog.notes, ""),
             ),
+            inArray(npcLog.role, GENERIC_ROLES),
             or(
               like(npcLog.description, "%looms ahead%"),
               like(npcLog.description, "%weathered sign%"),
               like(npcLog.description, "%creaking%"),
-              like(npcLog.description, "%tavern%building%"),
               like(npcLog.description, "%a diverse group%"),
             ),
           ))

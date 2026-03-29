@@ -1217,6 +1217,8 @@ MANDATORY PRE-FLIGHT CHECKLIST — run this EVERY turn before writing proposed_u
 Step 1 — Named NPCs: Scan every line of your narrative AND the current SITUATION descriptions above. Who appears by name or title (e.g. "Princess Alara", "Captain Bryn", "the bartender Marta")? List ALL of them. For EACH one, check the KNOWN NPCS list. If they are NOT already tracked → NPC_MET required — NO EXCEPTIONS, even for brief mentions, overheard names, NPCs referenced in dialogue, or NPCs mentioned in situation descriptions. A named NPC appearing ANYWHERE in the game state without a corresponding KNOWN NPC entry is ALWAYS a bug that must be fixed with NPC_MET this turn. If an NPC who was previously tracked by description now reveals their real name → use "replaces" field to merge, do NOT create a duplicate.
    CRITICAL NPC_MET QUALITY: Every NPC_MET MUST include COMPLETE, VIVID details. The "role" field must be a SPECIFIC role like "eccentric sea-trinket merchant", "grizzled harbor guard", "elven apothecary" — NEVER "unknown" or vague labels. The "description" field must be 1-2 vivid sentences describing the NPC's appearance and personality based on narrative context (e.g. "A weathered triton with coral-encrusted armor and a booming laugh, known for trading rare oceanic artifacts"). The "relationship" must reflect how they feel toward the party. An NPC_MET with role "unknown" or a generic description is ALWAYS a bug. If a known NPC already has role "unknown" or a placeholder description, emit NPC_MET again with FULL details to update them.
    IMPORTANT: Only emit NPC_MET for actual CHARACTERS (people, creatures, beings that can talk/act). Do NOT emit NPC_MET for: location names (taverns, shops, landmarks), animals (unless sentient), groups/crowds ("adventurers", "guards"), objects, or concepts. "The Rusty Anchor" is a TAVERN, not a character. "Seagull" is a BIRD, not a character.
+   ❌ WRONG — DO NOT DO THIS: Your narrative mentions "The Rusty Seagull" tavern. You then emit NPC_MET for "Seagull" with role "noble" and NPC_MET for "Rusty" with role "noble" — these are PARTS OF A TAVERN NAME, not characters. Similarly, "a group of adventurers" is NOT an NPC — do not emit NPC_MET for "Adventurers".
+   ✅ CORRECT: "The Rusty Seagull" is a location → no NPC_MET. "Adventurers" is a crowd → no NPC_MET. Only emit NPC_MET for the NAMED INDIVIDUAL characters in the scene (e.g. "Marta the bartender", "Captain Bryn").
 Step 2 — NPC Relationships: For each NPC in this scene who IS already in KNOWN NPCS, check their [relationship] tag. Has the player's action this turn made that NPC feel differently about the party? Helped them → friendlier. Threatened them → more hostile. Killed → deceased. If any relationship should change → NPC_RELATIONSHIP_CHANGED required.
 Step 3 — Gold: Did any gold/coins/money change hands in any way — found, looted, picked up, earned, received, paid, spent, gambled, stolen? If the narrative mentions coins, a coin pouch, a bag of gold, a reward, or any currency amount → GOLD_CHANGED is MANDATORY with the correct positive or negative delta. Finding a "bag of coins" without a GOLD_CHANGED update is ALWAYS a bug. The character's coin pouch will NOT update unless you emit this.
 Step 4 — Items: Did anyone gain an item? → ITEM_GRANTED required (+ GOLD_CHANGED if purchased). Did anyone sell, trade, use up, discard, or lose an item? → ITEM_REMOVED required for EACH item lost (+ GOLD_CHANGED if sold). GOLD_CHANGED alone does NOT remove items from inventory.
@@ -1958,6 +1960,28 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
         case "NPC_MET": {
           const name = (update.name ?? "").trim();
           if (!name) break;
+
+          const BLOCKED_NPC_NAMES = new Set([
+            "seagull", "seagulls", "rat", "rats", "cat", "cats", "dog", "dogs",
+            "bird", "birds", "horse", "horses", "crow", "crows", "raven", "ravens",
+            "wolf", "wolves", "spider", "spiders", "bat", "bats", "snake", "snakes",
+            "adventurers", "guards", "soldiers", "villagers", "townspeople",
+            "merchants", "travelers", "travellers", "pirates", "bandits",
+            "peasants", "sailors", "patrons", "crowd", "onlookers", "bystanders",
+            "rusty",
+          ]);
+          if (BLOCKED_NPC_NAMES.has(name.toLowerCase())) {
+            console.log(`[GM] Blocked NPC_MET for non-character name: "${name}"`);
+            break;
+          }
+
+          const desc = (update.description ?? "").toLowerCase();
+          const locationPhrases = ["looms ahead", "weathered sign", "creaking", "a diverse group", "group of"];
+          if (locationPhrases.some(p => desc.includes(p)) && !desc.match(/\b(he|she|his|her|man|woman|boy|girl|dwarf|elf|gnome|orc)\b/)) {
+            console.log(`[GM] Blocked NPC_MET for location/group description: "${name}" — "${update.description}"`);
+            break;
+          }
+
           const replacesName = (update.replaces ?? "").trim();
 
           const [existingNpc] = await db.select({ id: npcLog.id, portrait: npcLog.portrait })

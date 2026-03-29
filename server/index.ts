@@ -102,9 +102,20 @@ app.use((req, res, next) => {
       try {
         const { npcLog } = await import("@shared/schema");
         const { db } = await import("./db");
-        const { and, eq, like } = await import("drizzle-orm");
+        const { and, eq, like, isNull, sql } = await import("drizzle-orm");
         const { inArray, or } = await import("drizzle-orm");
-        const bogus = await db.delete(npcLog)
+
+        const BLOCKED_NPC_NAMES = [
+          "seagull", "seagulls", "rat", "rats", "cat", "cats", "dog", "dogs",
+          "bird", "birds", "horse", "horses", "crow", "crows", "raven", "ravens",
+          "wolf", "wolves", "spider", "spiders", "bat", "bats", "snake", "snakes",
+          "adventurers", "guards", "soldiers", "villagers", "townspeople",
+          "merchants", "travelers", "travellers", "pirates", "bandits",
+          "peasants", "sailors", "patrons", "crowd", "onlookers", "bystanders",
+          "rusty",
+        ];
+
+        const bogus1 = await db.delete(npcLog)
           .where(and(
             or(
               like(npcLog.notes, "%Auto-detected from narrative%"),
@@ -117,10 +128,35 @@ app.use((req, res, next) => {
             ),
           ))
           .returning({ id: npcLog.id, name: npcLog.name });
-        if (bogus.length > 0) {
-          log(`Cleaned up ${bogus.length} auto-detected placeholder NPCs: ${bogus.map(b => b.name).join(", ")}`);
+
+        const bogus2 = await db.delete(npcLog)
+          .where(sql`lower(${npcLog.name}) IN (${sql.join(BLOCKED_NPC_NAMES.map(n => sql`${n}`), sql`, `)})`)
+          .returning({ id: npcLog.id, name: npcLog.name });
+
+        const bogus3 = await db.delete(npcLog)
+          .where(and(
+            or(
+              isNull(npcLog.notes),
+              eq(npcLog.notes, ""),
+            ),
+            or(
+              like(npcLog.description, "%looms ahead%"),
+              like(npcLog.description, "%weathered sign%"),
+              like(npcLog.description, "%creaking%"),
+              like(npcLog.description, "%tavern%building%"),
+              like(npcLog.description, "%a diverse group%"),
+            ),
+          ))
+          .returning({ id: npcLog.id, name: npcLog.name });
+
+        const allBogus = [...bogus1, ...bogus2, ...bogus3];
+        const unique = [...new Map(allBogus.map(b => [b.id, b])).values()];
+        if (unique.length > 0) {
+          log(`Cleaned up ${unique.length} bogus NPCs: ${unique.map(b => b.name).join(", ")}`);
         }
-      } catch (e) { /* ignore cleanup errors */ }
+      } catch (e) {
+        log(`NPC cleanup error: ${e}`);
+      }
     },
   );
 })();

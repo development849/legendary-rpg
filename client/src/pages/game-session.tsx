@@ -3,6 +3,7 @@ import { getAvailableSkills, SKILL_MILESTONE_LEVELS, type SkillOption, RECHARGE_
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useSoundtrack, type MoodType } from "@/hooks/use-soundtrack";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import {
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
   Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy, LogOut, Menu,
   Download, Share2, Minimize2, Map as MapIcon, RefreshCw, Loader2,
-  ClipboardList, AlertTriangle, Clock, Target
+  ClipboardList, AlertTriangle, Clock, Target, Volume2, VolumeX, Music
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
@@ -236,6 +237,7 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
   const [noHorror, setNoHorror] = useState(campaign.noHorror ?? false);
   const [npcControl, setNpcControl] = useState(campaign.npcControl ?? "gm");
   const [physicalDice, setPhysicalDice] = useState(campaign.physicalDice ?? false);
+  const [soundtrackOn, setSoundtrackOn] = useState(campaign.soundtrackEnabled ?? true);
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -244,7 +246,7 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
       const res = await fetch(`/api/campaigns/${campaign.id}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentRating: rating, noRomance, noHorror, npcControl, physicalDice }),
+        body: JSON.stringify({ contentRating: rating, noRomance, noHorror, npcControl, physicalDice, soundtrackEnabled: soundtrackOn }),
       });
       if (!res.ok) throw new Error("Failed to save");
       toast({ title: "Settings updated", description: "Settings will apply from the next GM response.", variant: "success" as any });
@@ -260,6 +262,7 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
     { key: "noRomance", label: "No Romance", desc: "Exclude romantic subplots", value: noRomance, set: setNoRomance },
     { key: "noHorror", label: "No Horror", desc: "Avoid disturbing content", value: noHorror, set: setNoHorror },
     { key: "physicalDice", label: "Physical Dice", desc: "Enter roll results manually", value: physicalDice, set: setPhysicalDice },
+    { key: "soundtrackEnabled", label: "Soundtrack", desc: "Ambient music during gameplay", value: soundtrackOn, set: setSoundtrackOn },
   ];
 
   const NPC_CONTROL_OPTIONS = [
@@ -344,6 +347,98 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
   );
 }
 
+const MOOD_LABELS: Record<string, string> = {
+  exploration: "Exploring",
+  combat: "Combat",
+  mystery: "Mystery",
+  romance: "Romance",
+  leisure: "Tavern",
+  triumph: "Triumph",
+  stealth: "Stealth",
+};
+
+function SoundtrackControls({ soundtrack }: { soundtrack: ReturnType<typeof useSoundtrack> }) {
+  const [showSlider, setShowSlider] = useState(false);
+
+  const handleToggle = async () => {
+    if (!soundtrack.audioStarted) {
+      await soundtrack.initAudio();
+      if (soundtrack.enabled) {
+        setTimeout(() => soundtrack.startPlayback(), 100);
+      }
+      return;
+    }
+    if (soundtrack.isPlaying) {
+      soundtrack.stopPlayback();
+    } else if (soundtrack.enabled) {
+      soundtrack.startPlayback();
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1 relative" data-testid="soundtrack-controls">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={handleToggle}
+            data-testid="button-soundtrack-toggle"
+          >
+            {soundtrack.isPlaying ? (
+              <Volume2 className="w-4 h-4 text-primary" />
+            ) : (
+              <VolumeX className="w-4 h-4 text-muted-foreground" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {soundtrack.isPlaying
+            ? `Playing: ${MOOD_LABELS[soundtrack.currentMood] ?? soundtrack.currentMood}`
+            : "Start soundtrack"}
+        </TooltipContent>
+      </Tooltip>
+      {soundtrack.audioStarted && (
+        <div
+          className="relative"
+          onMouseEnter={() => setShowSlider(true)}
+          onMouseLeave={() => setShowSlider(false)}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setShowSlider(p => !p)}
+            data-testid="button-soundtrack-volume"
+          >
+            <Music className="w-3.5 h-3.5 text-muted-foreground" />
+          </Button>
+          {showSlider && (
+            <div className="absolute top-full right-0 mt-1 bg-card border border-border rounded-md shadow-lg p-3 z-50 min-w-[140px]" data-testid="soundtrack-volume-panel">
+              <p className="text-[10px] font-sans tracking-widest text-muted-foreground uppercase mb-2">Volume</p>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(soundtrack.volume * 100)}
+                onChange={e => soundtrack.setVolume(parseInt(e.target.value) / 100)}
+                className="w-full h-1.5 accent-primary cursor-pointer"
+                data-testid="input-soundtrack-volume"
+              />
+              {soundtrack.isPlaying && (
+                <p className="text-[10px] text-primary/70 mt-1.5 font-serif text-center">
+                  {MOOD_LABELS[soundtrack.currentMood] ?? soundtrack.currentMood}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [, navigate] = useLocation();
   const { user } = useAuth();
@@ -395,6 +490,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const { data: partyData } = useQuery<any>({
     queryKey: [`/api/parties/${partyId}`],
   });
+
+  const soundtrack = useSoundtrack(partyData?.campaign?.id);
 
   const { data: situations = [] } = useQuery<any[]>({
     queryKey: [`/api/parties/${partyId}/situations`],
@@ -586,6 +683,10 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             if (wsNotice) {
               setNoticeBoardData({ board_name: wsNotice.board_name, board_flavor: wsNotice.board_flavor ?? "", notices: wsNotice.notices ?? [] });
               setExpandedNotice(null);
+            }
+            const wsMood = msg.message?.metadata?.sceneMood;
+            if (wsMood && ["exploration", "combat", "mystery", "romance", "leisure", "triumph", "stealth"].includes(wsMood)) {
+              soundtrack.changeMood(wsMood as MoodType);
             }
           }
         } else if (msg.type === "STATE_UPDATE") {
@@ -818,6 +919,10 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                   setLevelUpData(myLU);
                   setStatPoints({ might: 0, agility: 0, endurance: 0, intellect: 0, will: 0, presence: 0 });
                 }
+              }
+              const mood = evt.sceneMood ?? evt.message?.metadata?.sceneMood;
+              if (mood && ["exploration", "combat", "mystery", "romance", "leisure", "triumph", "stealth"].includes(mood)) {
+                soundtrack.changeMood(mood as MoodType);
               }
             }
           } catch (_) {}
@@ -1123,6 +1228,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 <Settings className="w-4 h-4" />
               </Button>
             )}
+            <SoundtrackControls soundtrack={soundtrack} />
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowCharacters(p => !p)} data-testid="button-toggle-chars">
               <Users className="w-4 h-4" />
             </Button>

@@ -55,6 +55,7 @@ export const campaigns = pgTable("campaigns", {
   npcControl: text("npc_control").notNull().default("gm"),
   physicalDice: boolean("physical_dice").notNull().default(false),
   stylePack: text("style_pack").notNull().default("luminous_painterly_fantasy"),
+  soundtrackEnabled: boolean("soundtrack_enabled").notNull().default(true),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").default(sql`NOW()`).notNull(),
 });
@@ -62,6 +63,22 @@ export const campaigns = pgTable("campaigns", {
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({ id: true, createdAt: true });
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
 export type Campaign = typeof campaigns.$inferSelect;
+
+// ─── Campaign Soundtracks ────────────────────────────────────────────────────
+
+export const campaignSoundtracks = pgTable("campaign_soundtracks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull(),
+  mood: text("mood").notNull(),
+  musicalParams: jsonb("musical_params").notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").default(sql`NOW()`).notNull(),
+}, (t) => [
+  uniqueIndex("campaign_soundtracks_campaign_mood_idx").on(t.campaignId, t.mood),
+]);
+
+export const insertCampaignSoundtrackSchema = createInsertSchema(campaignSoundtracks).omit({ id: true, createdAt: true });
+export type InsertCampaignSoundtrack = z.infer<typeof insertCampaignSoundtrackSchema>;
+export type CampaignSoundtrack = typeof campaignSoundtracks.$inferSelect;
 
 // ─── Parties ──────────────────────────────────────────────────────────────────
 

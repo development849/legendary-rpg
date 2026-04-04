@@ -12,12 +12,13 @@ import {
   saveChatMessage, getPartyMessages, getWorldState,
   sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend,
   getFriends, getPendingRequests, getSentRequests, searchUsers,
+  getCampaignSoundtracks, saveCampaignSoundtrack,
 } from "./storage";
 import { rollDice, parseDieString, enforceHandLimits } from "./gameEngine";
-import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, generateLocationMap, isLocationMapGenerating, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory } from "./gmOrchestrator";
+import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, generateLocationMap, isLocationMapGenerating, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory, generateSoundtrackProfiles } from "./gmOrchestrator";
 import { registerAdminRoutes } from "./adminRoutes";
 import { db } from "./db";
-import { characters, characters as charsTable, locationScenes, locationMaps, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs } from "@shared/schema";
+import { characters, characters as charsTable, locationScenes, locationMaps, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs, campaignSoundtracks } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 // WebSocket connections per party
@@ -512,6 +513,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         await db.delete(partyMembers).where(eq(partyMembers.partyId, pid));
       }
       await db.delete(arcs).where(eq(arcs.campaignId, campaign.id));
+      await db.delete(campaignSoundtracks).where(eq(campaignSoundtracks.campaignId, campaign.id));
       for (const pid of partyIds) {
         await db.delete(parties).where(eq(parties.id, pid));
       }
@@ -531,7 +533,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!campaign) return res.status(404).json({ error: "Not found" });
       if (campaign.ownerId !== userId) return res.status(403).json({ error: "Forbidden" });
 
-      const { contentRating, noRomance, noHorror, fadeToBlack, gmMode, themes, npcControl, name, physicalDice } = req.body;
+      const { contentRating, noRomance, noHorror, fadeToBlack, gmMode, themes, npcControl, name, physicalDice, soundtrackEnabled } = req.body;
       const updates: any = {};
       if (typeof name === "string" && name.trim()) updates.name = name.trim();
       if (contentRating !== undefined) updates.contentRating = contentRating;
@@ -542,11 +544,53 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (themes !== undefined) updates.themes = themes;
       if (npcControl !== undefined && (npcControl === "gm" || npcControl === "player")) updates.npcControl = npcControl;
       if (physicalDice !== undefined) updates.physicalDice = !!physicalDice;
+      if (soundtrackEnabled !== undefined) updates.soundtrackEnabled = !!soundtrackEnabled;
 
       const updated = await updateCampaign(req.params.id, updates);
       res.json(updated);
     } catch (e) {
       res.status(500).json({ error: "Failed to update campaign settings" });
+    }
+  });
+
+  // ── Campaign Soundtracks ────────────────────────────────────────────────────
+
+  app.get("/api/campaigns/:id/soundtracks", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const campaign = await getCampaign(req.params.id);
+      if (!campaign) return res.status(404).json({ error: "Not found" });
+      if (campaign.ownerId !== userId) {
+        const userParties = await getUserParties(userId);
+        const isMember = userParties.some((p: any) => p.campaignId === campaign.id);
+        if (!isMember) return res.status(403).json({ error: "Forbidden" });
+      }
+      const soundtracks = await getCampaignSoundtracks(campaign.id);
+      res.json({ soundtracks, soundtrackEnabled: campaign.soundtrackEnabled });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to get soundtracks" });
+    }
+  });
+
+  app.post("/api/campaigns/:id/soundtracks/generate", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const campaign = await getCampaign(req.params.id);
+      if (!campaign) return res.status(404).json({ error: "Not found" });
+      if (campaign.ownerId !== userId) return res.status(403).json({ error: "Forbidden" });
+
+      const existing = await getCampaignSoundtracks(campaign.id);
+      if (existing.length > 0) {
+        return res.json({ soundtracks: existing, cached: true });
+      }
+
+      generateSoundtrackProfiles(campaign).catch(err => {
+        console.error("[Soundtrack generation error]", err);
+      });
+
+      res.json({ soundtracks: [], generating: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to generate soundtracks" });
     }
   });
 
@@ -962,6 +1006,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { isReady } = req.body;
       await setMemberReady(req.params.id, userId, isReady);
 
+      if (isReady) {
+        const party = await getParty(req.params.id);
+        if (party) {
+          const campaign = await getCampaign(party.campaignId);
+          if (campaign && campaign.soundtrackEnabled) {
+            getCampaignSoundtracks(campaign.id).then(existing => {
+              if (existing.length === 0) {
+                generateSoundtrackProfiles(campaign).catch(err => {
+                  console.error("[Soundtrack generation error]", err);
+                });
+              }
+            }).catch(() => {});
+          }
+        }
+      }
+
       const members = await getPartyMembers(req.params.id);
       broadcastToParty(req.params.id, { type: "MEMBER_UPDATE", members });
       res.json({ success: true });
@@ -1203,13 +1263,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           gmFullText += chunk;
           res.write(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`);
         },
-        async (fullText, updates, diceRequests, quickActions, turnHint, levelUps) => {
+        async (fullText, updates, diceRequests, quickActions, turnHint, levelUps, sceneMood) => {
           const gmMsg = await saveChatMessage({
             partyId,
             userId: undefined,
             role: "gm",
             content: fullText,
-            metadata: { updates, diceRequests, quickActions, turnHint, levelUps },
+            metadata: { updates, diceRequests, quickActions, turnHint, levelUps, sceneMood },
           });
 
           broadcastToParty(partyId, { type: "MESSAGE", message: gmMsg });
@@ -1223,7 +1283,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             broadcastToParty(partyId, { type: "LEVEL_UP", levelUps });
           }
 
-          res.write(`data: ${JSON.stringify({ type: "done", message: gmMsg, updates, diceRequests, quickActions, turnHint, levelUps })}\n\n`);
+          res.write(`data: ${JSON.stringify({ type: "done", message: gmMsg, updates, diceRequests, quickActions, turnHint, levelUps, sceneMood })}\n\n`);
           res.end();
         },
       );

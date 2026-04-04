@@ -2,12 +2,14 @@ import { db } from "./db";
 import {
   characters, campaigns, parties, partyMembers, chatMessages,
   gameEvents, worldState, sceneSummaries, arcs, friendships, users, locationScenes,
+  campaignSoundtracks,
   type Character, type InsertCharacter,
   type Campaign, type InsertCampaign,
   type Party, type InsertParty,
   type PartyMember, type InsertPartyMember,
   type ChatMessage, type InsertChatMessage,
   type Friendship,
+  type CampaignSoundtrack,
 } from "@shared/schema";
 import { eq, and, or, desc, sql, ilike } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -104,7 +106,7 @@ export async function getCampaign(id: string): Promise<Campaign | undefined> {
   return campaign;
 }
 
-export async function updateCampaign(id: string, data: Partial<{ contentRating: string; noRomance: boolean; noHorror: boolean; fadeToBlack: boolean; gmMode: string; themes: string[]; npcControl: string }>): Promise<Campaign | undefined> {
+export async function updateCampaign(id: string, data: Partial<{ contentRating: string; noRomance: boolean; noHorror: boolean; fadeToBlack: boolean; gmMode: string; themes: string[]; npcControl: string; soundtrackEnabled: boolean; name: string; physicalDice: boolean }>): Promise<Campaign | undefined> {
   const [updated] = await db.update(campaigns).set(data).where(eq(campaigns.id, id)).returning();
   return updated;
 }
@@ -342,4 +344,29 @@ export async function searchUsers(query: string, excludeUserId: string): Promise
       sql`${users.id} != ${excludeUserId}`,
     ))
     .limit(10);
+}
+
+// ─── Campaign Soundtrack Storage ──────────────────────────────────────────────
+
+export async function getCampaignSoundtracks(campaignId: string): Promise<CampaignSoundtrack[]> {
+  return db.select().from(campaignSoundtracks)
+    .where(eq(campaignSoundtracks.campaignId, campaignId));
+}
+
+export async function saveCampaignSoundtrack(campaignId: string, mood: string, musicalParams: any): Promise<CampaignSoundtrack> {
+  const existing = await db.select().from(campaignSoundtracks)
+    .where(and(eq(campaignSoundtracks.campaignId, campaignId), eq(campaignSoundtracks.mood, mood)));
+  if (existing.length > 0) {
+    const [updated] = await db.update(campaignSoundtracks)
+      .set({ musicalParams })
+      .where(eq(campaignSoundtracks.id, existing[0].id))
+      .returning();
+    return updated;
+  }
+  const [row] = await db.insert(campaignSoundtracks).values({ campaignId, mood, musicalParams }).returning();
+  return row;
+}
+
+export async function deleteCampaignSoundtracks(campaignId: string): Promise<void> {
+  await db.delete(campaignSoundtracks).where(eq(campaignSoundtracks.campaignId, campaignId));
 }

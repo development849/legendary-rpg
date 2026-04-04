@@ -90,6 +90,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
   const [editNoRomance, setEditNoRomance] = useState<boolean | null>(null);
   const [editNoHorror, setEditNoHorror] = useState<boolean | null>(null);
   const [editFadeToBlack, setEditFadeToBlack] = useState<boolean | null>(null);
+  const [editSoundtrack, setEditSoundtrack] = useState<boolean | null>(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
   useEffect(() => {
@@ -99,6 +100,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
       setEditNoRomance(campaign.noRomance ?? false);
       setEditNoHorror(campaign.noHorror ?? false);
       setEditFadeToBlack(campaign.fadeToBlack ?? true);
+      setEditSoundtrack(campaign.soundtrackEnabled ?? true);
     }
   }, [campaign?.id]);
 
@@ -106,7 +108,8 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
     editRating !== campaign.contentRating ||
     editGmMode !== campaign.gmMode ||
     editNoRomance !== campaign.noRomance ||
-    editNoHorror !== campaign.noHorror
+    editNoHorror !== campaign.noHorror ||
+    editSoundtrack !== (campaign.soundtrackEnabled ?? true)
   );
 
   async function saveSettings() {
@@ -116,7 +119,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
       const res = await fetch(`/api/campaigns/${campaign.id}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentRating: editRating, gmMode: editGmMode, noRomance: editNoRomance, noHorror: editNoHorror }),
+        body: JSON.stringify({ contentRating: editRating, gmMode: editGmMode, noRomance: editNoRomance, noHorror: editNoHorror, soundtrackEnabled: editSoundtrack }),
       });
       if (!res.ok) throw new Error();
       queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
@@ -343,6 +346,7 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
                   {[
                     { key: "noRomance", label: "No Romance", desc: "Exclude romantic subplots", value: editNoRomance, set: setEditNoRomance },
                     { key: "noHorror", label: "No Horror", desc: "Avoid disturbing content", value: editNoHorror, set: setEditNoHorror },
+                    { key: "soundtrackEnabled", label: "Soundtrack", desc: "Ambient music during gameplay", value: editSoundtrack, set: setEditSoundtrack },
                   ].map(t => (
                     <label key={t.key} className="flex items-center gap-3 cursor-pointer py-1">
                       <div

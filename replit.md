@@ -23,9 +23,18 @@ The application is built with a TypeScript, React, Express, PostgreSQL stack, ut
 - **AI Integration:** GPT-4o is used for GM narrative generation, state updates, NPC interaction, backstory generation, and scene summarization. Gemini generates AI portraits and world map images.
 - **Features:** Includes a friends system with request management, NPC companions with full character sheets and AI-driven leveling, and comprehensive equipment slot management.
 
+## Campaign Soundtrack System
+- **Procedural Audio:** Uses Tone.js to generate ambient soundtracks client-side — no audio files stored server-side.
+- **Mood System:** 7 mood categories (exploration, combat, mystery, romance, leisure, triumph, stealth) with crossfading transitions.
+- **AI Generation:** Campaign-specific musical parameters are generated via GPT-4o-mini when a campaign starts, stored in `campaignSoundtracks` table.
+- **GM Integration:** The GM orchestrator includes a `scene_mood` field in every response, which drives automatic soundtrack transitions via SSE events.
+- **Controls:** Volume slider and play/pause toggle in the game session header (`SoundtrackControls` component). Settings toggle in both lobby and in-game settings panels.
+- **Hook:** `client/src/hooks/use-soundtrack.ts` manages Tone.js audio context, layer creation, mood switching, and volume control.
+
 ## External Dependencies
 - **OpenAI GPT-4o:** Primary AI Game Master for narrative, state management, and character backstories.
 - **Google Gemini:** Used for AI-generated character portraits and world map images.
+- **Tone.js:** Client-side procedural audio synthesis for campaign soundtracks.
 - **PostgreSQL:** Relational database for all persistent game data.
 - **Drizzle ORM:** TypeScript ORM for database interaction.
 - **React:** Frontend library.

@@ -13,13 +13,12 @@ import {
   Scroll, Package, Shield, Zap, Gem, Coffee, Wrench, MapPin, Skull,
   Mic, MicOff, MessageCircle, Radio, BookOpen, Star, Activity, Brain, ScrollText,
   Settings, Navigation, Store, ShoppingCart, Coins, X, ArrowRightLeft, Trophy, LogOut, Menu,
-  Download, Share2, Maximize2, Minimize2, List, Map as MapIcon, RefreshCw, Loader2,
+  Download, Share2, Minimize2, Map as MapIcon, RefreshCw, Loader2,
   ClipboardList, AlertTriangle, Clock, Target
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import WorldMap from "@/components/WorldMap";
 
 function AuthImg({ src, alt, className, onClick, "data-testid": testId }: { src: string; alt: string; className?: string; onClick?: (e: React.MouseEvent) => void; "data-testid"?: string }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -374,8 +373,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [rolledPrompts, setRolledPrompts] = useState<Record<string, boolean>>({});
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
   const [expandedRegions, setExpandedRegions] = useState<Set<string>>(new Set());
-  const [mapViewMode, setMapViewMode] = useState<"map" | "list">("map");
-  const [mapFullscreen, setMapFullscreen] = useState(false);
+  const [expandedSceneImage, setExpandedSceneImage] = useState<{ name: string; imageData: string } | null>(null);
   const [viewingLocationMap, setViewingLocationMap] = useState<string | null>(null);
   const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
   const [shopData, setShopData] = useState<ShopData | null>(null);
@@ -408,30 +406,6 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     refetchInterval: 10000,
   });
 
-  const mapRecalcDone = useRef(false);
-  const mapRegenPending = useRef(false);
-  const { data: mapData, isLoading: isLoadingMap, error: mapError } = useQuery<any>({
-    queryKey: [`/api/parties/${partyId}/map`],
-    queryFn: async () => {
-      let url = `/api/parties/${partyId}/map`;
-      const params: string[] = [];
-      if (!mapRecalcDone.current) {
-        params.push("recalculate=1");
-        mapRecalcDone.current = true;
-      }
-      if (mapRegenPending.current) {
-        params.push("regenerate_map=1");
-        mapRegenPending.current = false;
-      }
-      if (params.length) url += "?" + params.join("&");
-      const res = await fetch(url, { credentials: "include" });
-      if (res.status === 401) return null;
-      if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
-      return res.json();
-    },
-    refetchInterval: (query) => (query.state.data as any)?.generating ? 5000 : 30000,
-    enabled: (sidebarTab === "map" || mapFullscreen) && !!partyId,
-  });
 
   const { data: locationMapData, isLoading: isLoadingLocationMap } = useQuery<any>({
     queryKey: [`/api/parties/${partyId}/location-maps`, viewingLocationMap],
@@ -453,10 +427,17 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     enabled: sidebarTab === "map" && !!partyId,
   });
 
-  const handleRegenerateMap = useCallback(() => {
-    mapRegenPending.current = true;
-    queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/map`] });
-  }, [partyId, queryClient]);
+  const { data: sceneThumbnails } = useQuery<Record<string, string>>({
+    queryKey: [`/api/parties/${partyId}/scene-thumbnails`],
+    queryFn: async () => {
+      const res = await fetch(`/api/parties/${partyId}/scene-thumbnails`, { credentials: "include" });
+      if (!res.ok) return {};
+      const data = await res.json();
+      return data.thumbnails ?? {};
+    },
+    enabled: sidebarTab === "map" && !!partyId,
+    staleTime: 60000,
+  });
 
   // Load messages — must complete before the auto-start effect can fire
   useEffect(() => {
@@ -2122,213 +2103,245 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                         <p className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-1.5">
                           <MapPin className="w-3 h-3 text-primary" /> Journey Map
                         </p>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => {
-                              if (mapViewMode !== "map") {
-                                const isMobile = window.innerWidth < 640;
-                                if (isMobile) {
-                                  setMapFullscreen(true);
-                                  return;
-                                }
-                              }
-                              setMapViewMode(mapViewMode === "map" ? "list" : "map");
-                            }}
-                            className="p-1 rounded hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors"
-                            data-testid="toggle-map-view-mode"
-                            title={mapViewMode === "map" ? "Switch to list view" : "Switch to map view"}
-                          >
-                            {mapViewMode === "map" ? <List className="w-3.5 h-3.5" /> : <MapIcon className="w-3.5 h-3.5" />}
-                          </button>
-                          {mapViewMode === "map" && (
-                            <>
-                              <button
-                                onClick={handleRegenerateMap}
-                                className="p-1 rounded hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors"
-                                data-testid="regenerate-map"
-                                title="Regenerate map"
-                              >
-                                <RefreshCw className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setMapFullscreen(true)}
-                                className="p-1 rounded hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors"
-                                data-testid="toggle-map-fullscreen"
-                                title="Expand map"
-                              >
-                                <Maximize2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          )}
-                        </div>
                       </div>
 
-                      {mapViewMode === "map" ? (
-                        <>
-                          <div className="rounded-md border border-border overflow-hidden sm:block hidden" style={{ height: "min(50vh, 400px)", minHeight: "250px" }}>
-                            <WorldMap
-                              mapImage={mapData?.mapImage ?? null}
-                              locations={mapData?.locations ?? []}
-                              generating={mapData?.generating}
-                              isLoading={isLoadingMap}
-                              error={!!mapError}
-                              onTravelTo={(name) => sendAction(`[ACTION] I travel to ${name}.`)}
-                            />
-                          </div>
-                          <button
-                            onClick={() => setMapFullscreen(true)}
-                            className="sm:hidden flex items-center justify-center gap-2 w-full rounded-md border border-border bg-card/60 py-6 text-sm text-muted-foreground hover:bg-card hover:text-foreground transition-colors"
-                            data-testid="mobile-open-fullscreen-map"
-                          >
-                            <Maximize2 className="w-4 h-4" />
-                            Open Full Map
-                          </button>
-                        </>
-                      
-                      ) : (
-                        <>
-                          {locations.length === 0 ? (
-                            <div className="text-center py-8">
-                              <MapPin className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
-                              <p className="text-xs text-muted-foreground font-serif italic">
-                                No locations discovered yet.
-                              </p>
-                            </div>
-                          ) : (() => {
-                            const regionMap: Record<string, any[]> = {};
-                            locations.forEach((loc: any) => {
-                              const r = loc.region || "Unknown Lands";
-                              if (!regionMap[r]) regionMap[r] = [];
-                              regionMap[r].push(loc);
-                            });
-                            const regionNames = Object.keys(regionMap);
-                            const currentRegion = regionNames.find(r => regionMap[r].some((l: any) => l.name === currentLocation));
-                            const autoExpanded = new Set(expandedRegions);
-                            if (currentRegion) autoExpanded.add(currentRegion);
-                            if (regionNames.length === 1) autoExpanded.add(regionNames[0]);
+                      {locations.length === 0 ? (
+                        <div className="text-center py-8">
+                          <MapPin className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
+                          <p className="text-xs text-muted-foreground font-serif italic">
+                            No locations discovered yet.
+                          </p>
+                        </div>
+                      ) : (() => {
+                        const thumbs: Record<string, string> = sceneThumbnails ?? {};
 
-                            return (
-                              <div className="space-y-1.5">
-                                {regionNames.map((regionName) => {
-                                  const locs = regionMap[regionName];
-                                  const isExpanded = autoExpanded.has(regionName) || expandedRegions.has(regionName);
-                                  const hasCurrentLoc = locs.some((l: any) => l.name === currentLocation);
+                        const SETTLEMENT_KEYWORDS = /town|city|village|hamlet|settlement|haven|castle|palace|fortress|keep|citadel|tower/i;
+                        const MINOR_KEYWORDS = /tavern|inn|pub|shop|market|bazaar|merchant|store|temple|church|shrine|gate|wall|mill|farm|camp|dock|pier|wharf/i;
 
-                                  return (
-                                    <div key={regionName} data-testid={`map-region-${regionName}`}>
+                        interface HierarchyNode {
+                          loc: any;
+                          children: HierarchyNode[];
+                        }
+
+                        const regionMap: Record<string, any[]> = {};
+                        locations.forEach((loc: any) => {
+                          const r = loc.region || "Unknown Lands";
+                          if (!regionMap[r]) regionMap[r] = [];
+                          regionMap[r].push(loc);
+                        });
+
+                        const buildRegionHierarchy = (locs: any[]): HierarchyNode[] => {
+                          const majors: HierarchyNode[] = [];
+                          const minors: any[] = [];
+                          const rest: any[] = [];
+
+                          for (const loc of locs) {
+                            const n = (loc.name || "").toLowerCase();
+                            if (SETTLEMENT_KEYWORDS.test(n)) {
+                              majors.push({ loc, children: [] });
+                            } else if (MINOR_KEYWORDS.test(n)) {
+                              minors.push(loc);
+                            } else {
+                              rest.push(loc);
+                            }
+                          }
+
+                          const getWords = (name: string) => name.toLowerCase().split(/[\s,]+/).filter((w: string) => w.length > 2 && !["the","a","an","of","by","to","in","on","at","near","old"].includes(w));
+                          const tryGroup = (loc: any): boolean => {
+                            const locWords = getWords(loc.name);
+                            for (const major of majors) {
+                              const majorWords = getWords(major.loc.name);
+                              if (locWords.some((w: string) => majorWords.includes(w))) {
+                                major.children.push({ loc, children: [] });
+                                return true;
+                              }
+                            }
+                            return false;
+                          };
+
+                          const ungroupedMinors: any[] = [];
+                          for (const m of minors) {
+                            if (!tryGroup(m)) ungroupedMinors.push(m);
+                          }
+                          const ungroupedRest: any[] = [];
+                          for (const r of rest) {
+                            if (!tryGroup(r)) ungroupedRest.push(r);
+                          }
+
+                          const result: HierarchyNode[] = [...majors];
+                          for (const loc of [...ungroupedMinors, ...ungroupedRest]) {
+                            result.push({ loc, children: [] });
+                          }
+                          return result;
+                        };
+
+                        const regionNames = Object.keys(regionMap);
+                        const currentRegion = regionNames.find(r => regionMap[r].some((l: any) => l.name === currentLocation));
+                        const autoExpanded = new Set(expandedRegions);
+                        if (currentRegion) autoExpanded.add(currentRegion);
+                        if (regionNames.length === 1) autoExpanded.add(regionNames[0]);
+
+                        const findSceneImage = (locName: string, locTitle?: string) => {
+                          if (locTitle && thumbs[locTitle]) return thumbs[locTitle];
+                          if (thumbs[locName]) return thumbs[locName];
+                          return null;
+                        };
+
+                        const renderLocationCard = (loc: any, depth: number) => {
+                          const isCurrent = loc.name === currentLocation;
+                          const sceneImg = findSceneImage(loc.name, loc.title);
+                          return (
+                            <div
+                              key={loc.name}
+                              data-testid={`map-location-${loc.name}`}
+                              className={`rounded-md border px-2.5 py-2 ${
+                                isCurrent
+                                  ? "border-primary/50 bg-primary/5"
+                                  : "border-border bg-card/60"
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                {sceneImg ? (
+                                  <button
+                                    onClick={() => setExpandedSceneImage({ name: loc.name, imageData: sceneImg })}
+                                    className="flex-shrink-0 w-10 h-10 rounded overflow-hidden border border-border/60 hover:border-primary/50 transition-colors cursor-pointer"
+                                    data-testid={`scene-thumb-${loc.name}`}
+                                    title={`View ${loc.name}`}
+                                  >
+                                    <img src={sceneImg} alt={loc.name} className="w-full h-full object-cover" />
+                                  </button>
+                                ) : (
+                                  <div className="flex-shrink-0 w-10 h-10 rounded bg-muted/30 border border-border/40 flex items-center justify-center">
+                                    {loc.threat ? (
+                                      <Skull className="w-4 h-4 text-red-400/60" />
+                                    ) : (
+                                      <MapPin className={`w-4 h-4 ${isCurrent ? "text-primary/60" : "text-muted-foreground/30"}`} />
+                                    )}
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <p className={`text-xs font-sans font-semibold leading-tight truncate ${isCurrent ? "text-primary" : "text-foreground"}`}>
+                                      {loc.name}
+                                    </p>
+                                    {isCurrent ? (
+                                      <span className="text-[10px] font-sans text-primary/70 flex-shrink-0 bg-primary/10 px-1.5 rounded">here</span>
+                                    ) : (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            data-testid={`fast-travel-${loc.name}`}
+                                            onClick={() => sendAction(`[ACTION] I travel to ${loc.name}.`)}
+                                            className="flex-shrink-0 p-0.5 rounded hover:bg-primary/10 text-muted-foreground/50 hover:text-primary transition-colors"
+                                          >
+                                            <Navigation className="w-3 h-3" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="text-xs">Travel to {loc.name}</TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                  </div>
+                                  {loc.title && loc.title !== loc.name && (
+                                    <p className="text-xs text-muted-foreground font-serif italic mt-0.5 leading-tight">{loc.title}</p>
+                                  )}
+                                  {loc.threat && (
+                                    <p className="text-xs text-red-400 mt-0.5 flex items-start gap-1">
+                                      <Skull className="w-2.5 h-2.5 flex-shrink-0 mt-0.5" /> <span className="break-words">{loc.threat}</span>
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <p className="text-[10px] text-muted-foreground/40">Turn {loc.firstVisitedTurn}</p>
+                                    {savedLocationMaps?.some((m: any) => m.locationName === loc.name) ? (
                                       <button
-                                        data-testid={`toggle-region-${regionName}`}
-                                        onClick={() => {
-                                          setExpandedRegions(prev => {
-                                            const next = new Set(prev);
-                                            if (next.has(regionName)) next.delete(regionName);
-                                            else next.add(regionName);
-                                            return next;
-                                          });
-                                        }}
-                                        className={`w-full flex items-center gap-1.5 py-1 px-1 rounded text-left hover:bg-muted/40 transition-colors ${hasCurrentLoc ? "text-primary" : "text-muted-foreground"}`}
+                                        onClick={() => setViewingLocationMap(loc.name)}
+                                        className="text-[10px] text-primary/70 hover:text-primary flex items-center gap-0.5 transition-colors"
+                                        data-testid={`view-location-map-${loc.name}`}
                                       >
-                                        {isExpanded ? (
-                                          <ChevronDown className="w-3 h-3 flex-shrink-0" />
-                                        ) : (
-                                          <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                                        )}
-                                        <MapPin className={`w-3 h-3 flex-shrink-0 ${hasCurrentLoc ? "text-primary" : "text-muted-foreground/50"}`} />
-                                        <span className="text-xs font-sans font-semibold tracking-wide uppercase truncate">{regionName}</span>
-                                        <span className="text-xs text-muted-foreground/40 ml-auto flex-shrink-0">{locs.length}</span>
+                                        <MapIcon className="w-2.5 h-2.5" /> Map
                                       </button>
-
-                                      {isExpanded && (
-                                        <div className="relative ml-3 pl-3 border-l border-border/40">
-                                          <div className="space-y-1.5 py-1">
-                                            {locs.map((loc: any, i: number) => {
-                                              const isCurrent = loc.name === currentLocation;
-                                              return (
-                                                <div
-                                                  key={i}
-                                                  data-testid={`map-location-${loc.name}`}
-                                                  className={`rounded-md border px-2.5 py-2 ${
-                                                    isCurrent
-                                                      ? "border-primary/50 bg-primary/5"
-                                                      : "border-border bg-card/60"
-                                                  }`}
-                                                >
-                                                  <div className="flex items-start justify-between gap-1">
-                                                    <div className="flex items-center gap-1.5 min-w-0">
-                                                      {loc.threat ? (
-                                                        <Skull className="w-3 h-3 text-red-400 flex-shrink-0" />
-                                                      ) : (
-                                                        <MapPin className={`w-3 h-3 flex-shrink-0 ${isCurrent ? "text-primary" : "text-muted-foreground/40"}`} />
-                                                      )}
-                                                      <p className={`text-xs font-sans font-semibold leading-tight truncate ${isCurrent ? "text-primary" : "text-foreground"}`}>
-                                                        {loc.name}
-                                                      </p>
-                                                    </div>
-                                                    {isCurrent ? (
-                                                      <span className="text-[10px] font-sans text-primary/70 flex-shrink-0 bg-primary/10 px-1.5 rounded">here</span>
-                                                    ) : (
-                                                      <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                          <button
-                                                            data-testid={`fast-travel-${loc.name}`}
-                                                            onClick={() => {
-                                                              sendAction(`[ACTION] I travel to ${loc.name}.`);
-                                                            }}
-                                                            className="flex-shrink-0 p-0.5 rounded hover:bg-primary/10 text-muted-foreground/50 hover:text-primary transition-colors"
-                                                          >
-                                                            <Navigation className="w-3 h-3" />
-                                                          </button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="left" className="text-xs">Travel to {loc.name}</TooltipContent>
-                                                      </Tooltip>
-                                                    )}
-                                                  </div>
-                                                  {loc.title && loc.title !== loc.name && (
-                                                    <p className="text-xs text-muted-foreground font-serif italic mt-0.5 leading-tight ml-[18px]">{loc.title}</p>
-                                                  )}
-                                                  {loc.threat && (
-                                                    <p className="text-xs text-red-400 mt-0.5 flex items-start gap-1 ml-[18px]">
-                                                      <Skull className="w-2.5 h-2.5 flex-shrink-0 mt-0.5" /> <span className="break-words">{loc.threat}</span>
-                                                    </p>
-                                                  )}
-                                                  <div className="flex items-center gap-2 mt-1 ml-[18px]">
-                                                    <p className="text-xs text-muted-foreground/40">Turn {loc.firstVisitedTurn}</p>
-                                                    {savedLocationMaps?.some((m: any) => m.locationName === loc.name) ? (
-                                                      <button
-                                                        onClick={() => setViewingLocationMap(loc.name)}
-                                                        className="text-[10px] text-primary/70 hover:text-primary flex items-center gap-0.5 transition-colors"
-                                                        data-testid={`view-location-map-${loc.name}`}
-                                                      >
-                                                        <MapIcon className="w-2.5 h-2.5" /> Map
-                                                      </button>
-                                                    ) : (
-                                                      <button
-                                                        onClick={async () => {
-                                                          await apiRequest("POST", `/api/parties/${partyId}/location-maps/${encodeURIComponent(loc.name)}/generate`);
-                                                          queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/location-maps`] });
-                                                          setViewingLocationMap(loc.name);
-                                                        }}
-                                                        className="text-[10px] text-muted-foreground/50 hover:text-primary flex items-center gap-0.5 transition-colors"
-                                                        data-testid={`generate-location-map-${loc.name}`}
-                                                      >
-                                                        <MapIcon className="w-2.5 h-2.5" /> Map
-                                                      </button>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                                    ) : (
+                                      <button
+                                        onClick={async () => {
+                                          await apiRequest("POST", `/api/parties/${partyId}/location-maps/${encodeURIComponent(loc.name)}/generate`);
+                                          queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/location-maps`] });
+                                          setViewingLocationMap(loc.name);
+                                        }}
+                                        className="text-[10px] text-muted-foreground/50 hover:text-primary flex items-center gap-0.5 transition-colors"
+                                        data-testid={`generate-location-map-${loc.name}`}
+                                      >
+                                        <MapIcon className="w-2.5 h-2.5" /> Map
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            );
-                          })()}
-                        </>
-                      )}
+                            </div>
+                          );
+                        };
+
+                        return (
+                          <div className="space-y-1.5">
+                            {regionNames.map((regionName) => {
+                              const locs = regionMap[regionName];
+                              const isExpanded = autoExpanded.has(regionName) || expandedRegions.has(regionName);
+                              const hasCurrentLoc = locs.some((l: any) => l.name === currentLocation);
+                              const hierarchy = buildRegionHierarchy(locs);
+
+                              return (
+                                <div key={regionName} data-testid={`map-region-${regionName}`}>
+                                  <button
+                                    data-testid={`toggle-region-${regionName}`}
+                                    onClick={() => {
+                                      setExpandedRegions(prev => {
+                                        const next = new Set(prev);
+                                        if (next.has(regionName)) next.delete(regionName);
+                                        else next.add(regionName);
+                                        return next;
+                                      });
+                                    }}
+                                    className={`w-full flex items-center gap-1.5 py-1 px-1 rounded text-left hover:bg-muted/40 transition-colors ${hasCurrentLoc ? "text-primary" : "text-muted-foreground"}`}
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="w-3 h-3 flex-shrink-0" />
+                                    ) : (
+                                      <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                                    )}
+                                    <MapPin className={`w-3 h-3 flex-shrink-0 ${hasCurrentLoc ? "text-primary" : "text-muted-foreground/50"}`} />
+                                    <span className="text-xs font-sans font-semibold tracking-wide uppercase truncate">{regionName}</span>
+                                    <span className="text-xs text-muted-foreground/40 ml-auto flex-shrink-0">{locs.length}</span>
+                                  </button>
+
+                                  {isExpanded && (
+                                    <div className="relative ml-3 pl-3 border-l border-border/40">
+                                      <div className="space-y-1.5 py-1">
+                                        {hierarchy.map((node) => (
+                                          <div key={node.loc.name}>
+                                            {renderLocationCard(node.loc, 0)}
+                                            {node.children.length > 0 && (
+                                              <div className="relative ml-4 pl-3 border-l border-border/30 space-y-1.5 py-1">
+                                                {node.children.map((child) => (
+                                                  <div key={child.loc.name}>
+                                                    {renderLocationCard(child.loc, 1)}
+                                                    {child.children.length > 0 && (
+                                                      <div className="relative ml-4 pl-3 border-l border-border/20 space-y-1.5 py-1">
+                                                        {child.children.map((grandchild) => renderLocationCard(grandchild.loc, 2))}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                   } catch (err) {
@@ -3526,32 +3539,31 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
         </div>
       )}
 
-      {mapFullscreen && (
-        <div className="fixed inset-0 z-[90] bg-background/95 backdrop-blur-sm flex flex-col" data-testid="overlay-map-fullscreen">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-            <p className="text-sm font-sans font-semibold tracking-wide flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-primary" /> World Map
-            </p>
+      {expandedSceneImage && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 cursor-pointer"
+          onClick={() => setExpandedSceneImage(null)}
+          data-testid="overlay-scene-image"
+        >
+          <div className="relative max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={expandedSceneImage.imageData}
+              alt={expandedSceneImage.name}
+              className="w-full rounded-lg object-cover border-2 border-border shadow-2xl"
+              data-testid="img-expanded-scene"
+            />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent rounded-b-lg px-4 py-3">
+              <p className="text-sm font-sans font-semibold text-white">{expandedSceneImage.name}</p>
+            </div>
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setMapFullscreen(false)}
-              data-testid="close-map-fullscreen"
-              className="h-8 w-8 p-0"
+              onClick={() => setExpandedSceneImage(null)}
+              data-testid="close-scene-image"
+              className="absolute top-2 right-2 h-8 w-8 p-0 bg-black/40 hover:bg-black/60 text-white"
             >
-              <Minimize2 className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </Button>
-          </div>
-          <div className="flex-1 min-h-0">
-            <WorldMap
-              mapImage={mapData?.mapImage ?? null}
-              locations={mapData?.locations ?? []}
-              generating={mapData?.generating}
-              isLoading={isLoadingMap}
-              error={!!mapError}
-              onTravelTo={(name) => { sendAction(`[ACTION] I travel to ${name}.`); setMapFullscreen(false); }}
-              fullscreen
-            />
           </div>
         </div>
       )}

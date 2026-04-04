@@ -718,6 +718,32 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/parties/:id/scene-thumbnails", requireAuth, async (req: any, res) => {
+    try {
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+      const partyId = req.params.id;
+      const userId = getUserId(req)!;
+      const members = await getPartyMembers(partyId);
+      if (!members.some((m: any) => m.userId === userId)) {
+        return res.status(403).json({ error: "Not a member of this party" });
+      }
+      const rows = await db.select({
+        locationName: locationScenes.locationName,
+        imageData: locationScenes.imageData,
+      })
+        .from(locationScenes)
+        .where(eq(locationScenes.partyId, partyId));
+      const thumbnails: Record<string, string> = {};
+      for (const row of rows) {
+        thumbnails[row.locationName] = row.imageData;
+      }
+      res.json({ thumbnails });
+    } catch (e) {
+      console.error("Scene thumbnails API error:", e);
+      res.status(500).json({ error: "Failed to fetch scene thumbnails" });
+    }
+  });
+
   app.get("/api/parties/:id/map", requireAuth, async (req: any, res) => {
     try {
       res.set("Cache-Control", "no-store, no-cache, must-revalidate");

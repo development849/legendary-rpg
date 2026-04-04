@@ -12,7 +12,7 @@ The application is built with a TypeScript, React, Express, PostgreSQL stack, ut
 **Frontend:**
 - **UI/UX:** Dark fantasy aesthetic with a near-black background, golden/amber accents, Cinzel font for headings, and Crimson Text for body. Built using Tailwind CSS and shadcn/ui components for a consistent design system.
 - **Pages:** Includes dedicated pages for landing, authentication, dashboard, character creation (with AI portrait generation), campaign creation, party lobby, the main game session, and character sheets.
-- **Interaction:** Features include a streaming GM chat, quick actions, an interactive world map (AI-generated, layered, with fog-of-war and location clustering), a journey map list view, a notice board system for quests, and a codex for learned recipes/spells.
+- **Interaction:** Features include a streaming GM chat, quick actions, a hierarchical journey map (Region > Major Location > Minor Location list with expandable AI scene thumbnails), a notice board system for quests, and a codex for learned recipes/spells.
 - **Character Customization:** Extensive character creation with 8 classes, 12 races, point-envelope stat allocation, AI-generated backstories, and a Portrait Studio for DALL-E 3 generation.
 
 **Backend:**

@@ -1795,10 +1795,13 @@ export async function runGM(
   // Safety net: if the narrative suggests a roll should happen but dice_requests is empty,
   // generate a fallback dice request so the player isn't stuck
   if (diceRequests.length === 0) {
-    const rawNarr = (parsed?.narrative ?? fullText).toLowerCase();
-    const rollIndicators = /\b(?:rolling to|roll for|rolls? (?:a |the )?d(?:20|ice)|attack roll|make (?:a |an )?(?:check|save|roll)|swing(?:s|ing)? (?:your|the|at)|hurl(?:s|ing)?|lunge(?:s|ing)?|strike(?:s|ing)? at|slash(?:es|ing)?|shoot(?:s|ing)?|fire(?:s|ing)? (?:your|an? |the )|thrust(?:s|ing)?|charge(?:s|ing)? (?:at|toward))\b/i;
-    const combatAction = /\b(?:attack|swing|strike|slash|stab|shoot|fire|hurl|throw|charge|lunge|smash|cleave)\b/i;
-    if (rollIndicators.test(rawNarr) || (combatAction.test(rawNarr) && /\b(?:aim|hit|miss|damage|weapon|sword|axe|bow|spear|blade)\b/i.test(rawNarr))) {
+    const rawNarrFull = (parsed?.narrative ?? fullText).toLowerCase();
+    const rawNarr = rawNarrFull.replace(/"[^"]*"/g, " ").replace(/\u201c[^\u201d]*\u201d/g, " ").replace(/'[^']*'/g, " ").replace(/\u2018[^\u2019]*\u2019/g, " ");
+    const rollIndicators = /\b(?:rolling to|roll for|rolls? (?:a |the )?d(?:20|ice)|attack roll|make (?:a |an )?(?:check|save|roll)|swing(?:s|ing)? (?:your|the|at) |strike(?:s|ing)? at |slash(?:es|ing)? (?:at|through|into) |shoot(?:s|ing)? (?:your|an? |the )|fire(?:s|ing)? (?:your|an? |the )|thrust(?:s|ing)? (?:your|at |toward))\b/i;
+    const combatAction = /\b(?:attacks?|swings? at|strikes? at|slashes? at|stabs?|shoots? at|hurls? at|charges? (?:at|toward)|lunges? (?:at|toward)|smashes?|cleaves?)\b/i;
+    const combatWeaponCtx = /\b(?:aim|hit|miss|damage|weapon|sword|axe|bow|spear|blade|arrow|dagger|mace|hammer)\b/i;
+    const playerActionCtx = /\byou\b|\byour\b/i;
+    if (rollIndicators.test(rawNarr) || (combatAction.test(rawNarr) && combatWeaponCtx.test(rawNarr) && playerActionCtx.test(rawNarr))) {
       // Find the acting character
       const partyChars = await db.select().from(characters)
         .innerJoin(partyMembers, eq(characters.id, partyMembers.characterId))

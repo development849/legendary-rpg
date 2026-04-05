@@ -555,6 +555,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // ── Campaign Soundtracks ────────────────────────────────────────────────────
 
+  const soundtrackGenerating = new Set<string>();
+
   app.get("/api/campaigns/:id/soundtracks", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
@@ -566,6 +568,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (!isMember) return res.status(403).json({ error: "Forbidden" });
       }
       const soundtracks = await getCampaignSoundtracks(campaign.id);
+      if (soundtracks.length === 0 && campaign.soundtrackEnabled && campaign.status === "active" && !soundtrackGenerating.has(campaign.id)) {
+        soundtrackGenerating.add(campaign.id);
+        generateSoundtrackProfiles(campaign).then(() => {
+          soundtrackGenerating.delete(campaign.id);
+        }).catch(err => {
+          soundtrackGenerating.delete(campaign.id);
+          console.error("[Soundtrack auto-generation error]", err);
+        });
+      }
       res.json({ soundtracks, soundtrackEnabled: campaign.soundtrackEnabled });
     } catch (e) {
       res.status(500).json({ error: "Failed to get soundtracks" });

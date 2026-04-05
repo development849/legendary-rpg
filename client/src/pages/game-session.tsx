@@ -322,13 +322,13 @@ function ContentSettingsPanel({ campaign, onClose, onSaved }: { campaign: any; o
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-x-6 gap-y-2">
+      <div className="flex flex-col gap-2">
         {toggles.map(t => (
           <label key={t.key} className="flex items-center gap-2 cursor-pointer">
             <div
               onClick={() => t.set(!t.value)}
               data-testid={`toggle-${t.key}`}
-              className={`relative w-8 h-4 rounded-full transition-colors cursor-pointer ${t.value ? "bg-primary" : "bg-secondary"}`}
+              className={`relative w-8 h-4 rounded-full transition-colors cursor-pointer flex-shrink-0 ${t.value ? "bg-primary" : "bg-secondary"}`}
             >
               <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${t.value ? "translate-x-4" : "translate-x-0.5"}`} />
             </div>

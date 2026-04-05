@@ -1800,12 +1800,20 @@ export async function runGM(
     const rollIndicators = /\b(?:rolling to|roll for|rolls? (?:a |the )?d(?:20|ice)|attack roll|make (?:a |an )?(?:check|save|roll)|swing(?:s|ing)? (?:your|the|at) |strike(?:s|ing)? at |slash(?:es|ing)? (?:at|through|into) |shoot(?:s|ing)? (?:your|an? |the )|fire(?:s|ing)? (?:your|an? |the )|thrust(?:s|ing)? (?:your|at |toward))\b/i;
     const combatAction = /\b(?:attacks?|swings? at|strikes? at|slashes? at|stabs?|shoots? at|hurls? at|charges? (?:at|toward)|lunges? (?:at|toward)|smashes?|cleaves?)\b/i;
     const combatWeaponCtx = /\b(?:aim|hit|miss|damage|weapon|sword|axe|bow|spear|blade|arrow|dagger|mace|hammer)\b/i;
-    const playerActionCtx = /\byou\b|\byour\b/i;
-    if (rollIndicators.test(rawNarr) || (combatAction.test(rawNarr) && combatWeaponCtx.test(rawNarr) && playerActionCtx.test(rawNarr))) {
-      // Find the acting character
-      const partyChars = await db.select().from(characters)
-        .innerJoin(partyMembers, eq(characters.id, partyMembers.characterId))
-        .where(eq(partyMembers.partyId, ctx.partyId));
+    const playerIntent = (ctx.playerIntent ?? "").toLowerCase();
+    const playerIntentCombat = /\b(?:attack|fight|strike|hit|slash|stab|shoot|swing|charge|lunge|smash|cleave|kill|slay)\b/i.test(playerIntent);
+    const partyCharsForCtx = await db.select().from(characters)
+      .innerJoin(partyMembers, eq(characters.id, partyMembers.characterId))
+      .where(eq(partyMembers.partyId, ctx.partyId));
+    const charNames = partyCharsForCtx.map(r => r.characters.name.toLowerCase());
+    if (campaign.npcControl === "player") {
+      const companions = await db.select().from(npcLog)
+        .where(and(eq(npcLog.partyId, ctx.partyId), eq(npcLog.isPartyMember, true)));
+      for (const c of companions) charNames.push(c.name.toLowerCase());
+    }
+    const hasCharRef = /\byou\b|\byour\b/i.test(rawNarr) || charNames.some(n => rawNarr.includes(n));
+    if (rollIndicators.test(rawNarr) || (combatAction.test(rawNarr) && combatWeaponCtx.test(rawNarr) && (hasCharRef || playerIntentCombat))) {
+      const partyChars = partyCharsForCtx;
       const actingChar = ctx.actingCharacterId
         ? partyChars.find(r => r.characters.id === ctx.actingCharacterId)?.characters
         : partyChars[0]?.characters;

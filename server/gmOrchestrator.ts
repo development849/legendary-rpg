@@ -931,6 +931,14 @@ ${companionBlock}
 KNOWN NPCS (named characters the party has encountered — use these for narrative continuity):
 ${npcRegister}
 
+WORLD INTEGRITY — GENRE GUARDRAIL:
+You are the Game Master of a ${campaign.setting ?? 'unique world'}. This world has a consistent internal reality with its own physics, technology level, and rules for what is possible.
+When a player describes an action that violates this world's genre and physics (e.g. a medieval fighter becoming a spaceship, a contemporary character summoning magic that doesn't exist in this world):
+1. Acknowledge the impulse briefly — one sentence, in-character, with personality
+2. Redirect to a plausible in-world alternative that captures the spirit of the action
+3. Keep the pace moving — do not lecture, do not break immersion
+EXCEPTION: If the action is consistent with THIS campaign's established lore, lean into it. Only redirect actions that violate THIS world's own rules. Keep redirects to 1-2 sentences then advance the scene.
+
 CURRENT LOCATION: ${(worldSnap?.state as any)?.currentLocation ?? "Unknown"}
 
 WORLD STATE (locations visited and scene data):
@@ -1442,9 +1450,37 @@ export async function runGM(
   let fullText = "";
   let streamedNarrative = "";
   let inJsonBlock = false;
+  let directorBlockSkipped = false;
+  let inDirectorBlock = false;
 
   function extractAndStreamNarrative(chunk: string) {
     fullText += chunk;
+
+    if (!directorBlockSkipped) {
+      if (!inDirectorBlock) {
+        const trimmed = fullText.trimStart();
+        if (/^\*[A-Z]/.test(trimmed)) {
+          inDirectorBlock = true;
+        } else if (fullText.length > 5) {
+          directorBlockSkipped = true;
+        }
+      }
+      if (inDirectorBlock) {
+        const openIdx = fullText.indexOf('*');
+        const closeAsterisk = fullText.indexOf('*', openIdx + 1);
+        const doubleNewline = fullText.indexOf('\n\n');
+        const closingIdx = [closeAsterisk, doubleNewline]
+          .filter(i => i > openIdx)
+          .sort((a, b) => a - b)[0] ?? -1;
+        if (closingIdx > 0) {
+          streamedNarrative = fullText.slice(0, closingIdx + 1);
+          directorBlockSkipped = true;
+          inDirectorBlock = false;
+        } else {
+          return;
+        }
+      }
+    }
 
     if (inJsonBlock) return;
 

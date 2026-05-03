@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,6 +55,12 @@ export default function CreateCampaignPage() {
   const selectedChar = characters.find(c => c.id === selectedCharId);
   const selectedHasPortrait = !!(selectedChar?.profilePicture);
 
+  useEffect(() => {
+    if (characters.length === 1 && !selectedCharId) {
+      setSelectedCharId(characters[0].id);
+    }
+  }, [characters, selectedCharId]);
+
   function toggleTheme(id: string) {
     setSelectedThemes(prev =>
       prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
@@ -68,14 +74,6 @@ export default function CreateCampaignPage() {
     }
     if (!selectedCharId) {
       toast({ title: "Select a character", description: "Choose a hero to lead this campaign", variant: "destructive" });
-      return;
-    }
-    if (!selectedHasPortrait) {
-      toast({
-        title: "Hero needs a portrait",
-        description: `${selectedChar?.name} has no portrait yet. Visit the Portrait Studio to generate one — your GM uses it to visualize your hero.`,
-        variant: "destructive",
-      });
       return;
     }
     setLoading(true);
@@ -328,25 +326,13 @@ export default function CreateCampaignPage() {
               </div>
             )}
 
-            {/* Portrait warning banner */}
-            {selectedCharId && !selectedHasPortrait && (
-              <div className="flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 mt-2">
-                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-sans font-medium text-amber-500">Portrait required</p>
-                  <p className="text-xs text-muted-foreground font-serif mt-0.5">
-                    Your GM uses your portrait to visualize {selectedChar?.name} during the adventure. Generate one before starting.
-                  </p>
+            {selectedChar && !selectedHasPortrait && (
+              <div className="mt-3 rounded-md border border-amber-600/40 bg-amber-950/20 p-3 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-300">Portrait needed</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Your GM uses your portrait to visualise your hero. Generate one in the character editor — takes about 10 seconds.</p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-shrink-0 border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
-                  onClick={() => navigate(`/characters/${selectedCharId}/appearance`)}
-                  data-testid="button-go-generate-portrait"
-                >
-                  <Palette className="w-3.5 h-3.5 mr-1.5" /> Portrait Studio
-                </Button>
               </div>
             )}
           </div>
@@ -356,7 +342,7 @@ export default function CreateCampaignPage() {
           <Button variant="outline" onClick={() => navigate("/dashboard")} data-testid="button-cancel">Cancel</Button>
           <Button
             onClick={handleCreate}
-            disabled={loading || !name.trim() || !selectedCharId}
+            disabled={loading || !name.trim() || !selectedCharId || !selectedHasPortrait}
             data-testid="button-create-campaign"
           >
             {loading ? "Weaving your world..." : "Begin the Chronicle"}

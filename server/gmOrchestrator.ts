@@ -10,6 +10,29 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+const STYLE_PROMPT = "Semi-realistic painterly digital art in the style of modern fantasy concept art and JRPG illustration. Soft diffused volumetric lighting with atmospheric haze, god-rays, and dramatic silhouettes. Rich tonal depth — warm amber/gold highlights against cool blue-grey shadows. Loose, textured brushwork that suggests detail without hard edges. Cinematic composition with depth-of-field blur. Luminous, ethereal atmosphere. High-detail environment but slightly soft and painterly, never photorealistic or cartoony. Moody and evocative. No text, no HUD, no UI overlays.";
+
+async function getStyleRefParts(): Promise<any[]> {
+  const fs = await import("fs");
+  const path = await import("path");
+  const parts: any[] = [];
+  const refs = [
+    "images_(1)_1772806248047.jpeg",
+    "images_(2)_1772806248048.jpeg",
+    "images_1772806248048.jpeg",
+  ];
+  parts.push({ text: "CRITICAL: Match the visual style of these reference images precisely — same painterly brushwork, same atmospheric lighting, same tonal palette, same level of semi-realism:" });
+  for (const ref of refs) {
+    const refPath = path.join(process.cwd(), "attached_assets", ref);
+    if (fs.existsSync(refPath)) {
+      const data = fs.readFileSync(refPath).toString("base64");
+      const ext = ref.endsWith(".jpeg") || ref.endsWith(".jpg") ? "image/jpeg" : "image/png";
+      parts.push({ inlineData: { mimeType: ext, data } });
+    }
+  }
+  return parts;
+}
+
 export async function generateLocationBackground(
   partyId: string,
   locationName: string,
@@ -70,36 +93,48 @@ export async function generateLocationBackground(
   }
 }
 
-// In-memory lock: prevents re-generating the global hall background concurrently
-let _hallBgInFlight = false;
+// ─── Per-campaign world image (party lobby backdrop) ─────────────────────────
+// Replaces the old static system-wide landing/hall/lobby backgrounds with
+// a bespoke painterly image generated from each campaign's worldName +
+// worldDescription, mirroring the character-portrait pattern.
 
-export async function generateHallBackground(): Promise<void> {
-  if (_hallBgInFlight) return;
-  const [existing] = await db.select({ id: locationScenes.id })
-    .from(locationScenes)
-    .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "adventurers_hall")));
-  if (existing) return;
+const _campaignImgInFlight = new Set<string>();
 
-  _hallBgInFlight = true;
+export async function generateCampaignWorldImage(campaignId: string): Promise<void> {
+  // Close the race window: claim the lock BEFORE any await so two concurrent
+  // pollers can never both enter the generation path.
+  if (_campaignImgInFlight.has(campaignId)) return;
+  _campaignImgInFlight.add(campaignId);
   try {
-    const hallScenes = [
-      "Interior of a legendary Adventurers Guild Hall carved into the base of a mountain — soaring natural stone vaulted ceiling fifty feet overhead with stalactites dripping with glowing blue-green bioluminescent moss, massive iron chandeliers the size of wagons suspended by ancient chains, their hundreds of candles casting pools of warm amber light that contrast against the cool stone. A grand central staircase of carved obsidian spirals upward past balcony levels lined with guild banners from centuries of campaigns. On the main floor, weathered oak tables covered in maps, scattered coins, and half-eaten feasts stretch toward a colossal fireplace where flames roar behind an ornate dragon-mouth hearth. Trophy weapons of legendary heroes — glowing swords, crystalline staves, a giant's axe — mounted on the walls between tall stained glass windows depicting epic battles. God-rays of amber firelight pierce through wood smoke haze creating volumetric shafts of light. Epic wide cinematic establishing shot.",
-      "A vast Adventurers Guild Hall built inside the ribcage of an ancient petrified dragon — the curved bone-white ribs arch overhead like cathedral vaults, draped in ivy and hanging lanterns that glow warm gold against the twilight sky visible through gaps above. The floor is polished dark stone, scattered with thick woven rugs. A massive round table dominates the center, carved from a single ancient tree trunk, its surface etched with a map of the known world and marked with guild tokens. Along the walls, weapon racks and armor stands display legendary gear behind glass cases lit from within. A three-story hearth built into the dragon's fossilized spine blazes with blue-tinged magical fire that casts dramatic dancing shadows. Floating motes of arcane light drift lazily through the smoky atmosphere. Wide cinematic shot, dramatic chiaroscuro lighting.",
-      "A grand guildhall built atop a sky-pier — open archways on three sides reveal a breathtaking vista of cloud-wreathed mountains and a distant valley far below at golden hour. The interior is warm roughhewn timber and ancient stone, with massive crossbeams overhead hung with iron lanterns, dried herb bundles, and weathered pennants from a hundred campaigns. A wall of cubbyholes stuffed with rolled scrolls and sealed letters forms the quest board. The far wall features a colossal relief map of the realm carved in stone and inlaid with glowing gemstones marking active quests. Warm firelight from twin hearths mixes with the cool blue-gold of the mountain sunset streaming through the arches. Atmospheric haze, volumetric god-rays, cinematic depth. Epic wide establishing shot.",
-    ];
-
-    const scene = hallScenes[Math.floor(Math.random() * hallScenes.length)];
-    let imageData: string | null = null;
-
+    const [c] = await db.select({
+      id: campaigns.id,
+      worldImage: campaigns.worldImage,
+      worldName: campaigns.worldName,
+      worldDescription: campaigns.worldDescription,
+      setting: campaigns.setting,
+      description: campaigns.description,
+      name: campaigns.name,
+      themes: campaigns.themes,
+    }).from(campaigns).where(eq(campaigns.id, campaignId));
+    if (!c || c.worldImage) return;
     const { GoogleGenAI, Modality } = await import("@google/genai");
     const ai = new GoogleGenAI({
       apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
       httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
     });
 
-    try {
-      const prompt = `${scene} ${STYLE_PROMPT} This is a hero image for a fantasy RPG guild hall — it should feel grand, legendary, and awe-inspiring. No people or characters visible. Environment only. Landscape orientation.`;
+    const worldName = (c.worldName || "").trim();
+    const worldDesc = (c.worldDescription || c.setting || c.description || "").trim();
+    const themesArr = Array.isArray(c.themes) ? (c.themes as string[]).slice(0, 5).join(", ") : "";
 
+    const titlePart = worldName ? `the world of "${worldName}"` : `the world of "${c.name}"`;
+    const descPart = worldDesc ? ` World brief: ${worldDesc.slice(0, 600)}.` : "";
+    const themesPart = themesArr ? ` Tonal themes: ${themesArr}.` : "";
+
+    const prompt = `Wide cinematic establishing matte painting of ${titlePart}.${descPart}${themesPart} Render the defining environment of THIS specific world — if it is a steampunk space-faring universe, paint a steampunk space scene; if it is a sunken kingdom, paint underwater ruins; if it is a feudal samurai land, paint that. Honor the world brief literally — do NOT default to generic medieval fantasy unless the brief calls for it. Establish the genre at a glance. Environment only, absolutely no people or characters in frame. Landscape orientation, immersive ultra-wide hero shot. ${STYLE_PROMPT}`;
+
+    let imageData: string | null = null;
+    try {
       const parts: any[] = await getStyleRefParts();
       parts.push({ text: prompt });
 
@@ -108,7 +143,6 @@ export async function generateHallBackground(): Promise<void> {
         contents: [{ role: "user", parts }],
         config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
       });
-
       const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
       if (imagePart?.inlineData?.data) {
         const mimeType = imagePart.inlineData.mimeType || "image/png";
@@ -116,8 +150,8 @@ export async function generateHallBackground(): Promise<void> {
       }
     } catch (geminiErr: any) {
       if (geminiErr?.status === 429) {
-        console.log("[GM] Hall bg: Gemini rate-limited, retrying without style refs...");
-        const simplePrompt = `${scene} Painterly fantasy concept art, atmospheric volumetric lighting, cinematic wide shot, landscape orientation. No text, no UI. No people.`;
+        console.log(`[GM] World image: Gemini rate-limited for campaign ${campaignId}, retrying without style refs...`);
+        const simplePrompt = `${prompt} Painterly digital art, atmospheric volumetric lighting, cinematic wide shot, landscape orientation. No text, no UI. No people.`;
         const response = await ai.models.generateContent({
           model: "gemini-3-pro-image-preview",
           contents: [{ role: "user", parts: [{ text: simplePrompt }] }],
@@ -135,209 +169,15 @@ export async function generateHallBackground(): Promise<void> {
 
     if (!imageData) return;
 
-    await db.insert(locationScenes).values({
-      partyId: "system",
-      locationName: "adventurers_hall",
-      imageData,
-    }).onConflictDoNothing();
-
-    console.log("[GM] Adventurers Hall background generated and saved.");
-  } catch (e) {
-    console.error("[GM] Hall background generation failed:", e);
-  } finally {
-    _hallBgInFlight = false;
-  }
-}
-
-const STYLE_PROMPT = "Semi-realistic painterly digital art in the style of modern fantasy concept art and JRPG illustration. Soft diffused volumetric lighting with atmospheric haze, god-rays, and dramatic silhouettes. Rich tonal depth — warm amber/gold highlights against cool blue-grey shadows. Loose, textured brushwork that suggests detail without hard edges. Cinematic composition with depth-of-field blur. Luminous, ethereal atmosphere. High-detail environment but slightly soft and painterly, never photorealistic or cartoony. Moody and evocative. No text, no HUD, no UI overlays.";
-
-async function getStyleRefParts(): Promise<any[]> {
-  const fs = await import("fs");
-  const path = await import("path");
-  const parts: any[] = [];
-  const refs = [
-    "images_(1)_1772806248047.jpeg",
-    "images_(2)_1772806248048.jpeg",
-    "images_1772806248048.jpeg",
-  ];
-  parts.push({ text: "CRITICAL: Match the visual style of these reference images precisely — same painterly brushwork, same atmospheric lighting, same tonal palette, same level of semi-realism:" });
-  for (const ref of refs) {
-    const refPath = path.join(process.cwd(), "attached_assets", ref);
-    if (fs.existsSync(refPath)) {
-      const data = fs.readFileSync(refPath).toString("base64");
-      const ext = ref.endsWith(".jpeg") || ref.endsWith(".jpg") ? "image/jpeg" : "image/png";
-      parts.push({ inlineData: { mimeType: ext, data } });
-    }
-  }
-  return parts;
-}
-
-let _landingBgInFlight = false;
-let _landingBgCooldownUntil = 0;
-let _landingBgRetryDelay = 15000;
-export async function generateLandingBackground(): Promise<void> {
-  if (_landingBgInFlight) return;
-  if (Date.now() < _landingBgCooldownUntil) return;
-  const [existing] = await db.select({ id: locationScenes.id })
-    .from(locationScenes)
-    .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "landing_hero")));
-  if (existing) return;
-
-  _landingBgInFlight = true;
-  try {
-    const scenes = [
-      "A lone cloaked figure standing on a cliff edge overlooking a vast fantasy kingdom at sunset — sprawling medieval city with cathedral spires in the valley below, distant mountains wreathed in clouds, golden god-rays breaking through dramatic cloud formations, birds wheeling in the amber sky.",
-      "An ancient dragon perched atop a crumbling tower silhouetted against a massive full moon — ruined castle sprawling below with glowing windows, a winding river reflecting moonlight through a misty enchanted forest, fireflies and magical motes drifting in the air.",
-      "A massive stone gateway covered in glowing arcane runes opening onto a luminous otherworldly landscape — floating islands and waterfalls in the distance, a single armored figure walking toward the portal, swirling magical energy and aurora-like lights in the sky.",
-      "A fleet of fantasy airships with billowing sails drifting through golden clouds at dawn — a floating citadel in the distance with waterfalls cascading into the void below, tiny figures visible on the ship decks, warm orange light painting everything.",
-      "A dark enchanted forest path lit by bioluminescent mushrooms and floating lanterns — ancient twisted trees forming a natural cathedral arch, mist pooling at ground level, distant warm glow of a hidden village through the trees, mystical and inviting atmosphere.",
-    ];
-
-    const scene = scenes[Math.floor(Math.random() * scenes.length)];
-    let imageData: string | null = null;
-
-    try {
-      const { GoogleGenAI, Modality } = await import("@google/genai");
-      const ai = new GoogleGenAI({
-        apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-        httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
-      });
-
-      const prompt = `${scene} ${STYLE_PROMPT} Wide landscape orientation, cinematic establishing shot. This is a hero image for a fantasy RPG — it should feel epic, inviting, and full of wonder.`;
-
-      const parts: any[] = await getStyleRefParts();
-      parts.push({ text: prompt });
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-pro-image-preview",
-        contents: [{ role: "user", parts }],
-        config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
-      });
-
-      const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
-      if (imagePart?.inlineData?.data) {
-        const mimeType = imagePart.inlineData.mimeType || "image/png";
-        imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
-      }
-    } catch (geminiErr: any) {
-      if (geminiErr?.status === 429) {
-        console.log("[GM] Landing bg: Gemini rate-limited, retrying without style refs...");
-        const { GoogleGenAI, Modality } = await import("@google/genai");
-        const ai2 = new GoogleGenAI({
-          apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-          httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
-        });
-        const simplePrompt = `${scene} Painterly fantasy concept art, atmospheric volumetric lighting, cinematic wide shot, landscape orientation. No text, no UI.`;
-        const response = await ai2.models.generateContent({
-          model: "gemini-3-pro-image-preview",
-          contents: [{ role: "user", parts: [{ text: simplePrompt }] }],
-          config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
-        });
-        const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
-        if (imagePart?.inlineData?.data) {
-          const mimeType = imagePart.inlineData.mimeType || "image/png";
-          imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
-        }
-      } else {
-        throw geminiErr;
-      }
-    }
-
-    if (!imageData) return;
-
-    await db.insert(locationScenes).values({
-      partyId: "system",
-      locationName: "landing_hero",
-      imageData,
-    }).onConflictDoNothing();
-
-    console.log("[GM] Landing page background generated and saved.");
-    _landingBgRetryDelay = 15000;
+    await db.update(campaigns).set({ worldImage: imageData }).where(eq(campaigns.id, campaignId));
+    console.log(`[GM] World image generated for campaign "${c.name}" (${campaignId})`);
   } catch (e: any) {
-    console.error("[GM] Landing background generation failed:", e?.message ?? e);
-    _landingBgCooldownUntil = Date.now() + _landingBgRetryDelay;
-    _landingBgRetryDelay = Math.min(_landingBgRetryDelay * 2, 120000);
+    console.error(`[GM] World image generation failed for campaign ${campaignId}:`, e?.message ?? e);
   } finally {
-    _landingBgInFlight = false;
+    _campaignImgInFlight.delete(campaignId);
   }
 }
 
-let _lobbyBgInFlight = false;
-export async function generateLobbyBackground(): Promise<void> {
-  if (_lobbyBgInFlight) return;
-  const [existing] = await db.select({ id: locationScenes.id })
-    .from(locationScenes)
-    .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "party_lobby")));
-  if (existing) return;
-
-  _lobbyBgInFlight = true;
-  try {
-    const lobbyScenes = [
-      "A private war room deep inside an ancient guild tower — a heavy round oak table dominates the center, its surface scarred with knife marks and covered in unfurled maps held down by daggers and heavy coins. Tall candelabras cast pools of warm flickering amber light across the dark stone walls, which are hung with tattered campaign banners, crossed swords, and a mounted wyvern skull with empty eye sockets. A narrow arched window reveals a moonlit city skyline with distant cathedral spires. Shelves of leather-bound tomes and rolled scrolls line one wall. A smoldering brazier in the corner fills the room with thin wisps of incense smoke catching the candlelight. Intimate, atmospheric, cinematic — the calm before a great adventure. Wide establishing shot.",
-      "An enchanted planning chamber at the top of a wizard's tower — the circular room has walls of living stone that shimmer with faint embedded runes. A central table of polished dark wood displays a three-dimensional magical map projection showing terrain, routes, and glowing waypoints hovering inches above the surface. Tall arched windows on every side reveal a stunning panoramic vista — rolling hills, ancient forests, and a distant volcanic mountain wreathed in lightning at twilight. Floating orbs of soft golden light drift near the ceiling alongside slowly spinning astrolabes. Bookshelves curve along the walls between the windows. The atmosphere is warm, magical, and full of anticipation. Wide cinematic shot, golden hour lighting mixing with cool arcane glow.",
-      "A cozy private alcove in a cliffside tavern overlooking the sea — rough timber walls with a massive circular window framing a dramatic view of crashing waves against sea stacks at sunset. The room is lit by a wrought-iron chandelier with beeswax candles and a small stone fireplace with dancing flames. A heavy table with a nautical chart pinned under brass instruments, scattered gold coins, and a half-empty bottle of wine. Thick rope coils, an old ship's wheel, and harpoons mounted on the walls give it a seafaring character. Warm amber firelight blends with the cool blue-pink of the ocean sunset outside. Atmospheric, intimate, adventurous. Wide establishing shot.",
-    ];
-
-    const scene = lobbyScenes[Math.floor(Math.random() * lobbyScenes.length)];
-    let imageData: string | null = null;
-
-    const { GoogleGenAI, Modality } = await import("@google/genai");
-    const ai = new GoogleGenAI({
-      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-      httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
-    });
-
-    try {
-      const prompt = `${scene} ${STYLE_PROMPT} This is a hero image for a fantasy RPG party room — it should feel intimate yet epic, like adventurers are about to embark on something legendary. No people or characters visible. Environment only. Landscape orientation.`;
-
-      const parts: any[] = await getStyleRefParts();
-      parts.push({ text: prompt });
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-pro-image-preview",
-        contents: [{ role: "user", parts }],
-        config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
-      });
-
-      const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
-      if (imagePart?.inlineData?.data) {
-        const mimeType = imagePart.inlineData.mimeType || "image/png";
-        imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
-      }
-    } catch (geminiErr: any) {
-      if (geminiErr?.status === 429) {
-        console.log("[GM] Lobby bg: Gemini rate-limited, retrying without style refs...");
-        const simplePrompt = `${scene} Painterly fantasy concept art, atmospheric volumetric lighting, cinematic wide shot, landscape orientation. No text, no UI. No people.`;
-        const response = await ai.models.generateContent({
-          model: "gemini-3-pro-image-preview",
-          contents: [{ role: "user", parts: [{ text: simplePrompt }] }],
-          config: { responseModalities: [Modality.TEXT, Modality.IMAGE] },
-        });
-        const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
-        if (imagePart?.inlineData?.data) {
-          const mimeType = imagePart.inlineData.mimeType || "image/png";
-          imageData = `data:${mimeType};base64,${imagePart.inlineData.data}`;
-        }
-      } else {
-        throw geminiErr;
-      }
-    }
-
-    if (!imageData) return;
-
-    await db.insert(locationScenes).values({
-      partyId: "system",
-      locationName: "party_lobby",
-      imageData,
-    }).onConflictDoNothing();
-
-    console.log("[GM] Party lobby background generated and saved.");
-  } catch (e) {
-    console.error("[GM] Lobby background generation failed:", e);
-  } finally {
-    _lobbyBgInFlight = false;
-  }
-}
 
 // ─── Region Map Generation ────────────────────────────────────────────────────
 

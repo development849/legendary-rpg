@@ -15,11 +15,11 @@ import {
   getCampaignSoundtracks, saveCampaignSoundtrack,
 } from "./storage";
 import { rollDice, parseDieString, enforceHandLimits } from "./gameEngine";
-import { runGM, generateLocationBackground, generateHallBackground, generateLobbyBackground, generateLandingBackground, generateRegionMap, generateLocationMap, isLocationMapGenerating, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory, generateSoundtrackProfiles } from "./gmOrchestrator";
+import { runGM, generateLocationBackground, generateCampaignWorldImage, generateRegionMap, generateLocationMap, isLocationMapGenerating, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory, generateSoundtrackProfiles } from "./gmOrchestrator";
 import { registerAdminRoutes } from "./adminRoutes";
 import { db } from "./db";
 import { characters, characters as charsTable, locationScenes, locationMaps, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs, campaignSoundtracks } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 
 // WebSocket connections per party
 const partyConnections = new Map<string, Set<WebSocket>>();
@@ -637,51 +637,38 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e) { res.status(500).json({ error: "Failed to get party" }); }
   });
 
-  app.get("/api/system/landing-background", async (_req, res) => {
+  // Bespoke per-campaign world image (used as the party-lobby backdrop and
+  // anywhere else we want to evoke "this specific world"). Generated lazily
+  // from worldName + worldDescription, then cached on campaigns.worldImage.
+  app.get("/api/campaigns/:id/world-image", requireAuth, async (req: any, res) => {
     try {
-      const [row] = await db.select({ imageData: locationScenes.imageData })
-        .from(locationScenes)
-        .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "landing_hero")));
-      if (row) {
-        res.set("Cache-Control", "public, max-age=604800, immutable");
-        return res.json({ imageData: row.imageData, pending: false });
-      }
-      generateLandingBackground().catch(console.error);
-      res.json({ imageData: null, pending: true });
-    } catch (e) {
-      res.status(500).json({ error: "Failed to fetch landing background" });
-    }
-  });
+      const userId = getUserId(req)!;
+      const campaign = await getCampaign(req.params.id);
+      if (!campaign) return res.status(404).json({ error: "Campaign not found" });
 
-  app.get("/api/system/hall-background", async (_req, res) => {
-    try {
-      const [row] = await db.select({ imageData: locationScenes.imageData })
-        .from(locationScenes)
-        .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "adventurers_hall")));
-      if (row) {
-        res.set("Cache-Control", "public, max-age=86400");
-        return res.json({ imageData: row.imageData, pending: false });
+      // Allow if owner, or member of any party in this campaign.
+      if (campaign.ownerId !== userId) {
+        const partyRows = await db.select({ id: parties.id }).from(parties).where(eq(parties.campaignId, campaign.id));
+        const partyIds = partyRows.map(p => p.id);
+        let isMember = false;
+        if (partyIds.length) {
+          const memberRows = await db.select({ id: partyMembers.id })
+            .from(partyMembers)
+            .where(and(eq(partyMembers.userId, userId), inArray(partyMembers.partyId, partyIds)));
+          isMember = memberRows.length > 0;
+        }
+        if (!isMember) return res.status(403).json({ error: "Forbidden" });
       }
-      generateHallBackground().catch(console.error);
-      res.json({ imageData: null, pending: true });
-    } catch (e) {
-      res.status(500).json({ error: "Failed to fetch hall background" });
-    }
-  });
 
-  app.get("/api/system/lobby-background", async (_req, res) => {
-    try {
-      const [row] = await db.select({ imageData: locationScenes.imageData })
-        .from(locationScenes)
-        .where(and(eq(locationScenes.partyId, "system"), eq(locationScenes.locationName, "party_lobby")));
-      if (row) {
-        res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-        return res.json({ imageData: row.imageData, pending: false });
+      if ((campaign as any).worldImage) {
+        res.set("Cache-Control", "private, max-age=3600");
+        return res.json({ imageData: (campaign as any).worldImage, pending: false });
       }
-      generateLobbyBackground().catch(console.error);
+      generateCampaignWorldImage(campaign.id).catch(console.error);
       res.json({ imageData: null, pending: true });
     } catch (e) {
-      res.status(500).json({ error: "Failed to fetch lobby background" });
+      console.error("world-image fetch error:", e);
+      res.status(500).json({ error: "Failed to fetch world image" });
     }
   });
 

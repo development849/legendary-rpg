@@ -1,0 +1,92 @@
+# Replit Instructions — Sprint 02 Hotfix (2026-05-04)
+
+> Paste this entire document into Replit's AI agent.
+> Apply both tasks in order. Report back after each one.
+
+## Project context
+Legendary RPG — AI-powered online RPG.
+Tech stack: React 18 + TypeScript + Vite (frontend), Node.js + Express (backend),
+PostgreSQL + Drizzle ORM, GPT-4o streaming for the AI Game Master (SSE).
+Key files: `server/gmOrchestrator.ts` (GM logic), `client/src/pages/game-session.tsx`
+(game UI), `client/src/components/WorldThreshold.tsx`,
+`client/src/components/CharacterHintPill.tsx`.
+
+---
+
+## Task 1 — Strip client-side director message from game UI (LR-006 variant)
+
+**Problem:** A message reading `*Begin the adventure.*` (or similar — full content
+wrapped in asterisks) is rendering in the Game Master message bubble at the top of
+the game session, before the Chronicle section. It appears as a real GM message with
+the GM avatar. This is a director/system instruction that should never be visible
+to the player.
+
+**Where to look:**
+1. Search the entire codebase for the string `Begin the adventure` — it is likely
+   hardcoded somewhere in `client/src/pages/game-session.tsx` as a local message
+   injected into the chat state on campaign start (the same area where the original
+   LR-006 fix was applied, around line 745 of that file).
+2. Also check `client/src/components/WorldThreshold.tsx` — the FR-002 implementation
+   may have added a client-side "start" message alongside the cinematic overlay.
+
+**Fix — two approaches, apply whichever is cleaner given what you find:**
+
+Option A (preferred — targeted removal): Find where `*Begin the adventure.*` (or
+equivalent director string) is added to the local messages array or chat state. Remove
+that injection entirely. The WorldThreshold overlay already signals "adventure starting"
+to the player — the asterisk message is redundant.
+
+Option B (fallback — render filter): In the component that renders the message list,
+add a filter before mapping over messages:
+const visibleMessages = messages.filter(
+msg => !(msg.role === 'gm' && /^*.**$/.test(msg.content?.trim() ?? ''))
+);
+Use `visibleMessages` for the render instead of the raw `messages` array. This
+silently drops any GM message whose entire content is wrapped in asterisks.
+
+**Verify:** After fix, start a new campaign. The first visible item should be the
+Chronicle section with narrative prose. No asterisk-wrapped message should appear
+above it.
+
+---
+
+## Task 2 — Fix CharacterHintPill position (UXF-013)
+
+**Problem:** The CharacterHintPill component (introduced by FR-002) renders over the
+chat input bar at the bottom of the viewport. It appears at the correct time (player
+turn 3) but in the wrong position, blocking the input field the player needs to type
+into.
+
+**File:** `client/src/components/CharacterHintPill.tsx` (and wherever it is rendered
+in `game-session.tsx`).
+
+**Fix:** Reposition the pill so it does not overlap the chat input bar. Target
+position: floating just above the chat input bar, with at least 12px clearance
+below it, OR anchored to the right-side character sheet panel if one exists in the
+layout.
+
+Recommended approach — change the pill's positioning from whatever bottom offset it
+currently uses to sit clearly above the input area. If the pill uses `position: fixed`
+or `position: absolute`, adjust the `bottom` value to account for the height of the
+chat input bar (typically 60–80px). For example:
+/* If currently something like: /
+bottom: 0;  / or bottom: 8px; */
+/* Change to: /
+bottom: 80px;  / clears the chat input bar */
+
+If the component uses Tailwind classes, replace any `bottom-0`, `bottom-2`, or
+`bottom-4` class with `bottom-20` (80px) or `bottom-24` (96px) — whichever clears
+the input bar without feeling disconnected from it.
+
+**Verify:** Start a campaign, play 3 turns. The CharacterHintPill should appear above
+the chat input with visible space between them. The input bar must remain fully
+clickable and unobscured while the pill is showing.
+
+---
+
+## After both tasks
+
+1. Restart the server
+2. Confirm the app loads at the Replit preview URL with HTTP 200
+3. Report: which files were changed, what the exact changes were, and whether
+   either task required a different approach than described above

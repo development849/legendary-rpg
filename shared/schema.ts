@@ -48,6 +48,7 @@ export const campaigns = pgTable("campaigns", {
   setting: text("setting").default(""),
   worldName: text("world_name"),
   worldDescription: text("world_description"),
+  worldImage: text("world_image"),
   contentRating: text("content_rating").notNull().default("pg13"),
   themes: jsonb("themes").notNull().default(sql`'[]'::jsonb`),
   noRomance: boolean("no_romance").notNull().default(false),

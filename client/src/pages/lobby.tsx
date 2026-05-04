@@ -34,20 +34,6 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [lobbyBg, setLobbyBg] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    const poll = async () => {
-      try {
-        const r = await fetch(`/api/system/lobby-background?_t=${Date.now()}`);
-        const d = await r.json();
-        if (!cancelled && d.imageData) setLobbyBg(d.imageData);
-        else if (!cancelled && d.pending) setTimeout(poll, 8000);
-      } catch {}
-    };
-    poll();
-    return () => { cancelled = true; };
-  }, []);
-
   const { data, isLoading, refetch } = useQuery<any>({
     queryKey: [`/api/parties/${partyId}`],
   });
@@ -55,6 +41,32 @@ export default function LobbyPage({ partyId }: LobbyPageProps) {
   const party = data?.party;
   const members = data?.members ?? [];
   const campaign = data?.campaign;
+
+  // Bespoke per-campaign world image — generated from worldName + worldDescription
+  // so e.g. an "Intergalactic 2: steampunk space-faring delegation" world no
+  // longer renders against a generic medieval tavern backdrop.
+  useEffect(() => {
+    if (!campaign?.id) return;
+    setLobbyBg(null);
+    let cancelled = false;
+    let attempts = 0;
+    const poll = async () => {
+      try {
+        const r = await fetch(`/api/campaigns/${campaign.id}/world-image`, { credentials: "include" });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (cancelled) return;
+        if (d.imageData) {
+          setLobbyBg(d.imageData);
+        } else if (d.pending && attempts < 30) {
+          attempts++;
+          setTimeout(poll, 6000);
+        }
+      } catch {}
+    };
+    poll();
+    return () => { cancelled = true; };
+  }, [campaign?.id]);
 
   useEffect(() => {
     const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`;

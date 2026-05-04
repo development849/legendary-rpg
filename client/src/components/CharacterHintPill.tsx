@@ -14,8 +14,8 @@ export function CharacterHintPill({ onDismiss, onOpen }: CharacterHintPillProps)
       data-testid="pill-character-hint"
       style={{
         position: "fixed",
-        bottom: "104px",
-        left: "24px",
+        top: "56px",
+        right: "20px",
         zIndex: 40,
         display: "flex",
         alignItems: "center",
@@ -25,10 +25,11 @@ export function CharacterHintPill({ onDismiss, onOpen }: CharacterHintPillProps)
         border: "1px solid rgba(200,146,26,0.3)",
         borderRadius: "8px",
         cursor: "pointer",
-        animation: "slide-up 0.4s ease forwards",
+        boxShadow: "0 6px 20px rgba(0,0,0,0.45)",
+        animation: "char-hint-slide-down 0.4s ease forwards",
       }}
     >
-      <span style={{ color: "#c8921a", fontSize: "14px" }}>⚔</span>
+      <span style={{ color: "#c8921a", fontSize: "16px", lineHeight: 1 }}>↑</span>
       <span
         style={{
           fontFamily: "'Inter', sans-serif",
@@ -39,7 +40,6 @@ export function CharacterHintPill({ onDismiss, onOpen }: CharacterHintPillProps)
       >
         Your stats and inventory are here
       </span>
-      <span style={{ color: "#c8921a", fontSize: "12px" }}>→</span>
 
       <button
         aria-label="Dismiss hint"
@@ -59,9 +59,25 @@ export function CharacterHintPill({ onDismiss, onOpen }: CharacterHintPillProps)
         ×
       </button>
 
+      {/* Triangle pointer pointing up toward the character icon in the header */}
+      <span
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          top: "-7px",
+          right: "14px",
+          width: 0,
+          height: 0,
+          borderLeft: "7px solid transparent",
+          borderRight: "7px solid transparent",
+          borderBottom: "7px solid #1a1b26",
+          filter: "drop-shadow(0 -1px 0 rgba(200,146,26,0.3))",
+        }}
+      />
+
       <style>{`
-        @keyframes slide-up {
-          from { opacity: 0; transform: translateY(10px); }
+        @keyframes char-hint-slide-down {
+          from { opacity: 0; transform: translateY(-8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>

@@ -1,66 +1,31 @@
-import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sword, Shield, Scroll, Users, Sparkles, Dices } from "lucide-react";
 import { LegendaryLogo } from "@/components/LegendaryLogo";
-
-function useLandingBackground() {
-  const [imageData, setImageData] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    let retries = 0;
-
-    async function fetchBg() {
-      try {
-        const res = await fetch("/api/system/landing-background");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-        if (data.imageData) {
-          setImageData(data.imageData);
-        } else if (data.pending && retries < 24) {
-          retries++;
-          const delay = Math.min(5000 + retries * 2000, 20000);
-          setTimeout(fetchBg, delay);
-        }
-      } catch (_) {}
-    }
-
-    fetchBg();
-    return () => { cancelled = true; };
-  }, []);
-
-  return imageData;
-}
+import { useHeroBackground } from "@/hooks/use-hero-background";
 
 export default function LandingPage() {
-  const bgImage = useLandingBackground();
+  const hero = useHeroBackground();
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Hero */}
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4 text-center">
-        {/* Background image */}
-        {bgImage && (
-          <div className="absolute inset-0 z-0">
-            <div
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000"
-              style={{ backgroundImage: `url(${bgImage})`, opacity: 0.55 }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-background/20" />
-            <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background" />
-          </div>
-        )}
+        {/* Cross-genre hero background (one per session) with Ken Burns drift */}
+        <div className="absolute inset-0 z-0 overflow-hidden" data-testid="hero-bg-landing">
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat animate-hero-drift"
+            style={{ backgroundImage: `url(${hero.url})`, opacity: 0.55 }}
+            aria-label={`${hero.label} hero backdrop`}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-background/20" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background" />
+        </div>
 
-        {/* Fallback gradient orbs when no image */}
-        {!bgImage && (
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-900/10 rounded-full blur-3xl" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-900/5 rounded-full blur-3xl" />
-          </div>
-        )}
+        {/* Soft accent glow */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-900/5 rounded-full blur-3xl" />
+        </div>
 
         {/* Decorative top border */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent z-10" />
@@ -179,7 +144,7 @@ export default function LandingPage() {
       <div className="text-center py-24 px-4 relative">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
         <div className="space-y-6 max-w-xl mx-auto">
-          <p className="text-3xl font-sans font-bold tracking-widest">READY, ADVENTURER?</p>
+          <p className="text-3xl font-sans font-bold tracking-widest">READY TO BE A LEGEND?</p>
           <p className="text-muted-foreground font-serif italic">The world of Legendary&#8480; awaits. Your story is about to begin.</p>
           <Link href="/auth">
             <Button

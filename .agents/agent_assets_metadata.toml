@@ -24,3 +24,63 @@ id = "98pbTP8VQTjo3-67w_0nB"
 uri = "file://attached_assets/logo_concepts/D_compass_eye.png"
 type = "image"
 title = "Logo D: Compass-Eye"
+
+[[generated]]
+id = "g-ZVezuefmsT3OBxgiWSb"
+uri = "file://client/public/hero-bgs/high_fantasy.png"
+type = "image"
+title = "hero-high_fantasy"
+
+[[generated]]
+id = "Jn-4PeU7UfVs3igfBlIqB"
+uri = "file://client/public/hero-bgs/dark_fantasy.png"
+type = "image"
+title = "hero-dark_fantasy"
+
+[[generated]]
+id = "ezH1BZ337HJcUoPnzJIFn"
+uri = "file://client/public/hero-bgs/sci_fi_derelict.png"
+type = "image"
+title = "hero-sci_fi_derelict"
+
+[[generated]]
+id = "1dKwP5U48FvoUBv_cgKqn"
+uri = "file://client/public/hero-bgs/cyberpunk.png"
+type = "image"
+title = "hero-cyberpunk"
+
+[[generated]]
+id = "c_8nZG21s_qvbWn9vliBR"
+uri = "file://client/public/hero-bgs/post_apocalyptic.png"
+type = "image"
+title = "hero-post_apocalyptic"
+
+[[generated]]
+id = "hWGrKcClyRkWh52QTtahW"
+uri = "file://client/public/hero-bgs/feudal_japan.png"
+type = "image"
+title = "hero-feudal_japan"
+
+[[generated]]
+id = "nUmVMRZ_IknSqs6rmE7ja"
+uri = "file://client/public/hero-bgs/pirate_seas.png"
+type = "image"
+title = "hero-pirate_seas"
+
+[[generated]]
+id = "DFsPz-QXrwkau3i8ovFW9"
+uri = "file://client/public/hero-bgs/victorian_noir.png"
+type = "image"
+title = "hero-victorian_noir"
+
+[[generated]]
+id = "pk7EFeCCSOJTLaArSvgXa"
+uri = "file://client/public/hero-bgs/underwater_ruins.png"
+type = "image"
+title = "hero-underwater_ruins"
+
+[[generated]]
+id = "fsLrbPDq-sG3-PmQG5c7a"
+uri = "file://client/public/hero-bgs/hellscape.png"
+type = "image"
+title = "hero-hellscape"

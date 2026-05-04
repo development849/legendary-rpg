@@ -1274,13 +1274,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           gmFullText += chunk;
           res.write(`data: ${JSON.stringify({ type: "chunk", content: chunk })}\n\n`);
         },
-        async (fullText, updates, diceRequests, quickActions, turnHint, levelUps, sceneMood) => {
+        async (fullText, updates, diceRequests, quickActions, turnHint, levelUps, sceneMood, combatStall) => {
           const gmMsg = await saveChatMessage({
             partyId,
             userId: undefined,
             role: "gm",
             content: fullText,
-            metadata: { updates, diceRequests, quickActions, turnHint, levelUps, sceneMood },
+            metadata: { updates, diceRequests, quickActions, turnHint, levelUps, sceneMood, combatStall: combatStall ?? null },
           });
 
           broadcastToParty(partyId, { type: "MESSAGE", message: gmMsg });
@@ -1294,7 +1294,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             broadcastToParty(partyId, { type: "LEVEL_UP", levelUps });
           }
 
-          res.write(`data: ${JSON.stringify({ type: "done", message: gmMsg, updates, diceRequests, quickActions, turnHint, levelUps, sceneMood })}\n\n`);
+          res.write(`data: ${JSON.stringify({ type: "done", message: gmMsg, updates, diceRequests, quickActions, turnHint, levelUps, sceneMood, combatStall: combatStall ?? null })}\n\n`);
           res.end();
         },
       );

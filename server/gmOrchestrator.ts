@@ -1385,10 +1385,103 @@ Make each mood DISTINCT. Combat should be fast/intense, mystery should be slow/d
   }
 }
 
+// ─── Combat Stall Detection ─────────────────────────────────────────────────
+// Lightweight server-side guard that flags when the GM appears to have skipped
+// part of a combat round. Detection is heuristic and intended for logging /
+// optional UI affordances — it never blocks or rewrites the GM response.
+export function detectCombatStall(args: {
+  cleanNarrative: string;
+  diceRequests: any[];
+  sceneMood: string;
+  prevGmMetadata: any | null;
+  playerCharNames: string[];
+  companionNames: string[];
+  npcControlMode: string;
+}): { stalled: boolean; reasons: string[] } {
+  const {
+    cleanNarrative, diceRequests, sceneMood,
+    prevGmMetadata,
+    playerCharNames, companionNames, npcControlMode,
+  } = args;
+
+  const reasons: string[] = [];
+  const isCombatNow = sceneMood === "combat";
+  const prevSceneMood = prevGmMetadata?.sceneMood;
+  const isCombatPrev = prevSceneMood === "combat";
+
+  if (!isCombatNow && !isCombatPrev) {
+    return { stalled: false, reasons };
+  }
+
+  const playerNamesLower = new Set(playerCharNames.map(n => n.toLowerCase()));
+  const companionNamesLower = new Set(companionNames.map(n => n.toLowerCase()));
+
+  const isAttackPurpose = (p: any) => /attack roll|attacks? with|swing|strike|shoot|cast(?:ing)? .*spell|spell attack/i.test(String(p ?? ""));
+  const isDamagePurpose = (p: any) => /damage/i.test(String(p ?? ""));
+
+  const attackRollChars = (dr: any[]): string[] =>
+    (Array.isArray(dr) ? dr : [])
+      .filter((d: any) => isAttackPurpose(d?.purpose))
+      .map((d: any) => String(d?.character ?? "").trim())
+      .filter(Boolean);
+
+  const currentAttackChars = attackRollChars(diceRequests);
+  const prevAttackChars = attackRollChars(prevGmMetadata?.diceRequests);
+
+  const hasCurrentDamageRoll = (Array.isArray(diceRequests) ? diceRequests : []).some((d: any) => isDamagePurpose(d?.purpose));
+
+  // Pattern enforced by the system prompt for in-narrative enemy/companion attacks.
+  const inNarrativeRollPattern = /\[\s*rolls?\s+\d+\s*[+\-]\s*\d+\s*=\s*\d+\s*vs\s+(?:your|the\s+\w+(?:'s)?|[A-Z][a-z]+(?:'s)?)?\s*AC\s*\d+\s*\]/i;
+  const hasInNarrAttack = inNarrativeRollPattern.test(cleanNarrative);
+
+  // Victory beat heuristic — if the player's attack just dropped the last enemy,
+  // companion/enemy turns can legitimately be skipped this response.
+  const victoryPattern = /\b(?:falls? lifeless|drops? (?:dead|lifeless|to (?:the|its) (?:floor|ground|knees))|crumples?|crumbles?|collapses?|defeated|slain|dies|expires|silen(?:ce|t) (?:fills|returns|descends)|battle (?:is )?(?:over|won|ends?|done)|last (?:enemy|foe|hostile|opponent)|with (?:no|none) (?:left|remaining)|no (?:enemies|foes|hostiles) (?:left|remain)|threats? (?:eliminated|neutralized)|encounter (?:over|ends|won)|fight (?:is )?(?:over|won|done))\b/i;
+  const isVictoryBeat = victoryPattern.test(cleanNarrative);
+
+  const prevHadPlayerAttack = prevAttackChars.some(c => playerNamesLower.has(c.toLowerCase()));
+  const prevHadCompanionAttack = prevAttackChars.some(c => companionNamesLower.has(c.toLowerCase()));
+  const currentHasCompanionRoll = currentAttackChars.some(c => companionNamesLower.has(c.toLowerCase()));
+
+  // (a) Two consecutive attack-roll dice_requests for the same player character
+  // with no enemy/companion action (in narrative or via a companion roll request)
+  // between them.
+  if (isCombatPrev && prevHadPlayerAttack) {
+    const repeatPlayer = currentAttackChars.find(c =>
+      playerNamesLower.has(c.toLowerCase()) &&
+      prevAttackChars.some(p => p.toLowerCase() === c.toLowerCase())
+    );
+    if (repeatPlayer && !hasInNarrAttack && !currentHasCompanionRoll && !prevHadCompanionAttack) {
+      reasons.push(`consecutive_player_attack_roll:${repeatPlayer}`);
+    }
+  }
+
+  // (b) Combat active and the player's prior attack has fully resolved, but no
+  // enemy attack appears in the current narrative despite living hostiles.
+  // - `hasCurrentDamageRoll` excluded: GM legitimately asked for a damage roll
+  //   on a hit; enemies will resolve in the next response.
+  // - `hasInNarrAttack` excluded: an enemy/companion attack already resolved.
+  // - `isVictoryBeat` excluded: last hostile dropped, no enemies left to act.
+  if (isCombatPrev && prevHadPlayerAttack && !hasCurrentDamageRoll && !hasInNarrAttack && !isVictoryBeat) {
+    reasons.push("no_enemy_action_after_player_attack");
+  }
+
+  // (c) Player-controlled-companion mode: a combat round resolved without any
+  // companion roll request being emitted for the round.
+  if (npcControlMode === "player" && companionNames.length > 0 && isCombatPrev && prevHadPlayerAttack) {
+    const anyCompanionRollThisOrPrev = currentHasCompanionRoll || prevHadCompanionAttack;
+    if (!anyCompanionRollThisOrPrev && !hasCurrentDamageRoll && !isVictoryBeat) {
+      reasons.push("missing_companion_roll_request");
+    }
+  }
+
+  return { stalled: reasons.length > 0, reasons };
+}
+
 export async function runGM(
   ctx: GMContext,
   onChunk: (chunk: string) => void,
-  onDone: (fullText: string, updates: any[], diceRequests: any[], quickActions: string[], turnHint?: any, levelUps?: { characterId: string; characterName: string; newLevel: number; hpGain: number; mpGain: number }[], sceneMood?: string) => void,
+  onDone: (fullText: string, updates: any[], diceRequests: any[], quickActions: string[], turnHint?: any, levelUps?: { characterId: string; characterName: string; newLevel: number; hpGain: number; mpGain: number }[], sceneMood?: string, combatStall?: { stalled: boolean; reasons: string[] } | null) => void,
 ): Promise<void> {
   // Load context
   const [party] = await db.select().from(parties).where(eq(parties.id, ctx.partyId));
@@ -1434,6 +1527,11 @@ export async function runGM(
     .where(eq(chatMessages.partyId, ctx.partyId))
     .orderBy(desc(chatMessages.createdAt))
     .limit(30);
+
+  // Capture the most recent prior GM message BEFORE we reverse `recentMsgs`
+  // for the chat history below — `Array.prototype.reverse()` mutates in place,
+  // so finding "the previous GM message" must happen on the DESC-ordered array.
+  const prevGmMsg = recentMsgs.find(m => m.role === "gm") ?? null;
 
   const history = recentMsgs.reverse().map(m => ({
     role: m.role === "gm" ? "assistant" : "user",
@@ -1940,7 +2038,32 @@ export async function runGM(
   const turnHint = parsed?.turn_hint ?? null;
   const validMoods = ["exploration", "combat", "mystery", "romance", "leisure", "triumph", "stealth"];
   const sceneMood = validMoods.includes(parsed?.scene_mood) ? parsed.scene_mood : "exploration";
-  onDone(cleanNarrative, updates, diceRequests, parsed?.quick_actions ?? [], turnHint, levelUps, sceneMood);
+
+  // Combat stall detection — log when the GM appears to have skipped a turn.
+  // Uses `prevGmMsg` captured before `recentMsgs.reverse()` so we always look
+  // at the immediately preceding GM turn, not the oldest one in the window.
+  let combatStall: { stalled: boolean; reasons: string[] } | null = null;
+  try {
+    const stallResult = detectCombatStall({
+      cleanNarrative,
+      diceRequests,
+      sceneMood,
+      prevGmMetadata: (prevGmMsg?.metadata as any) ?? null,
+      playerCharNames: chars.map((c: any) => c.name),
+      companionNames: companions.map((c: any) => c.name),
+      npcControlMode: campaign.npcControl ?? "gm",
+    });
+    if (stallResult.stalled) {
+      console.warn(
+        `[GM Stall] Combat stall detected — campaign=${ctx.campaignId} party=${ctx.partyId} turn=${turnNum} mood=${sceneMood} npcControl=${campaign.npcControl} reasons=${stallResult.reasons.join(",")}`,
+      );
+      combatStall = stallResult;
+    }
+  } catch (stallErr) {
+    console.error("[GM Stall] detection error:", stallErr);
+  }
+
+  onDone(cleanNarrative, updates, diceRequests, parsed?.quick_actions ?? [], turnHint, levelUps, sceneMood, combatStall);
 }
 
 export function isCoinItem(item: any): boolean {

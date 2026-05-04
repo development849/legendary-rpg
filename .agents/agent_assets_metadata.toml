@@ -84,3 +84,75 @@ id = "fsLrbPDq-sG3-PmQG5c7a"
 uri = "file://client/public/hero-bgs/hellscape.png"
 type = "image"
 title = "hero-hellscape"
+
+[[generated]]
+id = "KCAyP5MMbNMtNVc3fdK0N"
+uri = "file://client/public/hero-bgs/chinese_lore.png"
+type = "image"
+title = "chinese_lore"
+
+[[generated]]
+id = "Pa0hq_zy7_NR5FhHm5r6D"
+uri = "file://client/public/hero-bgs/fairy_glade.png"
+type = "image"
+title = "fairy_glade"
+
+[[generated]]
+id = "kuq7_An_xb01HeJdvlAOO"
+uri = "file://client/public/hero-bgs/norse_realm.png"
+type = "image"
+title = "norse_realm"
+
+[[generated]]
+id = "S2RvsEW-Phgtnwjykd2SU"
+uri = "file://client/public/hero-bgs/egyptian_tomb.png"
+type = "image"
+title = "egyptian_tomb"
+
+[[generated]]
+id = "cHFwdArlFV6WBcXpsMkDc"
+uri = "file://client/public/hero-bgs/mythic_olympus.png"
+type = "image"
+title = "mythic_olympus"
+
+[[generated]]
+id = "QVCDaOCS4mUZ5GAV5gPHD"
+uri = "file://client/public/hero-bgs/mesoamerican.png"
+type = "image"
+title = "mesoamerican"
+
+[[generated]]
+id = "VUWXPst2igKxXGngT3u6c"
+uri = "file://client/public/hero-bgs/arabian_nights.png"
+type = "image"
+title = "arabian_nights"
+
+[[generated]]
+id = "7_f5nG8ecohQAQYcKO0a7"
+uri = "file://client/public/hero-bgs/steampunk.png"
+type = "image"
+title = "steampunk"
+
+[[generated]]
+id = "-JfqRx9vb0-4ux_u3ktIq"
+uri = "file://client/public/hero-bgs/lovecraftian.png"
+type = "image"
+title = "lovecraftian"
+
+[[generated]]
+id = "5uwxZb_WzoyOMRYw01JYv"
+uri = "file://client/public/hero-bgs/witch_coven.png"
+type = "image"
+title = "witch_coven"
+
+[[generated]]
+id = "RqlmNYxy0D969X7BYOKZj"
+uri = "file://client/public/hero-bgs/frozen_wastes.png"
+type = "image"
+title = "frozen_wastes"
+
+[[generated]]
+id = "bokO98YviHEAnY9CK1MFv"
+uri = "file://client/public/hero-bgs/solarpunk.png"
+type = "image"
+title = "solarpunk"

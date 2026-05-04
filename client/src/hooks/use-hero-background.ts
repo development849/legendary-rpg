@@ -17,6 +17,18 @@ const HERO_BACKGROUNDS: HeroBackground[] = [
   { key: "victorian_noir",   label: "Victorian Noir",     url: "/hero-bgs/victorian_noir.png" },
   { key: "underwater_ruins", label: "Underwater Ruins",   url: "/hero-bgs/underwater_ruins.png" },
   { key: "hellscape",        label: "Hellscape",          url: "/hero-bgs/hellscape.png" },
+  { key: "chinese_lore",     label: "Wuxia Mountains",    url: "/hero-bgs/chinese_lore.png" },
+  { key: "fairy_glade",      label: "Fairy Glade",        url: "/hero-bgs/fairy_glade.png" },
+  { key: "norse_realm",      label: "Norse Fjord",        url: "/hero-bgs/norse_realm.png" },
+  { key: "egyptian_tomb",    label: "Egyptian Necropolis", url: "/hero-bgs/egyptian_tomb.png" },
+  { key: "mythic_olympus",   label: "Mythic Olympus",     url: "/hero-bgs/mythic_olympus.png" },
+  { key: "mesoamerican",     label: "Jungle Pyramid",     url: "/hero-bgs/mesoamerican.png" },
+  { key: "arabian_nights",   label: "Arabian Nights",     url: "/hero-bgs/arabian_nights.png" },
+  { key: "steampunk",        label: "Steampunk Skycity",  url: "/hero-bgs/steampunk.png" },
+  { key: "lovecraftian",     label: "Cosmic Horror",      url: "/hero-bgs/lovecraftian.png" },
+  { key: "witch_coven",      label: "Witch Coven",        url: "/hero-bgs/witch_coven.png" },
+  { key: "frozen_wastes",    label: "Frozen Wastes",      url: "/hero-bgs/frozen_wastes.png" },
+  { key: "solarpunk",        label: "Solarpunk Spires",   url: "/hero-bgs/solarpunk.png" },
 ];
 
 const SESSION_KEY = "legendary:heroBgKey";

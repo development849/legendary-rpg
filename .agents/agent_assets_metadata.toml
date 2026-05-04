@@ -1,0 +1,26 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "eDhOKm_LFq1avp_hubwaY"
+uri = "file://attached_assets/logo_concepts/A_story_mark.png"
+type = "image"
+title = "Logo A: Story Mark"
+
+[[generated]]
+id = "SMxCrGlQouB0KsiayD5Oj"
+uri = "file://attached_assets/logo_concepts/B_threshold.png"
+type = "image"
+title = "Logo B: Threshold"
+
+[[generated]]
+id = "CNeOL9GG8iV-jsRfGDyep"
+uri = "file://attached_assets/logo_concepts/C_constellation.png"
+type = "image"
+title = "Logo C: Constellation"
+
+[[generated]]
+id = "98pbTP8VQTjo3-67w_0nB"
+uri = "file://attached_assets/logo_concepts/D_compass_eye.png"
+type = "image"
+title = "Logo D: Compass-Eye"

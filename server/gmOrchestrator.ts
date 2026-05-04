@@ -1656,14 +1656,23 @@ export async function runGM(
       }
     }
   } catch (err: any) {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages,
-      stream: false,
-      max_tokens: 2000,
-      temperature: 0.8,
-    });
-    fullText = response.choices[0]?.message?.content ?? "";
+    console.error("[GM] Streaming call failed, attempting non-streaming fallback:", err?.message ?? err);
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages,
+        stream: false,
+        max_tokens: 2000,
+        temperature: 0.8,
+      });
+      fullText = response.choices[0]?.message?.content ?? "";
+    } catch (fallbackErr: any) {
+      console.error("[GM] Non-streaming fallback also failed:", fallbackErr?.message ?? fallbackErr);
+      onChunk("\n\n*The Game Master lost the thread. Please try your action again.*");
+      onDone("", [], [], [], undefined, [], undefined);
+      return;
+    }
   }
 
   // Parse the GM response

@@ -1,0 +1,93 @@
+# Replit Instructions — Sprint 02 TD-005 (2026-05-04)
+
+> Paste this entire document into Replit's AI agent as a standalone task.
+> This is separate from the four fixes already submitted (LR-006, UXF-005, UXF-006, UXF-007).
+> Apply the single task below, then report back PASS / FAIL / ERROR.
+
+## Project context
+Legendary RPG — AI-powered online multiplayer RPG.
+Tech stack: React 18 + TypeScript + Vite (frontend), Node.js + Express (backend),
+PostgreSQL + Drizzle ORM, GPT-4o streaming for the AI Game Master (SSE).
+Key file for this task: `server/gmOrchestrator.ts`
+
+---
+
+## Task 1 — GM streaming error boundary (TD-005)
+
+**File:** `server/gmOrchestrator.ts`  
+**Function:** `runGM`
+
+**Problem:** If the GPT-4o streaming call fails (timeout, rate limit, API error) and the
+silent non-streaming fallback also fails, `onDone` is never called. The route handler's
+`onDone` is the only place that calls `res.end()` — so the SSE connection hangs open
+indefinitely. The player sees a frozen, incomplete chat bubble with no error message and no
+way to recover without a hard refresh. Additionally, the current catch block swallows the
+original error entirely (no logging).
+
+**Find this exact block in `runGM`:**
+
+```typescript
+  } catch (err: any) {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages,
+      stream: false,
+      max_tokens: 2000,
+      temperature: 0.8,
+    });
+    fullText = response.choices[0]?.message?.content ?? "";
+  }
+```
+
+**Replace it with:**
+
+```typescript
+  } catch (err: any) {
+    // TD-005 FIX: log the primary streaming failure before attempting fallback
+    console.error("[GM] Streaming call failed, attempting non-streaming fallback:", err?.message ?? err);
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages,
+        stream: false,
+        max_tokens: 2000,
+        temperature: 0.8,
+      });
+      fullText = response.choices[0]?.message?.content ?? "";
+    } catch (fallbackErr: any) {
+      // TD-005 FIX: fallback also failed — surface a friendly error and close the SSE connection cleanly
+      console.error("[GM] Non-streaming fallback also failed:", fallbackErr?.message ?? fallbackErr);
+      onChunk("\n\n*The Game Master lost the thread. Please try your action again.*");
+      onDone("", [], [], [], undefined, [], undefined);
+      return;
+    }
+  }
+```
+
+**Where to find it:** Search for `const response = await openai.chat.completions.create` —
+there will be exactly one match inside a `catch` block. That is the target. The surrounding
+code (the `extractAndStreamNarrative` function above it and the JSON parse block below)
+stays exactly as-is.
+
+**Verify:**
+1. Restart the server after applying the change
+2. In Replit Secrets, temporarily rename `AI_INTEGRATIONS_OPENAI_API_KEY` to
+   `AI_INTEGRATIONS_OPENAI_API_KEY_BROKEN`
+3. Open https://llm-game-master.replit.app, sign in, start an active game session,
+   and submit any player action
+4. Confirm the chat shows: `*The Game Master lost the thread. Please try your action again.*`
+   (rather than a frozen/blank UI)
+5. Confirm the Replit server log shows both:
+   - `[GM] Streaming call failed, attempting non-streaming fallback: ...`
+   - `[GM] Non-streaming fallback also failed: ...`
+6. **Restore the secret name** (`AI_INTEGRATIONS_OPENAI_API_KEY`) before finishing
+7. Report: TD-005 — PASS / FAIL / ERROR
+
+---
+
+## After the task
+1. Confirm the secret is restored to its correct name
+2. Restart the server one final time to ensure clean state
+3. Open https://llm-game-master.replit.app and confirm the app loads without errors
+4. Report back: TD-005 — PASS / FAIL / ERROR

@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { storeSessionId } from "@/lib/queryClient";
 import { Eye, EyeOff, Scroll, Users, Sparkles, CheckCircle2, Sword } from "lucide-react";
 import { LegendaryLogo } from "@/components/LegendaryLogo";
+import { useHeroBackground } from "@/hooks/use-hero-background";
 
 const registerSchema = z.object({
   username: z
@@ -180,10 +181,21 @@ export default function AuthPage() {
     }
   }
 
+  const hero = useHeroBackground();
+
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex relative">
+      {/* Cross-genre hero background (one per session) */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" data-testid="hero-bg-auth" aria-hidden="true">
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat animate-hero-drift"
+          style={{ backgroundImage: `url(${hero.url})`, opacity: 0.4 }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/85" />
+      </div>
+
       {/* Left: Feature panel */}
-      <div className="hidden lg:flex flex-col justify-center px-12 w-[480px] flex-shrink-0 relative overflow-hidden border-r border-border">
+      <div className="hidden lg:flex flex-col justify-center px-12 w-[480px] flex-shrink-0 relative overflow-hidden border-r border-border z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-900/10 pointer-events-none" />
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-900/10 rounded-full blur-3xl pointer-events-none" />
@@ -226,7 +238,7 @@ export default function AuthPage() {
       </div>
 
       {/* Right: Auth forms */}
-      <div className="flex-1 flex items-center justify-center p-6">
+      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
         <div className="w-full max-w-md space-y-6">
           {/* Tab switcher */}
           <div className="flex rounded-md border border-border bg-secondary/30 p-1 gap-1">

@@ -11,22 +11,11 @@ import FriendsPanel from "@/components/FriendsPanel";
 import { apiRequest } from "@/lib/queryClient";
 import type { Character } from "@shared/schema";
 import { LegendaryLogo } from "@/components/LegendaryLogo";
-
-function useHallBackground() {
-  const { data, isLoading } = useQuery<{ imageData: string | null; pending: boolean }>({
-    queryKey: ["/api/system/hall-background"],
-    refetchInterval: (q) => {
-      const d = q.state.data as { imageData: string | null; pending: boolean } | undefined;
-      return d?.pending && !d?.imageData ? 6000 : false;
-    },
-    staleTime: 60_000,
-  });
-  return { imageData: data?.imageData ?? null, pending: data?.pending ?? false, isLoading };
-}
+import { useHeroBackground } from "@/hooks/use-hero-background";
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
-  const { imageData: hallBg } = useHallBackground();
+  const hero = useHeroBackground();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -118,18 +107,13 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background relative">
-      {hallBg && (
+      <div className="fixed inset-0 z-0 overflow-hidden" data-testid="hero-bg-dashboard" aria-hidden="true">
         <div
-          className="fixed inset-0 z-0"
-          style={{
-            backgroundImage: `url(${hallBg})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center 30%",
-            transition: "opacity 1s ease-in-out",
-          }}
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat animate-hero-drift"
+          style={{ backgroundImage: `url(${hero.url})`, opacity: 0.45 }}
         />
-      )}
-      <div className="fixed inset-0 z-0 bg-gradient-to-t from-background/95 via-background/60 to-background/20" />
+      </div>
+      <div className="fixed inset-0 z-0 bg-gradient-to-t from-background/95 via-background/70 to-background/30" />
       {/* Header */}
       <header className="relative z-10 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">

@@ -280,6 +280,20 @@
     border: 1px solid hsl(240 6% 12%);
   }
 
+  /* Cross-genre hero backdrop drift (Ken Burns) */
+  @keyframes hero-drift {
+    0%   { transform: scale(1.08) translate3d(-1.5%, -1%, 0); }
+    50%  { transform: scale(1.12) translate3d(1.5%, 1%, 0); }
+    100% { transform: scale(1.08) translate3d(-1.5%, -1%, 0); }
+  }
+  .animate-hero-drift {
+    animation: hero-drift 60s ease-in-out infinite;
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-hero-drift { animation: none; }
+  }
+
   /* HP bar animations */
   @keyframes hp-pulse {
     0%, 100% { box-shadow: 0 0 4px hsl(0 65% 45% / 0.4); }

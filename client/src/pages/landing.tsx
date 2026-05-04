@@ -12,11 +12,10 @@ export default function LandingPage() {
       {/* Hero */}
       <div className="relative min-h-screen flex flex-col items-center justify-center px-4 text-center">
         {/* Cross-genre hero background (one per session) with Ken Burns drift */}
-        <div className="absolute inset-0 z-0 overflow-hidden" data-testid="hero-bg-landing">
+        <div className="absolute inset-0 z-0 overflow-hidden" data-testid="hero-bg-landing" aria-hidden="true">
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat animate-hero-drift"
             style={{ backgroundImage: `url(${hero.url})`, opacity: 0.55 }}
-            aria-label={`${hero.label} hero backdrop`}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-background/20" />
           <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-transparent to-background" />

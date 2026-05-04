@@ -331,7 +331,17 @@ export default function CreateCampaignPage() {
                 <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-amber-300">Portrait needed</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Your GM uses your portrait to visualise your hero. Generate one in the character editor — takes about 10 seconds.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Your GM uses your portrait to visualise your hero.{" "}
+                    <button
+                      className="text-primary underline underline-offset-2"
+                      onClick={() => navigate(`/characters/${selectedChar.id}/appearance`)}
+                      data-testid="button-go-generate-portrait"
+                    >
+                      Generate one now
+                    </button>{" "}
+                    — takes about 10 seconds.
+                  </p>
                 </div>
               </div>
             )}

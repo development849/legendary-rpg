@@ -1070,7 +1070,7 @@ export default function CreateCharacterPage() {
                       <>
                         <ImageIcon className="w-12 h-12 text-muted-foreground/40" />
                         <p className="text-muted-foreground font-serif italic text-center px-6">
-                          Generate an AI portrait of {name}, or skip and add one later
+                          Generate an AI portrait of {name} — your GM uses it to visualise your hero
                         </p>
                       </>
                     )}
@@ -1078,9 +1078,6 @@ export default function CreateCharacterPage() {
                   <div className="flex gap-3 justify-center">
                     <Button variant="outline" onClick={() => setStep("confirm")} disabled={generatingPortrait} data-testid="button-back-confirm-from-portrait">
                       <ArrowLeft className="w-4 h-4 mr-2" /> Back
-                    </Button>
-                    <Button variant="outline" onClick={() => navigate("/dashboard")} data-testid="button-skip-portrait">
-                      Skip for Now
                     </Button>
                     <Button onClick={handleGeneratePortrait} disabled={generatingPortrait} data-testid="button-generate-portrait">
                       {generatingPortrait ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate Portrait</>}

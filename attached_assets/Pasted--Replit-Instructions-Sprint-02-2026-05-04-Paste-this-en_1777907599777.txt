@@ -1,0 +1,231 @@
+# Replit Instructions — Sprint 02 (2026-05-04)
+
+> Paste this entire document into Replit's AI agent.
+> Apply all tasks in order. Report back after each one.
+
+## Project context
+Legendary RPG — AI-powered online multiplayer RPG.
+Tech stack: React 18 + TypeScript + Vite (frontend), Node.js + Express (backend),
+PostgreSQL + Drizzle ORM, GPT-4o streaming for the AI Game Master (SSE).
+Key files: `server/gmOrchestrator.ts` (GM logic), `client/src/pages/create-campaign.tsx`,
+`client/src/pages/create-character.tsx`, `shared/` (shared TS types).
+
+---
+
+## Task 1 — Strip GM director instruction from first stream message (LR-006)
+
+**File:** `server/gmOrchestrator.ts`
+**Function:** Inside `runGM` — the inner `extractAndStreamNarrative` closure
+
+**Problem:** The GM's first streaming message echoes back the director instruction block,
+e.g. `*Campaign start. Drop the player straight into the middle...*`. The existing filter
+strips JSON blocks but not this leading `*...*` director block.
+
+**Change — Step 1:** Add two new flags alongside the existing `inJsonBlock` flag.
+Find the line `let inJsonBlock = false;` inside `runGM` and add the two lines immediately after:
+
+```typescript
+let inJsonBlock = false;
+let directorBlockSkipped = false;   // ADD
+let inDirectorBlock = false;         // ADD
+```
+
+**Change — Step 2:** At the very top of `extractAndStreamNarrative`, before the existing
+`if (inJsonBlock) return;` line, add the following block:
+
+```typescript
+// LR-006 FIX: Strip leading *UPPERCASE...* director instruction block
+if (!directorBlockSkipped) {
+  if (!inDirectorBlock) {
+    const trimmed = fullText.trimStart();
+    if (/^\*[A-Z]/.test(trimmed)) {
+      inDirectorBlock = true;
+    } else if (fullText.length > 5) {
+      // No director block present — proceed normally
+      directorBlockSkipped = true;
+    }
+  }
+  if (inDirectorBlock) {
+    // Find the end of the director block: closing * or double newline
+    const openIdx = fullText.indexOf('*');
+    const closeAsterisk = fullText.indexOf('*', openIdx + 1);
+    const doubleNewline = fullText.indexOf('\n\n');
+    const closingIdx = [closeAsterisk, doubleNewline]
+      .filter(i => i > openIdx)
+      .sort((a, b) => a - b)[0] ?? -1;
+    if (closingIdx > 0) {
+      // Director block complete — skip it, mark position, continue streaming
+      streamedNarrative = fullText.slice(0, closingIdx + 1);
+      directorBlockSkipped = true;
+      inDirectorBlock = false;
+      // Fall through to normal streaming with remaining content
+    } else {
+      return; // Block not yet complete, wait for more chunks
+    }
+  }
+}
+```
+
+**Verify:** Start a new campaign → Begin Adventure → confirm the first GM message is
+narrative prose only with no `*Campaign start...*` or `*...*` prefix visible to the player.
+
+---
+
+## Task 2 — Auto-select hero when only one character exists (UXF-006)
+
+**File:** `client/src/pages/create-campaign.tsx`
+
+**Problem:** On the "Begin a New Chronicle" campaign creation form, the hero card is not
+pre-selected even when the player has only one character. The "Begin the Chronicle" button
+stays disabled until the player manually clicks their own character.
+
+**Change — Step 1:** Ensure `useEffect` is imported at the top of the file:
+
+```typescript
+import { useState, useEffect } from "react";
+```
+
+(If `useEffect` is already imported, skip this step.)
+
+**Change — Step 2:** Find the line:
+```typescript
+const selectedHasPortrait = !!(selectedChar?.profilePicture);
+```
+Immediately after that line, add:
+
+```typescript
+// UXF-006 FIX: auto-select when player has exactly one character
+useEffect(() => {
+  if (characters.length === 1 && !selectedCharId) {
+    setSelectedCharId(characters[0].id);
+  }
+}, [characters, selectedCharId]);
+```
+
+**Verify:** With a single character that has a portrait, navigate to "Begin a New Chronicle".
+The character card should be pre-selected and "Begin the Chronicle" should be enabled immediately
+without any manual click.
+
+---
+
+## Task 3 — Portrait "optional but required" contradiction (UXF-005)
+
+**Confirmed approach: Option B** — enforce portrait at character creation, add an inline
+warning at campaign start rather than a silent destructive toast.
+
+**Part A — File:** `client/src/pages/create-character.tsx`
+
+**Problem:** Character creation has a "Skip for Now" button on the portrait step.
+Players skip it, then hit a silent dead end at campaign launch.
+
+**Change:** Find the portrait generation step in the character creation wizard. Remove the
+"Skip for Now" button or link entirely. The player must generate a portrait before proceeding.
+If the portrait step has a skip mechanism (a button, a link, or a conditional navigation
+bypass), remove it. Portrait generation must complete before the step advances.
+
+**Part B — File:** `client/src/pages/create-campaign.tsx`
+
+**Problem:** When a character has no portrait, `handleCreate()` fires a destructive toast
+and silently returns — the player has no idea what went wrong or how to fix it.
+
+**Change:** Find the block inside `handleCreate()` that checks `!selectedHasPortrait` and
+shows a destructive toast. Replace the entire block with an inline warning card that renders
+below the character selection UI instead. The create button should remain enabled but the
+warning guides the player to generate a portrait.
+
+Find this block and remove it:
+```typescript
+if (!selectedHasPortrait) {
+  toast({
+    title: "Hero needs a portrait",
+    description: `${selectedChar?.name} has no portrait yet...`,
+    variant: "destructive",
+  });
+  return;
+}
+```
+
+Then find where the hero card renders (below `selectedChar` card area) and add this inline
+warning — it should only appear when a character is selected but has no portrait:
+
+```tsx
+{/* UXF-005 FIX: Inline portrait warning with direct CTA */}
+{selectedChar && !selectedHasPortrait && (
+  <div className="mt-3 rounded-md border border-amber-600/40 bg-amber-950/20 p-3 flex items-start gap-2">
+    <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+    <div>
+      <p className="text-sm font-medium text-amber-300">Portrait needed</p>
+      <p className="text-xs text-muted-foreground mt-0.5">
+        Your GM uses your portrait to visualise your hero.{" "}
+        <button
+          className="text-primary underline underline-offset-2"
+          onClick={() => navigate(`/characters/${selectedChar.id}/portrait`)}
+        >
+          Generate one now
+        </button>{" "}
+        — takes about 10 seconds.
+      </p>
+    </div>
+  </div>
+)}
+```
+
+Note: Check `client/src/App.tsx` for the correct portrait route URL and adjust the
+`navigate()` path above to match. Also ensure `AlertTriangle` is imported from `lucide-react`.
+
+**Verify:** Select a character with no portrait on the campaign creation page. Confirm an
+amber inline warning appears with a "Generate one now" link. Confirm no silent disabled
+button or destructive toast.
+
+---
+
+## Task 4 — World-consistency guardrail in GM system prompt (UXF-007)
+
+**File:** `server/gmOrchestrator.ts`
+**Function:** `buildSystemPrompt`
+
+**Problem:** The GM narrates any player action regardless of whether it's physically
+possible in the world (e.g., a medieval fighter "turning into a spaceship"). There is no
+genre guardrail.
+
+**Change:** Find the `buildSystemPrompt` function. Inside the returned system prompt
+template string, locate the section that describes campaign constraints or player rules
+(near content about dice rolls, time skips, or the character/party block). After that
+section, add the following guardrail text directly into the prompt string:
+
+```
+WORLD INTEGRITY — GENRE GUARDRAIL:
+You are the Game Master of a [insert campaign setting here — use campaign.setting or equivalent variable]. This world has a consistent internal reality with its own physics, technology level, and rules for what is possible.
+
+When a player describes an action that violates this world's genre and physics (e.g. a medieval fighter becoming a spaceship, a contemporary character summoning magic that does not exist in this world):
+1. Acknowledge the impulse briefly — one sentence, in-character, with personality
+2. Redirect to a plausible in-world alternative that captures the spirit of the action
+3. Keep the pace moving — do not lecture, do not break immersion
+
+Examples:
+- Medieval fighter tries to "turn into a spaceship" → Brief wry acknowledgment + offer a plausible alternative (flee on horseback, climb a wall, use a grapple)
+- Space captain tries to "cast a fireball" → Redirect to tech equivalent (plasma grenade, thruster burst) unless magic is established in this campaign's lore
+
+EXCEPTION: If the player's action is consistent with this specific campaign's established lore (e.g. a world where technology and magic coexist), lean into it. Only redirect actions that violate THIS world's own rules.
+
+Keep redirects to 1–2 sentences. In-world voice only. Then advance the scene.
+```
+
+Use the correct template literal syntax to embed `campaign.setting` (or whatever the
+variable is called) into the guardrail text.
+
+**Verify:** In a medieval campaign, type: "I grow dragon wings, turn into a spaceship, and
+fly to the moon." The GM should respond with a brief in-character redirect (not narrate the
+transformation).
+
+---
+
+## After all tasks
+
+1. Restart the server (or confirm hot-reload picked up server-side changes in Tasks 1 and 4)
+2. Open https://llm-game-master.replit.app and confirm the app loads without errors
+3. Run a quick smoke test:
+   - Load the auth page — no console errors
+   - Sign in and navigate to dashboard — page loads
+   - Go to "Begin a New Chronicle" — confirm Task 2 auto-selection works if only one character
+4. Report back: list each task (Task 1 / Task 2 / Task 3 / Task 4) with PASS / FAIL / ERROR

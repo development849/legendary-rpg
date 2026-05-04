@@ -471,6 +471,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [expandedSceneImage, setExpandedSceneImage] = useState<{ name: string; imageData: string } | null>(null);
   const [viewingLocationMap, setViewingLocationMap] = useState<string | null>(null);
   const [turnHint, setTurnHint] = useState<{ character: string; prompt: string } | null>(null);
+  const [sceneMood, setSceneMood] = useState<string | null>(null);
   const [shopData, setShopData] = useState<ShopData | null>(null);
   const [noticeBoardData, setNoticeBoardData] = useState<NoticeBoardData | null>(null);
   const [expandedNotice, setExpandedNotice] = useState<number | null>(null);
@@ -549,6 +550,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           if (Array.isArray(savedQa) && savedQa.length > 0) setQuickActions(savedQa);
           const savedTh = lastGm?.metadata?.turnHint;
           if (savedTh?.character) setTurnHint(savedTh);
+          const savedMood = lastGm?.metadata?.sceneMood;
+          if (typeof savedMood === "string" && savedMood.length > 0) setSceneMood(savedMood);
 
           const preRolled: Record<string, boolean> = {};
           const lastGmId = lastGm?.id;
@@ -686,6 +689,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             }
             const wsMood = msg.message?.metadata?.sceneMood;
             if (wsMood && ["exploration", "combat", "mystery", "romance", "leisure", "triumph", "stealth"].includes(wsMood)) {
+              setSceneMood(wsMood);
               soundtrack.changeMood(wsMood as MoodType);
             }
           }
@@ -922,6 +926,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               }
               const mood = evt.sceneMood ?? evt.message?.metadata?.sceneMood;
               if (mood && ["exploration", "combat", "mystery", "romance", "leisure", "triumph", "stealth"].includes(mood)) {
+                setSceneMood(mood);
                 soundtrack.changeMood(mood as MoodType);
               }
             }
@@ -966,6 +971,87 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     const diceReqs: any[] = m.metadata?.diceRequests ?? [];
     return diceReqs.some((_: any, i: number) => !rolledPrompts[`${m.id}-${i}`]);
   });
+
+  async function triggerRoll(promptKey: string, req: any) {
+    setRolledPrompts(prev => ({ ...prev, [promptKey]: true }));
+    try {
+      const res = await fetch("/api/dice/roll", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          die: req.die ?? "d20",
+          count: 1,
+          modifier: req.modifier ?? 0,
+          advantageState: req.advantage ?? "normal",
+          label: req.purpose,
+        }),
+      });
+      const data = await res.json();
+      const total = data.total;
+      const rolls = data.rolls?.join(", ") ?? total;
+      const modStr = req.modifier > 0 ? `+${req.modifier}` : req.modifier < 0 ? `${req.modifier}` : "";
+      const dcMatch = req.purpose?.match(/dc\s*(\d+)/i);
+      const dc = dcMatch ? parseInt(dcMatch[1]) : null;
+      const dcText = dc ? ` vs DC ${dc}` : "";
+      const outcome = dc ? (total >= dc ? " — SUCCESS" : " — FAILURE") : "";
+      sendAction(
+        `[ROLL RESULT] ${req.character ?? "Character"} — ${req.purpose}: rolled ${total} [${rolls}] on ${req.die ?? "d20"}${modStr}${dcText}${outcome}`,
+        undefined,
+        "action"
+      );
+    } catch (_) {
+      setRolledPrompts(prev => { const n = { ...prev }; delete n[promptKey]; return n; });
+    }
+  }
+
+  const inCombat = sceneMood === "combat";
+
+  const activeTurnDice = (() => {
+    if (!turnHint?.character) return null;
+    const target = turnHint.character.toLowerCase();
+    for (let mi = messages.length - 1; mi >= 0; mi--) {
+      const m = messages[mi];
+      if (m.role !== "gm") continue;
+      const reqs: any[] = m.metadata?.diceRequests ?? [];
+      if (reqs.length === 0) continue;
+      for (let i = 0; i < reqs.length; i++) {
+        const promptKey = `${m.id}-${i}`;
+        if (rolledPrompts[promptKey]) continue;
+        const reqChar = (reqs[i].character ?? "").toLowerCase();
+        if (reqChar === target) {
+          return { msgId: m.id, idx: i, req: reqs[i], promptKey };
+        }
+      }
+      break;
+    }
+    return null;
+  })();
+
+  const activeTurnSubject = (() => {
+    if (!turnHint?.character) return null;
+    const lc = turnHint.character.toLowerCase();
+    if (myMember?.character?.name?.toLowerCase() === lc) {
+      return { kind: "self" as const, name: myMember.character.name, portraitUrl: myMember.character.profilePicture || null, isMyTurn: true, controllable: true };
+    }
+    const otherMember = members.find((m: any) => m.character?.name?.toLowerCase() === lc);
+    if (otherMember?.character) {
+      return { kind: "ally" as const, name: otherMember.character.name, portraitUrl: otherMember.character.profilePicture || null, isMyTurn: false, controllable: false };
+    }
+    const npc = npcs.find((n: any) => n.name?.toLowerCase() === lc);
+    if (npc) {
+      const playerControlled = !!npc.isPartyMember && campaign?.npcControl === "player";
+      return {
+        kind: npc.isPartyMember ? "companion" as const : "enemy" as const,
+        name: npc.name,
+        portraitUrl: `/api/npcs/${npc.id}/portrait`,
+        isMyTurn: false,
+        controllable: playerControlled,
+      };
+    }
+    return { kind: "unknown" as const, name: turnHint.character, portraitUrl: null, isMyTurn: false, controllable: false };
+  })();
+
+  const showCombatBanner = inCombat && !!turnHint && !!activeTurnSubject;
 
   const classColors: Record<string, string> = {
     fighter: "text-red-400", rogue: "text-emerald-400",
@@ -1079,36 +1165,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                           variant="outline"
                           className="h-7 px-3 text-xs border-amber-700/50 text-amber-300 hover:bg-amber-900/30 hover:text-amber-200"
                           data-testid={`button-roll-${promptKey}`}
-                          onClick={async () => {
-                            setRolledPrompts(prev => ({ ...prev, [promptKey]: true }));
-                            try {
-                              const res = await fetch("/api/dice/roll", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  die: req.die ?? "d20",
-                                  count: 1,
-                                  modifier: req.modifier ?? 0,
-                                  advantageState: req.advantage ?? "normal",
-                                  label: req.purpose,
-                                }),
-                              });
-                              const data = await res.json();
-                              const total = data.total;
-                              const rolls = data.rolls?.join(", ") ?? total;
-                              const dcMatch = req.purpose?.match(/dc\s*(\d+)/i);
-                              const dc = dcMatch ? parseInt(dcMatch[1]) : null;
-                              const dcText = dc ? ` vs DC ${dc}` : "";
-                              const outcome = dc ? (total >= dc ? " — SUCCESS" : " — FAILURE") : "";
-                              sendAction(
-                                `[ROLL RESULT] ${req.character ?? "Character"} — ${req.purpose}: rolled ${total} [${rolls}] on ${req.die ?? "d20"}${modStr}${dcText}${outcome}`,
-                                undefined,
-                                "action"
-                              );
-                            } catch (_) {
-                              setRolledPrompts(prev => { const n = { ...prev }; delete n[promptKey]; return n; });
-                            }
-                          }}
+                          onClick={() => triggerRoll(promptKey, req)}
                         >
                           🎲 Roll
                         </Button>
@@ -1294,6 +1351,123 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-br from-primary/5 via-transparent to-primary/5 animate-pulse" />
           )}
 
+          {/* Combat Turn Banner — prominent indicator of whose turn it is */}
+          {showCombatBanner && activeTurnSubject && turnHint && (() => {
+            const subj = activeTurnSubject;
+            const needsMyAction = subj.controllable && !!activeTurnDice;
+            const promptText = subj.isMyTurn && myMember?.character
+              ? turnHint.prompt
+                  .replace(new RegExp(`\\b${myMember.character.name}\\b`, "gi"), "you")
+                  .replace(/\byou's\b/gi, "your")
+                  .replace(/\byou is\b/gi, "you are")
+                  .replace(/\byou sees\b/gi, "you see")
+                  .replace(/\byou hears\b/gi, "you hear")
+                  .replace(/\byou notices\b/gi, "you notice")
+                  .replace(/\byou feels\b/gi, "you feel")
+              : turnHint.prompt;
+            const turnLabel =
+              subj.kind === "self" ? "Your Turn"
+              : subj.kind === "companion" ? `${subj.name}'s Turn — Companion`
+              : subj.kind === "enemy" ? `${subj.name}'s Turn — Enemy`
+              : subj.kind === "ally" ? `${subj.name}'s Turn`
+              : `${subj.name}'s Turn`;
+            const ringCls = needsMyAction || subj.isMyTurn
+              ? "border-primary/70 bg-primary/15 ring-2 ring-primary/40 animate-pulse"
+              : subj.kind === "enemy"
+              ? "border-red-700/40 bg-red-950/30"
+              : "border-border/60 bg-card/85";
+            const labelCls = needsMyAction || subj.isMyTurn
+              ? "text-primary"
+              : subj.kind === "enemy"
+              ? "text-red-300"
+              : "text-foreground/80";
+            const req = activeTurnDice?.req;
+            const modStr = req ? (req.modifier > 0 ? `+${req.modifier}` : req.modifier < 0 ? `${req.modifier}` : "") : "";
+            const advStr = req?.advantage && req.advantage !== "normal" ? ` (${req.advantage})` : "";
+            return (
+              <div
+                className={`flex-shrink-0 z-20 border-b backdrop-blur-md px-4 py-2.5 ${ringCls}`}
+                data-testid="combat-turn-banner"
+                style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
+              >
+                <div className="max-w-3xl mx-auto flex items-center gap-3">
+                  <div className={`relative w-12 h-12 rounded-md overflow-hidden flex-shrink-0 border ${
+                    needsMyAction || subj.isMyTurn ? "border-primary/70" : subj.kind === "enemy" ? "border-red-700/50" : "border-border/60"
+                  } bg-secondary`}>
+                    {subj.portraitUrl ? (
+                      subj.kind === "companion" || subj.kind === "enemy" ? (
+                        <AuthImg src={subj.portraitUrl} alt={subj.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <img src={subj.portraitUrl} alt={subj.name} className="w-full h-full object-cover" />
+                      )
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        {subj.kind === "enemy" ? (
+                          <Skull className="w-5 h-5 text-red-400" />
+                        ) : (
+                          <Sword className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Sword className={`w-3.5 h-3.5 flex-shrink-0 ${
+                        needsMyAction || subj.isMyTurn ? "text-primary" : subj.kind === "enemy" ? "text-red-400" : "text-muted-foreground"
+                      }`} />
+                      <span className={`font-sans font-bold tracking-wider uppercase text-xs sm:text-sm ${labelCls}`}>
+                        {turnLabel}
+                      </span>
+                      <span className="text-[10px] font-sans tracking-widest uppercase text-muted-foreground/80 px-1.5 py-0.5 rounded bg-background/40 border border-border/40">
+                        Combat
+                      </span>
+                    </div>
+                    <span className="text-xs sm:text-sm font-serif italic text-foreground/85 truncate mt-0.5" data-testid="text-turn-prompt">
+                      {promptText}
+                    </span>
+                  </div>
+                  {needsMyAction && req && (
+                    usePhysicalDice ? (
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-[10px] font-mono text-amber-300/80 whitespace-nowrap">
+                          {req.die ?? "d20"}{modStr}{advStr}
+                        </span>
+                        <PhysicalDiceInput
+                          promptKey={activeTurnDice.promptKey}
+                          req={req}
+                          modStr={modStr}
+                          onSubmit={(total: number) => {
+                            setRolledPrompts(prev => ({ ...prev, [activeTurnDice.promptKey]: true }));
+                            const dcMatch = req.purpose?.match(/dc\s*(\d+)/i);
+                            const dc = dcMatch ? parseInt(dcMatch[1]) : null;
+                            const dcText = dc ? ` vs DC ${dc}` : "";
+                            const outcome = dc ? (total >= dc ? " — SUCCESS" : " — FAILURE") : "";
+                            sendAction(
+                              `[ROLL RESULT] ${req.character ?? "Character"} — ${req.purpose}: rolled ${total} [physical dice] on ${req.die ?? "d20"}${modStr}${dcText}${outcome}`,
+                              undefined,
+                              "action"
+                            );
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="flex-shrink-0 h-9 px-3 bg-primary text-primary-foreground hover:bg-primary/90 font-sans font-bold tracking-wide shadow-md"
+                        data-testid="button-roll-active-turn"
+                        disabled={sending || isStreaming}
+                        onClick={() => triggerRoll(activeTurnDice.promptKey, req)}
+                      >
+                        <Dices className="w-4 h-4 mr-1.5" />
+                        Roll {req.die ?? "d20"}{modStr}
+                      </Button>
+                    )
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Messages */}
           <ScrollArea className="flex-1 px-4 py-4 relative z-10">
             {messages.length === 0 && !isStreaming ? (
@@ -1355,8 +1529,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             )}
           </ScrollArea>
 
-          {/* Turn Hint */}
-          {turnHint && !isStreaming && !sending && (() => {
+          {/* Turn Hint (compact, shown when no prominent combat banner is visible) */}
+          {turnHint && !isStreaming && !sending && !showCombatBanner && (() => {
             const myChar = myMember?.character;
             const isMyTurn = myChar && turnHint.character.toLowerCase() === myChar.name.toLowerCase();
             return (

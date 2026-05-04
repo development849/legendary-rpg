@@ -1547,7 +1547,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               </div>
             ) : (
               <div className="space-y-5 max-w-3xl mx-auto">
-                {messages.map(renderMessage)}
+                {messages
+                  .filter(msg => !(msg.role === "gm" && /^\*.*\*$/.test((msg.content ?? "").trim())))
+                  .map(renderMessage)}
 
                 {/* Streaming GM message */}
                 {isStreaming && streamingContent && (

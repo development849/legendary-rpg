@@ -14,7 +14,7 @@ export function CharacterHintPill({ onDismiss, onOpen }: CharacterHintPillProps)
       data-testid="pill-character-hint"
       style={{
         position: "fixed",
-        bottom: "24px",
+        bottom: "104px",
         left: "24px",
         zIndex: 40,
         display: "flex",

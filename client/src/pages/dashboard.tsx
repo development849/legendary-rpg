@@ -163,7 +163,7 @@ export default function DashboardPage() {
           <div className="relative z-20 p-8 space-y-2">
             <p className="text-primary font-sans tracking-widest text-xs uppercase">Chronicle · Session Dashboard</p>
             <h1 className="text-3xl font-sans font-bold tracking-wider drop-shadow-sm">
-              The Adventurer's Hall
+              The Hall of Legends
             </h1>
             <p className="text-muted-foreground font-serif italic">
               Your characters stand ready. Your campaigns await continuation.

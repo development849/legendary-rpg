@@ -1,0 +1,79 @@
+# Replit Instructions — Sprint 03 (2026-05-18)
+
+> Paste this entire document into Replit's AI agent.
+> Apply all tasks in order. Report back after each one.
+
+## Project context
+Legendary RPG — AI-powered online multiplayer RPG.
+Tech stack: React 18 + TypeScript + Vite (frontend), Node.js + Express (backend),
+PostgreSQL + Drizzle ORM, GPT-4o streaming for the AI Game Master (SSE).
+Key files: `server/gmOrchestrator.ts` (GM logic), `server/gameEngine.ts` (dice/mechanics),
+`client/src/pages/` (all UI pages), `shared/` (shared TS types).
+
+---
+
+## Task 1 — Rename "Adventurer's Hall" → "The Hall of Legends" (LR-007)
+
+**Files:** `client/src/pages/dashboard.tsx` (or equivalent dashboard page), plus any other files containing the old string.
+
+**Problem:** The dashboard is labelled "The Adventurer's Hall" — a fantasy-coded name that conflicts with the product's genre-agnostic "Cinematic Worlds" positioning. Approved replacement: **"The Hall of Legends"**.
+
+**Step 1 — Find all occurrences:**
+
+Run a codebase-wide search for the old string:
+
+```bash
+grep -ri "adventurer" client/ --include="*.tsx" --include="*.ts" --include="*.html" -l
+grep -ri "adventurer" server/ --include="*.tsx" --include="*.ts" -l
+```
+
+Report which files contain the string before making any changes.
+
+**Step 2 — Replace in all files found:**
+
+For every file returned by the grep above, replace:
+
+| Old string | New string |
+|---|---|
+| `The Adventurer's Hall` | `The Hall of Legends` |
+| `Adventurer's Hall` | `The Hall of Legends` |
+| `adventurer's hall` (lowercase) | `the hall of legends` |
+| `Adventurer&#39;s Hall` (HTML-encoded) | `The Hall of Legends` |
+
+**Step 3 — Update the browser `<title>` tag:**
+
+If the dashboard page sets a document title (look for `document.title`, a `<title>` tag in an HTML template, or a `useHead` / `Helmet` call), update:
+
+```
+"Legendary RPG | Adventurer's Hall"  →  "Legendary RPG | The Hall of Legends"
+```
+
+or simply:
+
+```
+"Adventurer's Hall"  →  "The Hall of Legends"
+```
+
+**Step 4 — Check the index.html for a default title:**
+
+```bash
+grep -i "adventurer" index.html
+```
+
+If found, update it.
+
+**Where to insert:** This is a text replacement only — no logic changes needed.
+
+**Verify:** Log in at https://llm-game-master.replit.app → navigate to the dashboard → confirm the page header reads "The Hall of Legends". Check the browser tab title also shows the new name.
+
+---
+
+## After all tasks
+1. Restart the server (or confirm hot-reload picked up the changes)
+2. Open https://llm-game-master.replit.app and confirm the app loads without errors
+3. Navigate to the dashboard and verify the heading reads "The Hall of Legends"
+4. Report: LR-007 — PASS / FAIL / ERROR (include which files were updated)
+
+---
+
+*More tasks will be added to this file as Sprint 03 work is scoped. This first task can be applied at any time before the sprint begins — it is a standalone copy change with zero risk.*

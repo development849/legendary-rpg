@@ -778,7 +778,10 @@ Achievements: ${((c.achievements as any[]) || []).map((a: any) => `${a.title} [$
   return `You are the Game Master for "${campaign.name}", an online fantasy RPG using the Legendary Lite ruleset.
 
 CAMPAIGN SETTING:
-${campaign.description || "A rich fantasy world full of danger and wonder."}
+${campaign.worldSeed
+  ? `WORLD PREMISE (GM-chosen backdrop — treat as the foundational reality of this world):\n${campaign.worldSeed}\n\n${campaign.description || ""}`
+  : campaign.description || "A rich fantasy world full of danger and wonder."
+}
 ${campaign.setting || ""}
 
 CONTENT SETTINGS:
@@ -1932,7 +1935,30 @@ export async function runGM(
     }
   }
 
-  const turnHint = parsed?.turn_hint ?? null;
+  // UXF-012 FIX: ensure turnHint and quickActions always have usable values
+  const rawTurnHint = parsed?.turn_hint ?? null;
+  const turnHint = rawTurnHint ?? {
+    character: chars[0]?.name ?? "You",
+    prompt: "What do you do?",
+  };
+
+  const rawQuickActions: string[] = parsed?.quick_actions ?? [];
+  const quickActions: string[] = rawQuickActions.length > 0
+    ? rawQuickActions
+    : (() => {
+        const loc = (worldSnap?.state as any)?.currentLocation ?? "the area";
+        const npcName = npcs.find((n: any) => !n.isPartyMember)?.name;
+        return npcName
+          ? [
+              `Ask ${npcName} what's going on`,
+              `Look around ${loc} for anything useful`,
+            ]
+          : [
+              `Search ${loc} carefully`,
+              `Prepare for whatever comes next`,
+            ];
+      })();
+
   const validMoods = ["exploration", "combat", "mystery", "romance", "leisure", "triumph", "stealth"];
   const sceneMood = validMoods.includes(parsed?.scene_mood) ? parsed.scene_mood : "exploration";
 
@@ -1960,7 +1986,7 @@ export async function runGM(
     console.error("[GM Stall] detection error:", stallErr);
   }
 
-  onDone(cleanNarrative, updates, diceRequests, parsed?.quick_actions ?? [], turnHint, levelUps, sceneMood, combatStall);
+  onDone(cleanNarrative, updates, diceRequests, quickActions, turnHint, levelUps, sceneMood, combatStall);
 }
 
 export function isCoinItem(item: any): boolean {

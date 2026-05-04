@@ -361,7 +361,9 @@ export default function DashboardPage() {
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground font-serif mt-0.5 truncate">
-                          {party.name} · Code: {party.inviteCode}
+                          {party.name}
+                          {/* Phase 4 — multiplayer reactivation */}
+                          {/* {" · Code: "}{party.inviteCode} */}
                         </p>
                       </div>
                       <button
@@ -395,12 +397,13 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Join Party */}
-            <JoinPartyCard characters={characters} />
+            {/* Phase 4 — multiplayer reactivation */}
+            {/* <JoinPartyCard characters={characters} /> */}
           </div>
         </div>
 
-        <FriendsPanel />
+        {/* Phase 4 — multiplayer reactivation */}
+        {/* <FriendsPanel /> */}
       </div>
 
       {confirmDelete && (

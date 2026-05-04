@@ -44,7 +44,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 const FEATURES = [
   { icon: Sword, label: "Choose your class and race", detail: "8 classes, 12 races, countless legends" },
   { icon: Scroll, label: "AI-powered Game Master", detail: "Narrates your story in real time" },
-  { icon: Users, label: "Solo or party play", detail: "Join friends with invite codes" },
+  { icon: Users, label: "Play any world, on your own schedule.", detail: "" },
   { icon: Sparkles, label: "Persistent world", detail: "Your choices shape the chronicle forever" },
 ];
 

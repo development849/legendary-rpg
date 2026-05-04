@@ -475,9 +475,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/campaigns", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
-      const { name, description, setting, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack } = req.body;
+      const { name, description, setting, worldName, worldDescription, worldSeed, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack } = req.body;
       if (!name) return res.status(400).json({ error: "Name required" });
-      const campaign = await createCampaign(userId, { name, description, setting, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack });
+      const campaign = await createCampaign(userId, { name, description, setting, worldName, worldDescription, worldSeed, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack });
       const party = await createParty(campaign.id, "The Company");
       res.status(201).json({ campaign, party });
     } catch (e) { res.status(500).json({ error: "Failed to create campaign" }); }

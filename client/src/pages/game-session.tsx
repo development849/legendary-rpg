@@ -1658,7 +1658,10 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                 {([
                   { id: "action", label: "Act", icon: Sword, tip: "Perform an action — the GM narrates what happens" },
                   { id: "dialogue", label: "Say", icon: MessageCircle, tip: "Speak in character — NPCs will respond" },
-                  { id: "ooc", label: "OOC", icon: Radio, tip: "Out of character — visible to party only, GM ignores" },
+                  /* Phase 4 — multiplayer reactivation */
+                  ...((members?.length ?? 1) > 1
+                    ? [{ id: "ooc" as const, label: "OOC", icon: Radio, tip: "Out of character — visible to party only, GM ignores" }]
+                    : []),
                 ] as const).map(m => (
                   <button
                     key={m.id}

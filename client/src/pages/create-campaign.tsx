@@ -20,6 +20,18 @@ const CONTENT_RATINGS = [
   { id: "r", label: "Mature", desc: "Blood, graphic violence, strong language, dark and morally grey themes.", icon: "⚔️" },
 ];
 
+// FR-008: World seed pool for "Surprise me" random campaign backdrop
+const WORLD_SEED_POOL = [
+  "Crumbling space station on the edge of known space",
+  "Pirate adventure on an uncharted archipelago",
+  "Noir detective city in permanent rain and moral ambiguity",
+  "Hellscape — a shattered afterlife where the damned fight for scraps of memory",
+  "Polar expedition — ice-locked research station with something wrong below the ice",
+  "Sunken civilisation — underwater ruins, bioluminescent fauna, forgotten technology",
+  "Haunted estate — Victorian manor sealed for 40 years, now reopened",
+  "Post-collapse city — survivors in a megacity 200 years after the fall",
+] as const;
+
 const THEME_OPTIONS = [
   { id: "mystery",    label: "Mystery",         desc: "Secrets, clues, and hidden truths to uncover",           icon: "🔍" },
   { id: "horror",     label: "Horror & Dread",  desc: "Dark atmosphere, tension, and unsettling encounters",     icon: "💀" },
@@ -51,6 +63,9 @@ export default function CreateCampaignPage() {
   const [fadeToBlack, setFadeToBlack] = useState(true);
   const [selectedCharId, setSelectedCharId] = useState("");
   const [loading, setLoading] = useState(false);
+  // FR-008: Random world seed state
+  const [surpriseMode, setSurpriseMode] = useState(false);
+  const [worldSeed, setWorldSeed] = useState<string | null>(null);
 
   const { data: characters = [] } = useQuery<Character[]>({ queryKey: ["/api/characters"] });
 
@@ -83,7 +98,7 @@ export default function CreateCampaignPage() {
       const res = await fetch("/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description, setting, worldName: worldName.trim() || null, worldDescription: worldDescription.trim() || null, themes: selectedThemes, gmMode, contentRating, noRomance, noHorror, fadeToBlack }),
+        body: JSON.stringify({ name: name.trim(), description, setting, worldName: worldName.trim() || null, worldDescription: worldDescription.trim() || null, worldSeed: worldSeed ?? undefined, themes: selectedThemes, gmMode, contentRating, noRomance, noHorror, fadeToBlack }),
       });
       if (!res.ok) throw new Error(await res.text());
       const { campaign, party } = await res.json();
@@ -187,6 +202,52 @@ export default function CreateCampaignPage() {
               maxLength={160}
               data-testid="input-world-description"
             />
+          </div>
+
+          {/* FR-008: Surprise me / Random World toggle */}
+          <div className="space-y-3">
+            <button
+              type="button"
+              data-testid="button-surprise-me"
+              onClick={() => {
+                const next = !surpriseMode;
+                setSurpriseMode(next);
+                if (next) {
+                  const seed = WORLD_SEED_POOL[Math.floor(Math.random() * WORLD_SEED_POOL.length)];
+                  setWorldSeed(seed);
+                } else {
+                  setWorldSeed(null);
+                }
+              }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-md border text-sm font-medium transition-colors ${
+                surpriseMode
+                  ? "border-amber-600/60 bg-amber-950/30 text-amber-300"
+                  : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"
+              }`}
+            >
+              <span>
+                {surpriseMode ? "Random World selected" : "Surprise me — Random World"}
+              </span>
+              <span className="text-lg">{surpriseMode ? "✦" : "⟳"}</span>
+            </button>
+
+            {surpriseMode && worldSeed && (
+              <div className="px-4 py-3 rounded-md border border-amber-600/20 bg-amber-950/10" data-testid="card-world-seed">
+                <p className="text-xs uppercase tracking-widest text-amber-600/70 mb-1">Your GM has chosen</p>
+                <p className="text-sm text-amber-200/90 font-medium" data-testid="text-world-seed">{worldSeed}</p>
+                <button
+                  type="button"
+                  data-testid="button-draw-another-seed"
+                  className="mt-2 text-xs text-muted-foreground underline underline-offset-2 hover:text-primary"
+                  onClick={() => {
+                    const seed = WORLD_SEED_POOL[Math.floor(Math.random() * WORLD_SEED_POOL.length)];
+                    setWorldSeed(seed);
+                  }}
+                >
+                  Draw another
+                </button>
+              </div>
+            )}
           </div>
 
           {/* GM Mode */}

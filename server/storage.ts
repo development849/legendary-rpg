@@ -79,6 +79,8 @@ export async function updateCharacter(id: string, data: Partial<Character>): Pro
 
 export async function createCampaign(ownerId: string, data: {
   name: string; description?: string; setting?: string;
+  worldName?: string | null; worldDescription?: string | null;
+  worldSeed?: string | null;
   themes?: string[];
   contentRating?: string; noRomance?: boolean; noHorror?: boolean;
   fadeToBlack?: boolean; gmMode?: string; stylePack?: string;
@@ -89,6 +91,9 @@ export async function createCampaign(ownerId: string, data: {
     name: data.name,
     description: data.description,
     setting: data.setting,
+    worldName: data.worldName ?? null,
+    worldDescription: data.worldDescription ?? null,
+    worldSeed: data.worldSeed ?? null,
     themes: data.themes ?? [],
     contentRating: data.contentRating,
     noRomance: data.noRomance,

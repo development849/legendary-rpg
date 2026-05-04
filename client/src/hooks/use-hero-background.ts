@@ -31,35 +31,36 @@ const HERO_BACKGROUNDS: HeroBackground[] = [
   { key: "solarpunk",        label: "Solarpunk Spires",   url: "/hero-bgs/solarpunk.png" },
 ];
 
-const SESSION_KEY = "legendary:heroBgKey";
+// Tracks the most recently shown background so consecutive mounts
+// (landing → auth → dashboard) never show the same image twice in a row.
+const LAST_KEY = "legendary:heroBgLast";
 
-function pickFromKey(key: string): HeroBackground {
-  const found = HERO_BACKGROUNDS.find(b => b.key === key);
-  return found ?? HERO_BACKGROUNDS[0];
-}
-
-function pickRandom(): HeroBackground {
-  const idx = Math.floor(Math.random() * HERO_BACKGROUNDS.length);
-  return HERO_BACKGROUNDS[idx];
+function pickRandomExcluding(excludeKey: string | null): HeroBackground {
+  const pool = excludeKey
+    ? HERO_BACKGROUNDS.filter(b => b.key !== excludeKey)
+    : HERO_BACKGROUNDS;
+  const idx = Math.floor(Math.random() * pool.length);
+  return pool[idx];
 }
 
 /**
- * Returns one cross-genre hero background per browser session, persisted in
- * sessionStorage so navigation between pages (landing → auth → dashboard) keeps
- * the same image — feels intentional rather than chaotic.
+ * Returns a fresh random cross-genre hero background on every mount.
+ *
+ * Rotation behavior:
+ *  - Each page mount picks a NEW random image from the pool
+ *    (so navigating landing → auth → dashboard cycles the visual)
+ *  - The most recently shown image is excluded from the pool to
+ *    guarantee back-to-back navigations actually change the picture
+ *    (random can otherwise pick the same one twice)
  */
 export function useHeroBackground(): HeroBackground {
   return useMemo(() => {
     if (typeof window === "undefined") return HERO_BACKGROUNDS[0];
-    try {
-      const cached = window.sessionStorage.getItem(SESSION_KEY);
-      if (cached) return pickFromKey(cached);
-      const picked = pickRandom();
-      window.sessionStorage.setItem(SESSION_KEY, picked.key);
-      return picked;
-    } catch {
-      return pickRandom();
-    }
+    let last: string | null = null;
+    try { last = window.sessionStorage.getItem(LAST_KEY); } catch { /* ignore */ }
+    const picked = pickRandomExcluding(last);
+    try { window.sessionStorage.setItem(LAST_KEY, picked.key); } catch { /* ignore */ }
+    return picked;
   }, []);
 }
 

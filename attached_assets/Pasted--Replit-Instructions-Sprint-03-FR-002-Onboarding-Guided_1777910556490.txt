@@ -1,0 +1,599 @@
+# Replit Instructions — Sprint 03: FR-002 Onboarding & Guided First Scene
+
+> Paste this entire document into Replit's AI agent.
+> Apply all tasks in order. Report back after each one.
+> **Before starting:** confirm Sprint 02 fixes (LR-006, UXF-005, UXF-006, UXF-007) are
+> already applied. These instructions assume the LR-006 director-block filter is in place.
+
+## Project context
+
+Legendary RPG — AI-powered online RPG. GM is GPT-4o streaming via SSE.
+Tech stack: React 18 + TypeScript + Vite (frontend), Node.js + Express (backend),
+PostgreSQL + Drizzle ORM.
+Key files: `server/gmOrchestrator.ts` (GM logic), `client/src/pages/` (game UI),
+`shared/` (shared TS types).
+
+---
+
+## What we're building (FR-002)
+
+Three ambient onboarding moments for first-time players. No tutorial modals.
+
+1. **WorldThreshold** — full-screen cinematic overlay on first session load
+2. **Guided first-scene prompt** — GM system prompt change for `session_turn === 0`
+3. **Progressive hints** — CharacterHintPill appears at player turn 3, clears by turn 5
+
+---
+
+## Task 1 — Add world_name and world_description to campaigns
+
+**Background:** The WorldThreshold screen needs to display the campaign's world name and
+a one-line description. These fields may not exist yet on the campaign model.
+
+**Step 1 — Check the schema.**
+Open `shared/schema.ts` (or wherever Drizzle table definitions live). Find the `campaigns`
+table definition. Check whether `world_name` and `world_description` columns exist.
+
+If they DO exist: skip Step 2 and Step 3. Proceed to verify their types are `text`.
+
+**Step 2 — Add columns if missing.**
+Add these two optional columns to the `campaigns` table:
+
+```typescript
+world_name: text("world_name"),
+world_description: text("world_description"),
+```
+
+**Step 3 — Run migration.**
+If using Drizzle Kit, run:
+```
+npx drizzle-kit push
+```
+Or use `npx drizzle-kit generate` then `npx drizzle-kit migrate` per the project's setup.
+If the project runs migrations automatically on startup, just restart the server.
+
+**Step 4 — Add fields to campaign creation form.**
+Open `client/src/pages/create-campaign.tsx`.
+Find the form's field list. Add two optional fields after the existing campaign name/description:
+
+```tsx
+{/* FR-002: World context for threshold screen */}
+<div className="space-y-1">
+  <label className="text-xs uppercase tracking-widest text-muted-foreground">
+    World Name <span className="text-xs normal-case font-normal">(optional)</span>
+  </label>
+  <input
+    className="w-full bg-surface-3 border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-disabled focus:border-accent focus:outline-none"
+    placeholder="e.g. The Sunken City · A Crumbling Space Station"
+    value={worldName}
+    onChange={e => setWorldName(e.target.value)}
+    maxLength={80}
+  />
+</div>
+
+<div className="space-y-1">
+  <label className="text-xs uppercase tracking-widest text-muted-foreground">
+    World Description <span className="text-xs normal-case font-normal">(optional — one sentence)</span>
+  </label>
+  <input
+    className="w-full bg-surface-3 border border-border rounded-md px-3 py-2 text-sm text-primary placeholder:text-disabled focus:border-accent focus:outline-none"
+    placeholder="e.g. Below the waves, the old empire's towers still stand."
+    value={worldDescription}
+    onChange={e => setWorldDescription(e.target.value)}
+    maxLength={160}
+  />
+</div>
+```
+
+Add `const [worldName, setWorldName] = useState("")` and
+`const [worldDescription, setWorldDescription] = useState("")` to the component's state.
+
+Include `world_name: worldName, world_description: worldDescription` in the mutation/API
+call that creates the campaign (wherever the other campaign fields are submitted).
+
+**Verify:** Create a new campaign with a world name filled in. Confirm `world_name` is
+saved to the database.
+
+---
+
+## Task 2 — Create WorldThreshold component
+
+**File to create:** `client/src/components/WorldThreshold.tsx`
+
+This component renders a full-screen cinematic overlay. It fires once per campaign's
+first session. It auto-dismisses when `gmStarted` becomes true (first GM chunk arrived).
+It can also be manually dismissed via a button that appears after 3.5 seconds.
+
+```tsx
+// FR-002: WorldThreshold — cinematic first-session overlay
+// Renders once per campaign on session_turn === 0.
+// Auto-dismisses when GM starts streaming. Manual button appears after 3.5s.
+
+import { useEffect, useState } from "react";
+
+interface WorldThresholdProps {
+  worldName: string;
+  worldDescription: string;
+  gmStarted: boolean;     // true when first GM SSE chunk has arrived
+  onDismiss: () => void;  // called when overlay should disappear
+}
+
+export function WorldThreshold({
+  worldName,
+  worldDescription,
+  gmStarted,
+  onDismiss,
+}: WorldThresholdProps) {
+  const [phase, setPhase] = useState<"loading" | "reveal" | "hint">("loading");
+  const [showButton, setShowButton] = useState(false);
+  const [exiting, setExiting] = useState(false);
+
+  // Animate through phases
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase("reveal"), 1500);
+    const t2 = setTimeout(() => setPhase("hint"), 3000);
+    const t3 = setTimeout(() => setShowButton(true), 3500);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  // Auto-dismiss when GM starts streaming
+  useEffect(() => {
+    if (gmStarted && !exiting) triggerExit();
+  }, [gmStarted]);
+
+  function triggerExit() {
+    setExiting(true);
+    setTimeout(onDismiss, 700);
+  }
+
+  const displayName = worldName?.trim() || "An Unknown World";
+  const displayDesc = worldDescription?.trim() || "";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6"
+      style={{
+        backgroundColor: "rgba(13,13,18,0.92)",
+        backdropFilter: "blur(2px)",
+        transition: "opacity 0.7s ease, filter 0.7s ease",
+        opacity: exiting ? 0 : 1,
+        filter: exiting ? "blur(6px)" : "blur(0px)",
+      }}
+    >
+      {/* Phase 1: loading pulse */}
+      <div
+        style={{
+          transition: "opacity 0.6s ease",
+          opacity: phase === "loading" ? 1 : 0,
+          position: "absolute",
+        }}
+        className="flex items-center gap-3"
+      >
+        <span
+          className="w-2 h-2 rounded-full"
+          style={{ backgroundColor: "#c8921a", animation: "pulse-amber 1.2s ease-in-out infinite" }}
+        />
+        <span
+          className="text-xs uppercase"
+          style={{ color: "#8a7a5a", letterSpacing: "0.14em" }}
+        >
+          Your world is being woven…
+        </span>
+      </div>
+
+      {/* Phase 2+: world name, description, hint */}
+      <div
+        style={{
+          transition: "opacity 0.8s ease, transform 0.8s ease",
+          opacity: phase === "reveal" || phase === "hint" ? 1 : 0,
+          transform: phase === "reveal" || phase === "hint" ? "translateY(0)" : "translateY(14px)",
+          textAlign: "center",
+          maxWidth: "520px",
+        }}
+      >
+        <h1
+          style={{
+            fontFamily: "'Cinzel', 'Cormorant Garamond', serif",
+            fontSize: "clamp(1.6rem, 5vw, 2.5rem)",
+            fontWeight: 700,
+            color: "#f0e8d0",
+            letterSpacing: "0.06em",
+            lineHeight: 1.15,
+            marginBottom: "0.75rem",
+          }}
+        >
+          {displayName}
+        </h1>
+
+        {displayDesc && (
+          <p
+            style={{
+              fontFamily: "'Crimson Text', 'Playfair Display', serif",
+              fontSize: "1.125rem",
+              color: "#c4b898",
+              lineHeight: 1.5,
+              marginBottom: "1.25rem",
+            }}
+          >
+            {displayDesc}
+          </p>
+        )}
+
+        {/* Amber divider */}
+        <div
+          style={{
+            width: "80px",
+            height: "1px",
+            backgroundColor: "rgba(200,146,26,0.4)",
+            margin: "0 auto 1.75rem",
+          }}
+        />
+
+        {/* Interface hint — fades in at phase "hint" */}
+        <p
+          style={{
+            transition: "opacity 0.8s ease",
+            opacity: phase === "hint" ? 1 : 0,
+            fontFamily: "'Inter', sans-serif",
+            fontSize: "0.875rem",
+            color: "#8a7a5a",
+            letterSpacing: "0.09em",
+          }}
+        >
+          Type anything to shape your legend.
+        </p>
+      </div>
+
+      {/* Manual dismiss button — appears at 3.5s */}
+      {showButton && (
+        <button
+          onClick={triggerExit}
+          style={{
+            marginTop: "2.5rem",
+            padding: "0.65rem 2rem",
+            backgroundColor: "#c8921a",
+            color: "#0d0d12",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            letterSpacing: "0.08em",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            animation: "fade-up-in 0.5s ease forwards",
+          }}
+        >
+          Enter the World
+        </button>
+      )}
+
+      <style>{`
+        @keyframes pulse-amber {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: 0.4; transform: scale(0.7); }
+        }
+        @keyframes fade-up-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
+```
+
+**Verify:** File created and compiles without TypeScript errors.
+
+---
+
+## Task 3 — Create CharacterHintPill component
+
+**File to create:** `client/src/components/CharacterHintPill.tsx`
+
+Small ambient pill in the bottom-left of the game view. Appears at player turn 3,
+links to the character sheet, auto-clears by turn 5.
+
+```tsx
+// FR-002: CharacterHintPill — ambient character sheet nudge at player turn 3
+
+interface CharacterHintPillProps {
+  onDismiss: () => void;
+  onOpen: () => void;  // opens the character sheet / sidebar
+}
+
+export function CharacterHintPill({ onDismiss, onOpen }: CharacterHintPillProps) {
+  return (
+    <div
+      role="button"
+      aria-label="Open character sheet"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={e => e.key === "Enter" && onOpen()}
+      style={{
+        position: "fixed",
+        bottom: "24px",
+        left: "24px",
+        zIndex: 40,
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "8px 14px",
+        backgroundColor: "#1a1b26",
+        border: "1px solid rgba(200,146,26,0.3)",
+        borderRadius: "8px",
+        cursor: "pointer",
+        animation: "slide-up 0.4s ease forwards",
+      }}
+    >
+      <span style={{ color: "#c8921a", fontSize: "14px" }}>⚔</span>
+      <span
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: "0.8125rem",
+          color: "#8a7a5a",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Your stats and inventory are here
+      </span>
+      <span style={{ color: "#c8921a", fontSize: "12px" }}>→</span>
+
+      <button
+        aria-label="Dismiss hint"
+        onClick={e => { e.stopPropagation(); onDismiss(); }}
+        style={{
+          marginLeft: "4px",
+          background: "none",
+          border: "none",
+          color: "#4a4535",
+          fontSize: "16px",
+          cursor: "pointer",
+          lineHeight: 1,
+          padding: "0 2px",
+        }}
+      >
+        ×
+      </button>
+
+      <style>{`
+        @keyframes slide-up {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
+```
+
+**Verify:** File created and compiles without TypeScript errors.
+
+---
+
+## Task 4 — Integrate both components into the game session page
+
+**File:** Find the game session page — most likely one of:
+- `client/src/pages/game.tsx`
+- `client/src/pages/session.tsx`
+- `client/src/pages/play.tsx`
+
+It renders the GM chat stream and the player input box. That is the file to modify.
+
+**Step 1 — Add imports at the top of the file:**
+
+```typescript
+import { WorldThreshold } from "@/components/WorldThreshold";
+import { CharacterHintPill } from "@/components/CharacterHintPill";
+```
+
+**Step 2 — Add state variables inside the component:**
+
+```typescript
+// FR-002: Onboarding state
+const [showThreshold, setShowThreshold] = useState(false);
+const [gmHasStarted, setGmHasStarted] = useState(false);
+const [playerTurnCount, setPlayerTurnCount] = useState(0);
+const [showCharHint, setShowCharHint] = useState(false);
+const [charHintDismissed, setCharHintDismissed] = useState(false);
+
+// isFirstSession: true when no messages have been exchanged in this campaign yet.
+// Adjust to match how session/campaign data is accessed in this file.
+const isFirstSession = (messages ?? []).filter(m => m.role === "assistant").length === 0;
+```
+
+**Step 3 — Show threshold on mount if first session:**
+
+```typescript
+useEffect(() => {
+  if (isFirstSession) {
+    setShowThreshold(true);
+  }
+}, []); // runs once on mount
+```
+
+**Step 4 — Detect first GM chunk.**
+Find the streaming SSE handler (the code that processes incoming GM tokens/chunks and
+appends them to state). At the point where the first non-empty chunk arrives, add:
+
+```typescript
+if (!gmHasStarted) {
+  setGmHasStarted(true);
+}
+```
+
+Place this so it fires on the first chunk only — the `!gmHasStarted` guard ensures it
+only triggers once per session load.
+
+**Step 5 — Track player turns.**
+Find the form submit handler that sends the player's message. After the message is sent
+(after the mutation fires or the POST request is made), add:
+
+```typescript
+setPlayerTurnCount(prev => prev + 1);
+```
+
+**Step 6 — Show/hide CharacterHintPill by turn:**
+
+```typescript
+useEffect(() => {
+  if (playerTurnCount === 3 && !charHintDismissed) {
+    setShowCharHint(true);
+  }
+  if (playerTurnCount >= 5) {
+    setShowCharHint(false);
+  }
+}, [playerTurnCount, charHintDismissed]);
+```
+
+**Step 7 — Render both components.**
+In the JSX return, add both components. The WorldThreshold should be first (highest z-index),
+outside of any scroll container, at the root level of the page:
+
+```tsx
+<>
+  {/* FR-002: Cinematic first-session overlay */}
+  {showThreshold && (
+    <WorldThreshold
+      worldName={campaign?.world_name ?? ""}
+      worldDescription={campaign?.world_description ?? ""}
+      gmStarted={gmHasStarted}
+      onDismiss={() => setShowThreshold(false)}
+    />
+  )}
+
+  {/* FR-002: Character sheet nudge at turn 3 */}
+  {showCharHint && (
+    <CharacterHintPill
+      onDismiss={() => {
+        setShowCharHint(false);
+        setCharHintDismissed(true);
+      }}
+      onOpen={() => {
+        // Replace with however the character sheet panel is opened in this codebase.
+        // Common patterns: setCharSheetOpen(true), setActivePanel("character"), etc.
+        setCharSheetOpen(true);
+      }}
+    />
+  )}
+
+  {/* ... rest of existing game UI unchanged ... */}
+</>
+```
+
+Adjust `campaign?.world_name` to match the actual shape of the campaign object in this
+component. If the campaign comes from a React Query hook, use `campaignData?.world_name`.
+
+**Verify:**
+- Open a fresh new campaign in a private window.
+- The WorldThreshold overlay appears immediately.
+- Once the GM starts responding, the overlay fades out with a blur transition.
+- "Enter the World" button appears at ~3.5 seconds and dismisses the overlay on click.
+- Send 3 short messages. CharacterHintPill appears in the bottom-left.
+- Click the × on the pill. It dismisses and does not reappear.
+- Revisiting an EXISTING campaign (with prior messages): threshold does NOT appear.
+
+---
+
+## Task 5 — Guided first-scene director in GM system prompt
+
+**File:** `server/gmOrchestrator.ts`
+**Function:** `buildSystemPrompt` (or the function that assembles the GM system prompt string)
+
+**Step 1 — Add the FIRST_SCENE_DIRECTOR constant.**
+Near the top of `gmOrchestrator.ts` (outside any function), add:
+
+```typescript
+// FR-002: First-scene director — used only on session_turn === 0
+const FIRST_SCENE_DIRECTOR = `
+FIRST SCENE — THIS IS THE PLAYER'S VERY FIRST INTERACTION:
+Your opening message must do two things at once: drop the player into a scene already
+in motion, AND give them an obvious, irresistible first action.
+
+RULES FOR THIS OPENING MESSAGE ONLY:
+1. THREE SENTENCES MAXIMUM. Short. Dense. Sensory. No preamble, no travel montage,
+   no "you find yourself in...". Something is already happening.
+2. NAME exactly one NPC or threat. Give them one vivid, specific physical or
+   behavioural detail that makes them feel real and present.
+3. Your final sentence must present an urgent situation that demands response.
+   You may offer two concrete options ("You could X or Y") but always add
+   "— or something else entirely." This teaches the player they have full agency.
+4. End on its own blank line with exactly these four words: What do you do?
+5. No meta-language ("type your action", "choose an option"). Fully diegetic.
+
+EXAMPLES:
+
+(Sci-fi): "The airlock alarm is screaming. Through the porthole, Engineer Voss floats
+face-down two hundred metres out — suit torn at the shoulder, no movement. The emergency
+release is three metres to your left; the comms panel to your right — or something else entirely.
+
+What do you do?"
+
+(Horror): "The door at the end of the corridor is open. It was locked when you checked it
+twenty minutes ago. A child's music box sits in the middle of the floor, lid up, playing
+— you could close the door and back away, or walk toward it — or something else entirely.
+
+What do you do?"
+
+(Maritime): "The first mate drops the logbook on the chart table and won't meet your eyes.
+The last entry is three days ago — the same day three crew went missing. You could demand
+she explain, or check the missing crew's quarters yourself — or something else entirely.
+
+What do you do?"
+
+THIS INSTRUCTION APPLIES TO THIS OPENING MESSAGE ONLY.
+After the player responds, resume your normal GM voice and style.
+`;
+```
+
+**Step 2 — Gate it on first session.**
+Inside `buildSystemPrompt`, find where the session-start director is currently injected
+(the block about "Campaign start. Drop the player straight into the middle…").
+
+Wrap the existing director and the new one in a conditional based on whether any messages
+exist. The exact variable name will depend on the function signature — look for a `messages`
+or `history` array parameter:
+
+```typescript
+// FR-002: Use guided first-scene director on turn 0, normal director thereafter
+const sessionDirector = (messages.length === 0)
+  ? FIRST_SCENE_DIRECTOR
+  : `Campaign start. Drop the player straight into the middle of something happening
+right now — no preamble, no scenic vista. Something is already in motion: a confrontation,
+a job going sideways, waking up somewhere unexpected, an NPC doing something weird.
+The player is reacting, not arriving.`;
+```
+
+Then use `sessionDirector` in the prompt template string where the old director text was.
+
+**Verify:**
+1. Start a brand new campaign.
+2. First GM message must be 3–4 sentences maximum.
+3. First GM message must end with a blank line followed by "What do you do?" (exactly).
+4. There is a named NPC or visible threat in the message.
+5. The `*Campaign start...*` prefix does NOT appear (LR-006 fix still working).
+6. Start a second session in an existing campaign. Confirm the guided director does NOT
+   fire — the GM opens normally without the "What do you do?" format.
+
+---
+
+## After all tasks
+
+Restart the server to pick up `gmOrchestrator.ts` changes, then run this checklist:
+
+| # | Check | Pass / Fail / Notes |
+|---|---|---|
+| 1 | `world_name` field appears on campaign creation form | |
+| 2 | `world_name` saved to DB after campaign creation | |
+| 3 | `WorldThreshold.tsx` compiles cleanly | |
+| 4 | `CharacterHintPill.tsx` compiles cleanly | |
+| 5 | Threshold overlay appears on NEW campaign first load | |
+| 6 | Threshold auto-dismisses when GM starts streaming | |
+| 7 | "Enter the World" button appears after ~3.5s and works | |
+| 8 | Threshold does NOT appear when re-entering an existing campaign | |
+| 9 | CharacterHintPill appears after player sends 3 messages | |
+| 10 | CharacterHintPill × button dismisses it permanently | |
+| 11 | First GM message ≤ 4 sentences, ends "What do you do?" | |
+| 12 | First GM message contains a named NPC or threat | |
+| 13 | Existing campaign second session: no guided director, no threshold | |
+
+Report each row. For any FAIL, include the error message and filename.

@@ -20,6 +20,8 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { WorldThreshold } from "@/components/WorldThreshold";
+import { CharacterHintPill } from "@/components/CharacterHintPill";
 
 function AuthImg({ src, alt, className, onClick, "data-testid": testId }: { src: string; alt: string; className?: string; onClick?: (e: React.MouseEvent) => void; "data-testid"?: string }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -484,6 +486,14 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
 
+  // FR-002: Onboarding state
+  const [showThreshold, setShowThreshold] = useState(false);
+  const [thresholdInitialized, setThresholdInitialized] = useState(false);
+  const [gmHasStarted, setGmHasStarted] = useState(false);
+  const [playerTurnCount, setPlayerTurnCount] = useState(0);
+  const [showCharHint, setShowCharHint] = useState(false);
+  const [charHintDismissed, setCharHintDismissed] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -544,7 +554,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
       .then(data => {
         if (Array.isArray(data)) {
           setMessages(data);
-          if (data.length > 0) setIsFirstTurn(false);
+          // FR-002: first-turn = no prior GM message has been delivered (player-only
+          // messages should not block the onboarding flow if the GM never replied)
+          if (data.some((m: ChatMsg) => m.role === "gm")) setIsFirstTurn(false);
           const lastGm = [...data].reverse().find((m: ChatMsg) => m.role === "gm");
           const savedQa = lastGm?.metadata?.quickActions;
           if (Array.isArray(savedQa) && savedQa.length > 0) setQuickActions(savedQa);
@@ -741,8 +753,23 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
     }
   }, [messagesLoaded, isFirstTurn, partyData]);
 
+  // FR-002: Show WorldThreshold once on first session load (when no GM messages exist yet)
+  useEffect(() => {
+    if (!messagesLoaded || thresholdInitialized) return;
+    if (isFirstTurn) setShowThreshold(true);
+    setThresholdInitialized(true);
+  }, [messagesLoaded, isFirstTurn, thresholdInitialized]);
+
+  // FR-002: Show character hint pill at player turn 3, hide by turn 5
+  useEffect(() => {
+    if (playerTurnCount === 3 && !charHintDismissed) setShowCharHint(true);
+    if (playerTurnCount >= 5) setShowCharHint(false);
+  }, [playerTurnCount, charHintDismissed]);
+
   const startAdventure = useCallback(async () => {
-    await sendAction("*Campaign start. Drop the player straight into the middle of something happening right now — no preamble, no scenic vista. Something is already in motion: a confrontation, a job going sideways, waking up somewhere unexpected, an NPC doing something weird. The player is reacting, not arriving.*", "Game Master");
+    // FR-002: minimal trigger — the FIRST_SCENE_DIRECTOR in the system prompt
+    // (gated server-side on no-prior-GM-message) carries all opening instructions now.
+    await sendAction("*Begin the adventure.*", "Game Master");
   }, [partyId]);
 
   function toggleVoice() {
@@ -823,6 +850,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
     lastSentRef.current = { content, playerName, mode };
 
+    // FR-002: count only real player-driven turns (system startAdventure passes a playerName)
+    if (!playerName) setPlayerTurnCount(prev => prev + 1);
+
     // OOC: simple POST, no streaming, no GM response
     if (mode === "ooc") {
       try {
@@ -886,11 +916,16 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
             } else if (evt.type === "chunk") {
               accumulated += evt.content;
               setStreamingContent(accumulated);
+              // FR-002: signal threshold to dismiss on first non-empty GM chunk
+              if (!gmHasStarted && evt.content) setGmHasStarted(true);
             } else if (evt.type === "done") {
               clearStreamTimeout();
               lastSentRef.current = null;
               setStreamingContent("");
               setIsStreaming(false);
+              // FR-002: belt-and-braces — also clear first-turn here in case the
+              // websocket MESSAGE event is delayed or missed
+              if (evt.message?.role === "gm") setIsFirstTurn(false);
               queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}`] });
               queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/situations`] });
               queryClient.invalidateQueries({ queryKey: [`/api/parties/${partyId}/npcs`] });
@@ -1247,6 +1282,31 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
+      {/* FR-002: Cinematic first-session overlay */}
+      {showThreshold && (
+        <WorldThreshold
+          worldName={(campaign as any)?.worldName ?? ""}
+          worldDescription={(campaign as any)?.worldDescription ?? ""}
+          gmStarted={gmHasStarted}
+          onDismiss={() => setShowThreshold(false)}
+        />
+      )}
+
+      {/* FR-002: Character sheet nudge at player turn 3 */}
+      {showCharHint && (
+        <CharacterHintPill
+          onDismiss={() => {
+            setShowCharHint(false);
+            setCharHintDismissed(true);
+          }}
+          onOpen={() => {
+            setSidebarTab("sheet");
+            setShowCharHint(false);
+            setCharHintDismissed(true);
+          }}
+        />
+      )}
+
       {/* Header */}
       <header className="flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-sm z-40">
         <div className="flex items-center gap-3 px-4 h-12">

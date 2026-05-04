@@ -810,6 +810,47 @@ export interface GMContext {
   actingCharacterId?: string;
 }
 
+// FR-002: First-scene director — appended to system prompt only on session_turn === 0
+const FIRST_SCENE_DIRECTOR = `
+FIRST SCENE — THIS IS THE PLAYER'S VERY FIRST INTERACTION:
+Your opening message must do two things at once: drop the player into a scene already
+in motion, AND give them an obvious, irresistible first action.
+
+RULES FOR THIS OPENING MESSAGE ONLY:
+1. THREE SENTENCES MAXIMUM. Short. Dense. Sensory. No preamble, no travel montage,
+   no "you find yourself in...". Something is already happening.
+2. NAME exactly one NPC or threat. Give them one vivid, specific physical or
+   behavioural detail that makes them feel real and present.
+3. Your final sentence must present an urgent situation that demands response.
+   You may offer two concrete options ("You could X or Y") but always add
+   "— or something else entirely." This teaches the player they have full agency.
+4. End on its own blank line with exactly these four words: What do you do?
+5. No meta-language ("type your action", "choose an option"). Fully diegetic.
+
+EXAMPLES:
+
+(Sci-fi): "The airlock alarm is screaming. Through the porthole, Engineer Voss floats
+face-down two hundred metres out — suit torn at the shoulder, no movement. The emergency
+release is three metres to your left; the comms panel to your right — or something else entirely.
+
+What do you do?"
+
+(Horror): "The door at the end of the corridor is open. It was locked when you checked it
+twenty minutes ago. A child's music box sits in the middle of the floor, lid up, playing
+— you could close the door and back away, or walk toward it — or something else entirely.
+
+What do you do?"
+
+(Maritime): "The first mate drops the logbook on the chart table and won't meet your eyes.
+The last entry is three days ago — the same day three crew went missing. You could demand
+she explain, or check the missing crew's quarters yourself — or something else entirely.
+
+What do you do?"
+
+THIS INSTRUCTION APPLIES TO THIS OPENING MESSAGE ONLY.
+After the player responds, resume your normal GM voice and style.
+`;
+
 function buildSystemPrompt(campaign: any, party: any, chars: any[], worldSnap: any, summaries: any[], arcData: any[], situations: any[], npcs: any[], actingCharacterId?: string, companions?: any[]): string {
   const charSheets = chars.map(c => `
 Character: ${c.name} (${c.race} ${c.class}, Level ${c.level})
@@ -1541,7 +1582,14 @@ export async function runGM(
   } as const));
 
   const companions = npcs.filter((n: any) => n.isPartyMember);
-  const systemPrompt = buildSystemPrompt(campaign, party, chars, worldSnap, summaries, arcData, situations, npcs, ctx.actingCharacterId, companions);
+  let systemPrompt = buildSystemPrompt(campaign, party, chars, worldSnap, summaries, arcData, situations, npcs, ctx.actingCharacterId, companions);
+
+  // FR-002: Use guided first-scene director when no prior GM message exists.
+  // The just-saved player message is already in recentMsgs, so we gate on the
+  // presence of any prior GM message instead of total message count.
+  if (!recentMsgs.some(m => m.role === "gm")) {
+    systemPrompt += `\n\n${FIRST_SCENE_DIRECTOR}`;
+  }
 
   // Add current player intent
   const userMessage = `${ctx.userName}: ${ctx.playerIntent}`;

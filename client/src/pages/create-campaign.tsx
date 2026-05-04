@@ -41,6 +41,8 @@ export default function CreateCampaignPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [setting, setSetting] = useState("");
+  const [worldName, setWorldName] = useState("");
+  const [worldDescription, setWorldDescription] = useState("");
   const [gmMode, setGmMode] = useState("balanced");
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [contentRating, setContentRating] = useState("pg13");
@@ -81,7 +83,7 @@ export default function CreateCampaignPage() {
       const res = await fetch("/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description, setting, themes: selectedThemes, gmMode, contentRating, noRomance, noHorror, fadeToBlack }),
+        body: JSON.stringify({ name: name.trim(), description, setting, worldName: worldName.trim() || null, worldDescription: worldDescription.trim() || null, themes: selectedThemes, gmMode, contentRating, noRomance, noHorror, fadeToBlack }),
       });
       if (!res.ok) throw new Error(await res.text());
       const { campaign, party } = await res.json();
@@ -158,6 +160,32 @@ export default function CreateCampaignPage() {
               onChange={e => setSetting(e.target.value)}
               maxLength={200}
               data-testid="input-setting"
+            />
+          </div>
+
+          {/* World Name (FR-002) */}
+          <div className="space-y-2">
+            <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">World Name <span className="normal-case text-muted-foreground/50">(optional)</span></label>
+            <input
+              className="w-full bg-input border border-border rounded-md px-4 py-3 text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+              placeholder="e.g. The Sunken City · A Crumbling Space Station"
+              value={worldName}
+              onChange={e => setWorldName(e.target.value)}
+              maxLength={80}
+              data-testid="input-world-name"
+            />
+          </div>
+
+          {/* World Description (FR-002) */}
+          <div className="space-y-2">
+            <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">World Description <span className="normal-case text-muted-foreground/50">(optional — one sentence)</span></label>
+            <input
+              className="w-full bg-input border border-border rounded-md px-4 py-3 text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+              placeholder="e.g. Below the waves, the old empire's towers still stand."
+              value={worldDescription}
+              onChange={e => setWorldDescription(e.target.value)}
+              maxLength={160}
+              data-testid="input-world-description"
             />
           </div>
 

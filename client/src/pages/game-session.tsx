@@ -2341,6 +2341,35 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                           </div>
                                         );
                                       })()}
+                                      {/* LR-012: Drop button. Hidden for the Coin Pouch and equipped gear. */}
+                                      {!isEquipped && !/^coin\s*pouch/i.test(item.name || "") && (
+                                        <button
+                                          data-testid={`btn-drop-${originalIndex}`}
+                                          onClick={async () => {
+                                            if (!confirm(`Drop ${item.name}?`)) return;
+                                            try {
+                                              const resp = await fetch(`/api/characters/${char.id}/drop-item`, {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ itemIndex: originalIndex }),
+                                              });
+                                              if (!resp.ok) {
+                                                const err = await resp.json().catch(() => ({}));
+                                                toast({ title: "Couldn't drop item", description: err.error || "Try again.", variant: "destructive" });
+                                                return;
+                                              }
+                                              queryClient.invalidateQueries({ queryKey: ["/api/parties", partyId, "members"] });
+                                              queryClient.invalidateQueries({ queryKey: [`/api/characters/${char.id}`] });
+                                            } catch {
+                                              toast({ title: "Couldn't drop item", variant: "destructive" });
+                                            }
+                                          }}
+                                          className="text-[10px] font-sans font-medium px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                                          title="Drop item"
+                                        >
+                                          Drop
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                 </div>

@@ -19,7 +19,7 @@ import { runGM, generateLocationBackground, generateCampaignWorldImage, generate
 import { registerAdminRoutes } from "./adminRoutes";
 import { db } from "./db";
 import { characters, characters as charsTable, locationScenes, locationMaps, partyMembers, characterSituations, parties, campaigns, chatMessages, gameEvents, worldState, sceneSummaries, npcLog, arcs, campaignSoundtracks } from "@shared/schema";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, gt, gte, sql } from "drizzle-orm";
 
 // WebSocket connections per party
 const partyConnections = new Map<string, Set<WebSocket>>();
@@ -334,6 +334,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!char) return res.status(404).json({ error: "Not found" });
       if (char.userId !== userId) return res.status(403).json({ error: "Forbidden" });
 
+      // LR-015: server-side XP / unclaimed-level-up verification.
+      // Players may only spend stat points that were earned through XP.
+      // The XP grant path bumps `level` first, then sets unclaimedLevelUps,
+      // so by the time we get here the player's `level` already reflects the
+      // earned tier. We verify they actually meet the XP threshold for the
+      // level they currently hold (defense-in-depth alongside unclaimedLevelUps).
+      const XP_THRESHOLDS = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000];
+      const unclaimed = (char as any).unclaimedLevelUps ?? 0;
+      const currentLevelThreshold = XP_THRESHOLDS[Math.max(0, char.level - 1)] ?? 0;
+      if (unclaimed <= 0 || char.xp < currentLevelThreshold) {
+        return res.status(403).json({ error: "No level-up available to claim." });
+      }
+
       const { statAllocations, selectedSkills } = req.body;
       if (!statAllocations || typeof statAllocations !== "object") {
         return res.status(400).json({ error: "statAllocations required" });
@@ -366,7 +379,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       const newSkills = [...existingSkills, ...validatedSkills];
 
-      const updated = await updateCharacter(req.params.id, { stats, skills: newSkills } as any);
+      // LR-015 race-safety: atomic conditional UPDATE — only succeeds if the
+      // claim is still available. Two concurrent /level-up requests cannot
+      // both decrement the same slot.
+      const claimResult = await db
+        .update(characters)
+        .set({ stats, skills: newSkills, unclaimedLevelUps: sql`${characters.unclaimedLevelUps} - 1` })
+        .where(and(eq(characters.id, req.params.id), gt(characters.unclaimedLevelUps, 0)))
+        .returning();
+      if (claimResult.length === 0) {
+        return res.status(409).json({ error: "Level-up claim no longer available." });
+      }
+      const updated = claimResult[0];
 
       if (validatedSkills.length > 0) {
         const partyMember = await db.select().from(partyMembers)
@@ -459,6 +483,49 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json(updated);
     } catch (e) {
       res.status(500).json({ error: "Failed to equip item" });
+    }
+  });
+
+  // LR-012: Drop an item from a character's inventory. Properly decrements qty
+  // (or splices the stack at qty 1) and re-sorts. The Coin Pouch cannot be
+  // dropped — gold is removed via shop or GM GOLD_CHANGED only.
+  app.post("/api/characters/:id/drop-item", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const char = await getCharacter(req.params.id);
+      if (!char) return res.status(404).json({ error: "Not found" });
+      if (char.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+
+      const { itemIndex, qty } = req.body;
+      if (typeof itemIndex !== "number") {
+        return res.status(400).json({ error: "itemIndex (number) required" });
+      }
+
+      const inv = [...(char.inventory as any[])];
+      if (itemIndex < 0 || itemIndex >= inv.length) {
+        return res.status(400).json({ error: "Invalid item index" });
+      }
+      const item = inv[itemIndex];
+      if (isCoinItem(item)) {
+        return res.status(400).json({ error: "The Coin Pouch cannot be dropped." });
+      }
+      if (item.equipped) {
+        return res.status(400).json({ error: "Unequip the item before dropping it." });
+      }
+
+      const removeQty = Math.max(1, typeof qty === "number" ? qty : 1);
+      const currentQty = item.qty ?? 1;
+      if (currentQty <= removeQty) {
+        inv.splice(itemIndex, 1);
+      } else {
+        inv[itemIndex] = { ...item, qty: currentQty - removeQty };
+      }
+      const sorted = sortInventory(inv);
+      const updated = await updateCharacter(req.params.id, { inventory: sorted } as any);
+      res.json(updated);
+    } catch (e) {
+      console.error("Drop item error:", e);
+      res.status(500).json({ error: "Failed to drop item" });
     }
   });
 
@@ -1044,8 +1111,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (gold < price) return res.status(400).json({ error: "Not enough gold" });
       const newGold = gold - price;
       if (pouchIdx >= 0) {
-        if (newGold === 0) inv.splice(pouchIdx, 1);
-        else inv[pouchIdx] = { ...inv[pouchIdx], name: `Coin Pouch (${newGold}gp)`, properties: { ...inv[pouchIdx].properties, value: newGold } };
+        // LR-013: keep the Coin Pouch in inventory even at 0gp so the player
+        // can see they're broke instead of the pouch silently disappearing.
+        inv[pouchIdx] = { ...inv[pouchIdx], name: `Coin Pouch (${newGold}gp)`, properties: { ...inv[pouchIdx].properties, value: newGold } };
       }
       const newItem: any = { qty: item.qty ?? 1, name: item.name, type: item.type ?? "misc", rarity: item.rarity ?? "common", equipped: false, properties: item.properties ?? {}, price };
       if (item.description) newItem.description = item.description;
@@ -1205,7 +1273,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userId = getUserId(req)!;
       const partyId = req.params.id;
-      const { content, playerName, mode = "action" } = req.body;
+      const { content, playerName } = req.body;
+      // LR-014 hardening: normalize mode to a strict enum so a malformed mode
+      // can't bypass downstream gating (e.g. the Downed check).
+      const rawMode = req.body?.mode;
+      const mode: "action" | "dialogue" | "ooc" =
+        rawMode === "dialogue" || rawMode === "ooc" ? rawMode : "action";
       if (!content) return res.status(400).json({ error: "content required" });
 
       // Get party to find campaign
@@ -1244,6 +1317,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         .from(partyMembers)
         .where(and(eq(partyMembers.partyId, partyId), eq(partyMembers.userId, userId)));
       const actingCharacterId = actingMember?.characterId ?? undefined;
+
+      // LR-014: enforce a Downed state at 0 HP. Players can still talk OOC or
+      // narrate dialogue (last words, calls for help) but cannot take heroic
+      // actions until they're stabilised/healed back above 0 HP.
+      if (mode === "action" && actingCharacterId) {
+        const actingChar = await getCharacter(actingCharacterId);
+        if (actingChar && actingChar.currentHp <= 0) {
+          return res.status(409).json({
+            error: "You are Downed at 0 HP. You can speak (Say), but you cannot act until an ally stabilises or heals you.",
+            code: "DOWNED",
+          });
+        }
+      }
 
       let gmFullText = "";
 

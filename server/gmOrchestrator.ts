@@ -2038,8 +2038,11 @@ export function consolidateCoins(inv: any[]): any[] {
       result.push({ qty: 1, name: `Coin Pouch (${totalGold}gp)`, type: "treasure", properties: { value: totalGold } });
     }
   } else if (firstPouchIdx >= 0) {
+    // LR-013: keep the pouch visible at 0gp instead of removing it.
     const pIdx = result.indexOf(inv[firstPouchIdx]);
-    if (pIdx >= 0) result.splice(pIdx, 1);
+    if (pIdx >= 0) {
+      result[pIdx] = { qty: 1, name: `Coin Pouch (0gp)`, type: "treasure", properties: { value: 0 } };
+    }
   }
 
   return result;
@@ -2161,7 +2164,12 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
             const newCurrentMp = char.currentMp + mpGain;
             await db.update(characters).set({
               xp: newXp, level: newLevel,
-              ...(leveledUp ? { maxHp: newMaxHp, currentHp: newCurrentHp, maxMp: newMaxMp, currentMp: newCurrentMp } : {}),
+              ...(leveledUp ? {
+                maxHp: newMaxHp, currentHp: newCurrentHp, maxMp: newMaxMp, currentMp: newCurrentMp,
+                // LR-015: track unclaimed level-ups so the level-up endpoint
+                // can verify the player has actually earned the stat points.
+                unclaimedLevelUps: ((char as any).unclaimedLevelUps ?? 0) + levelsGained,
+              } : {}),
             }).where(eq(characters.id, char.id));
             await db.insert(gameEvents).values({
               partyId, campaignId, eventType: "XP_GRANTED", actorId: "gm",
@@ -2268,15 +2276,12 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
             if (pouchIdx >= 0) {
               const currentValue = typeof inv[pouchIdx].properties?.value === "number" ? inv[pouchIdx].properties.value : 0;
               const newValue = Math.max(0, currentValue + delta);
-              if (newValue === 0) {
-                inv.splice(pouchIdx, 1);
-              } else {
-                inv[pouchIdx] = {
-                  ...inv[pouchIdx],
-                  name: `Coin Pouch (${newValue}gp)`,
-                  properties: { ...inv[pouchIdx].properties, value: newValue },
-                };
-              }
+              // LR-013: keep the pouch visible at 0gp instead of removing it.
+              inv[pouchIdx] = {
+                ...inv[pouchIdx],
+                name: `Coin Pouch (${newValue}gp)`,
+                properties: { ...inv[pouchIdx].properties, value: newValue },
+              };
             } else if (delta > 0) {
               inv.push({ qty: 1, name: `Coin Pouch (${delta}gp)`, type: "treasure", properties: { value: delta } });
             }

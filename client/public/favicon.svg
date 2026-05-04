@@ -1,10 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#f59e0b"/>
-      <stop offset="100%" style="stop-color:#d97706"/>
+    <linearGradient id="ll-light" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="45%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#92400e" stop-opacity="0"/>
     </linearGradient>
+    <radialGradient id="ll-glow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+    </radialGradient>
   </defs>
   <rect width="64" height="64" rx="12" fill="#1a1a2e"/>
-  <text x="32" y="46" text-anchor="middle" font-family="serif" font-weight="bold" font-size="42" fill="url(#g)">L</text>
+  <circle cx="32" cy="30" r="26" fill="url(#ll-glow)"/>
+  <path d="M22 22 A 10 10 0 0 1 42 22 V 56 H 22 Z" fill="url(#ll-light)"/>
+  <path d="M14 58 V 22 A 18 18 0 0 1 50 22 V 58 H 42 V 22 A 10 10 0 0 0 22 22 V 58 Z" fill="#d97706"/>
+  <rect x="11" y="56" width="42" height="3" rx="1" fill="#d97706"/>
+  <circle cx="32" cy="48" r="1.6" fill="#fef3c7" opacity="0.95"/>
 </svg>

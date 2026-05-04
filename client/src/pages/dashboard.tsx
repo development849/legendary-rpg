@@ -10,7 +10,7 @@ import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Sc
 import FriendsPanel from "@/components/FriendsPanel";
 import { apiRequest } from "@/lib/queryClient";
 import type { Character } from "@shared/schema";
-import logoPath from "@assets/legendary-logo-transparent.png";
+import { LegendaryLogo } from "@/components/LegendaryLogo";
 
 function useHallBackground() {
   const { data, isLoading } = useQuery<{ imageData: string | null; pending: boolean }>({
@@ -134,7 +134,7 @@ export default function DashboardPage() {
       <header className="relative z-10 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src={logoPath} alt="Legendary" className="w-7 h-7 rounded-sm object-contain" />
+            <LegendaryLogo className="w-7 h-7" glow={false} />
             <span className="font-sans font-bold tracking-widest text-lg">LEGENDARY RPG<sup className="text-xs align-super ml-px">℠</sup></span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">

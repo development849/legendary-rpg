@@ -15,7 +15,7 @@ import CharacterSheetPage from "@/pages/character-sheet";
 import LobbyPage from "@/pages/lobby";
 import AppearanceEditorPage from "@/pages/appearance-editor";
 import AdminPage from "@/pages/admin";
-import logoPath from "@assets/legendary-logo-transparent.png";
+import { LegendaryLogo } from "@/components/LegendaryLogo";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   constructor(props: { children: ReactNode }) {
@@ -33,7 +33,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
       return (
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center space-y-4 max-w-md px-6">
-            <img src={logoPath} alt="Legendary" className="w-16 h-16 mx-auto opacity-70 object-contain" />
+            <LegendaryLogo className="w-16 h-16 mx-auto opacity-70" />
             <p className="text-lg font-sans text-foreground">Something went wrong</p>
             <p className="text-sm text-muted-foreground font-serif">An unexpected error occurred. Try refreshing the page.</p>
             <button
@@ -55,7 +55,7 @@ function LoadingScreen() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center space-y-4">
-        <img src={logoPath} alt="Legendary" className="w-20 h-20 mx-auto opacity-90 animate-pulse object-contain" />
+        <LegendaryLogo className="w-20 h-20 mx-auto opacity-90 animate-pulse" />
         <div className="text-3xl font-sans text-primary glow-gold tracking-widest">LEGENDARY RPG<sup className="text-lg align-super">℠</sup></div>
         <div className="text-muted-foreground text-sm font-serif italic animate-pulse">Summoning your adventure...</div>
       </div>

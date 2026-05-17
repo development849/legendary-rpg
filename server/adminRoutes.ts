@@ -193,4 +193,15 @@ export function registerAdminRoutes(app: Express) {
     const user = await getCurrentUser(req);
     res.json({ isAdmin: true, email: user?.email });
   });
+
+  app.get("/api/admin/feedback", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { sessionFeedback } = await import("@shared/schema");
+      const limit = Math.min(parseInt((req.query.limit as string) ?? "100", 10) || 100, 500);
+      const rows = await db.select().from(sessionFeedback).orderBy(desc(sessionFeedback.createdAt)).limit(limit);
+      res.json({ rows, total: rows.length });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 }

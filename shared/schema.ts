@@ -158,6 +158,25 @@ export const sceneSummaries = pgTable("scene_summaries", {
 
 export type SceneSummary = typeof sceneSummaries.$inferSelect;
 
+// ─── Session Feedback ─────────────────────────────────────────────────────────
+
+export const sessionFeedback = pgTable("session_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  partyId: varchar("party_id"),
+  campaignId: varchar("campaign_id"),
+  rating: integer("rating").notNull(), // 1-5
+  category: text("category").notNull().default("general"), // bug, balance, narrative, ux, general
+  comment: text("comment").notNull().default(""),
+  createdAt: timestamp("created_at").default(sql`NOW()`).notNull(),
+}, (t) => [
+  index("idx_session_feedback_created").on(t.createdAt),
+]);
+
+export const insertSessionFeedbackSchema = createInsertSchema(sessionFeedback).omit({ id: true, createdAt: true });
+export type InsertSessionFeedback = z.infer<typeof insertSessionFeedbackSchema>;
+export type SessionFeedback = typeof sessionFeedback.$inferSelect;
+
 // ─── Chat Messages ────────────────────────────────────────────────────────────
 
 export const chatMessages = pgTable("chat_messages", {

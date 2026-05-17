@@ -242,6 +242,14 @@ const FLAWS = [
   "Owes a dangerous debt", "Fears death above all", "Cannot trust anyone", "Lost faith",
 ];
 
+const FANTASY_NAMES = [
+  "Aldric", "Brynn", "Caelum", "Dara", "Elara", "Fenwick", "Gael", "Hestia",
+  "Idris", "Jora", "Kael", "Lyra", "Morrigan", "Nyx", "Oren", "Petra",
+  "Quill", "Rowan", "Sable", "Theron", "Umber", "Vesper", "Wren", "Xara",
+  "Yara", "Zephyr", "Ashara", "Bram", "Cirdan", "Dahlia", "Eirik", "Freya",
+  "Grimshaw", "Isolde", "Kaelen", "Liora", "Mazrek", "Niamh", "Ondra", "Ravenna",
+];
+
 type Step = "class" | "race" | "stats" | "details" | "confirm" | "portrait";
 
 export default function CreateCharacterPage() {
@@ -439,14 +447,7 @@ export default function CreateCharacterPage() {
     const rMotivation = MOTIVATIONS[Math.floor(Math.random() * MOTIVATIONS.length)];
     const rFlaw = FLAWS[Math.floor(Math.random() * FLAWS.length)];
 
-    const fantasyNames = [
-      "Aldric", "Brynn", "Caelum", "Dara", "Elara", "Fenwick", "Gael", "Hestia",
-      "Idris", "Jora", "Kael", "Lyra", "Morrigan", "Nyx", "Oren", "Petra",
-      "Quill", "Rowan", "Sable", "Theron", "Umber", "Vesper", "Wren", "Xara",
-      "Yara", "Zephyr", "Ashara", "Bram", "Cirdan", "Dahlia", "Eirik", "Freya",
-      "Grimshaw", "Isolde", "Kaelen", "Liora", "Mazrek", "Niamh", "Ondra", "Ravenna",
-    ];
-    const rName = fantasyNames[Math.floor(Math.random() * fantasyNames.length)];
+    const rName = FANTASY_NAMES[Math.floor(Math.random() * FANTASY_NAMES.length)];
 
     setSelectedClass(rCls.id);
     setSelectedRace(rRace.name);
@@ -687,14 +688,26 @@ export default function CreateCharacterPage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Hero Name *</label>
-                  <input
-                    className="w-full bg-input border border-border rounded-md px-4 py-3 text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-                    placeholder="Ser Aldric the Bold"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    maxLength={50}
-                    data-testid="input-character-name"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      className="flex-1 min-w-0 bg-input border border-border rounded-md px-4 py-3 text-foreground font-serif placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+                      placeholder="Ser Aldric the Bold"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      maxLength={50}
+                      data-testid="input-character-name"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setName(FANTASY_NAMES[Math.floor(Math.random() * FANTASY_NAMES.length)])}
+                      title="Roll a random hero name"
+                      aria-label="Roll a random hero name"
+                      data-testid="button-random-name"
+                      className="flex-shrink-0 w-12 h-12 rounded-md border border-border bg-card hover:border-primary/50 hover:bg-primary/10 hover:text-primary text-muted-foreground transition-colors flex items-center justify-center"
+                    >
+                      <Dices className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Gender</label>
@@ -1079,10 +1092,20 @@ export default function CreateCharacterPage() {
                     <Button variant="outline" onClick={() => setStep("confirm")} disabled={generatingPortrait} data-testid="button-back-confirm-from-portrait">
                       <ArrowLeft className="w-4 h-4 mr-2" /> Back
                     </Button>
-                    <Button onClick={handleGeneratePortrait} disabled={generatingPortrait} data-testid="button-generate-portrait">
+                    <Button onClick={handleGeneratePortrait} disabled={generatingPortrait || !name || !selectedClass || !selectedRace} data-testid="button-generate-portrait">
                       {generatingPortrait ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate Portrait</>}
                     </Button>
                   </div>
+                  {!generatingPortrait && (!name || !selectedClass || !selectedRace) && (
+                    <p className="text-xs text-muted-foreground/70 font-serif italic text-center px-4" data-testid="text-portrait-microcopy">
+                      Complete your character's name, class, and race before the court painter can begin.
+                    </p>
+                  )}
+                  {!generatingPortrait && name && selectedClass && selectedRace && (
+                    <p className="text-xs text-muted-foreground/60 font-serif italic text-center px-4" data-testid="text-portrait-microcopy">
+                      Tip — you can always regenerate or skip this and add a portrait later from your character card.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

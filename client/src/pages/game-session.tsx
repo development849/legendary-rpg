@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { WorldThreshold } from "@/components/WorldThreshold";
 import { CharacterHintPill } from "@/components/CharacterHintPill";
+import { SessionFeedback } from "@/components/session-feedback";
 
 function AuthImg({ src, alt, className, onClick, "data-testid": testId }: { src: string; alt: string; className?: string; onClick?: (e: React.MouseEvent) => void; "data-testid"?: string }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -492,6 +493,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
   const [gmHasStarted, setGmHasStarted] = useState(false);
   const [playerTurnCount, setPlayerTurnCount] = useState(0);
   const [showCharHint, setShowCharHint] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const [charHintDismissed, setCharHintDismissed] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1282,6 +1284,15 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
+      {/* Sprint 08: post-session feedback modal — shown before leaving the campaign */}
+      <SessionFeedback
+        open={showFeedback}
+        onClose={() => { setShowFeedback(false); navigate("/dashboard"); }}
+        onSubmitted={() => { setShowFeedback(false); navigate("/dashboard"); }}
+        partyId={party?.id ?? null}
+        campaignId={campaign?.id ?? null}
+      />
+
       {/* FR-002: Cinematic first-session overlay */}
       {showThreshold && (
         <WorldThreshold
@@ -1317,7 +1328,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => navigate("/dashboard")} className="text-destructive focus:text-destructive" data-testid="menu-leave-campaign">
+              <DropdownMenuItem onClick={() => setShowFeedback(true)} className="text-destructive focus:text-destructive" data-testid="menu-leave-campaign">
                 <LogOut className="w-4 h-4 mr-2" />
                 Leave Campaign
               </DropdownMenuItem>
@@ -1651,7 +1662,10 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
           )}
 
           {/* Input */}
-          <div className="flex-shrink-0 border-t border-border bg-card/90 backdrop-blur-sm p-3 relative z-10">
+          <div
+            className="flex-shrink-0 border-t border-border bg-card/90 backdrop-blur-sm p-3 relative z-10"
+            style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
+          >
             <div className="max-w-3xl mx-auto space-y-2">
               {/* Mode selector */}
               <div className="flex gap-1.5 items-center">
@@ -1860,6 +1874,14 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                   style={{ width: `${hpPct}%` }}
                                 />
                               </div>
+                              {char.currentHp <= 0 && (
+                                <div
+                                  className="mt-1 text-[10px] font-sans tracking-widest uppercase text-red-300 bg-red-950/60 border border-red-500/40 rounded px-2 py-1 text-center animate-pulse"
+                                  data-testid={`badge-downed-${char.id}`}
+                                >
+                                  ⚠ Downed — 0 HP
+                                </div>
+                              )}
                             </div>
                             {(char.maxMp ?? 0) > 0 && (
                               <div className="space-y-1">

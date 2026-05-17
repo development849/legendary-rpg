@@ -1473,6 +1473,31 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── Session Feedback ─────────────────────────────────────────────────────────
+
+  app.post("/api/feedback", requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const { sessionFeedback, insertSessionFeedbackSchema } = await import("@shared/schema");
+      const parsed = insertSessionFeedbackSchema.safeParse({ ...req.body, userId });
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid feedback", details: parsed.error.flatten() });
+      }
+      const rating = parsed.data.rating;
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "Rating must be 1–5" });
+      }
+      const comment = (parsed.data.comment ?? "").slice(0, 2000);
+      const [row] = await db.insert(sessionFeedback).values({
+        ...parsed.data,
+        comment,
+      }).returning();
+      res.json({ success: true, id: row.id });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ── WebSocket ────────────────────────────────────────────────────────────────
 
   const wss = new WebSocketServer({ server: httpServer, path: "/ws" });

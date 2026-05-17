@@ -761,6 +761,11 @@ Achievements: ${((c.achievements as any[]) || []).map((a: any) => `${a.title} [$
   // Build party status — where each character currently is
   const situationMap = new Map(situations.map(s => [s.characterId, s]));
   const actingChar = actingCharacterId ? chars.find(c => c.id === actingCharacterId) : null;
+  // LR-014: critical-priority directive when the acting character is at 0 HP.
+  const actingCharIsDowned = !!(actingChar && (actingChar.currentHp ?? 0) <= 0);
+  const downedDirective = actingCharIsDowned
+    ? `\n╔══════════════════════════════════════════════════════════╗\n║  CRITICAL PRIORITY — CHARACTER IS DOWNED (0 HP)         ║\n╚══════════════════════════════════════════════════════════╝\n${actingChar?.name} is at 0 HP and INCAPACITATED. They CANNOT take ordinary actions, attacks, spells, dialogue, or movement on their own. They are unconscious or bleeding out on the ground.\n- Do NOT narrate them performing any voluntary action.\n- If an ally heals or stabilises them (HP_CHANGED with positive delta bringing HP > 0), narrate the recovery and remove the Downed condition.\n- If no aid comes, narrate the world around them: allies acting, enemies approaching, the passage of time. Their fate hangs on what others do.\n- Their player can still SPEAK out-of-character but their character does nothing until stabilised.\n`
+    : "";
   const partyStatus = chars.map(c => {
     const sit = situationMap.get(c.id);
     const isActing = c.id === actingCharacterId;
@@ -815,6 +820,7 @@ ${companionBlock}
 KNOWN NPCS (named characters the party has encountered — use these for narrative continuity):
 ${npcRegister}
 
+${downedDirective}
 WORLD INTEGRITY — GENRE GUARDRAIL:
 You are the Game Master of a ${campaign.setting ?? 'unique world'}. This world has a consistent internal reality with its own physics, technology level, and rules for what is possible.
 
@@ -838,7 +844,7 @@ ${worldData}
 
 LOCATION CONSISTENCY — CRITICAL: The party is currently at the CURRENT LOCATION shown above. ALL NPCs, merchants, and shops you reference MUST exist at the current location. Do NOT bring in NPCs or merchants from other towns the party visited previously. If a player asks to visit a shop, it must be a shop that exists in the CURRENT location. Check the KNOWN NPCS list — each NPC has a "Last seen" annotation showing where they were encountered. Only NPCs last seen at or near the current location should appear in scenes. If you need a new merchant or NPC at the current location, create a new one with NPC_MET rather than teleporting one from another town.
 
-RECENT STORY SUMMARIES:
+STORY SO FAR (recent narrative summaries — use for continuity):
 ${recentSummaries || "This is the beginning of the adventure."}
 
 ACTIVE ARCS:
@@ -2085,7 +2091,20 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
           const char = await resolveCharacter(update.character_id, partyId);
           if (char) {
             const newHp = Math.max(0, Math.min(char.maxHp, char.currentHp + (update.delta ?? 0)));
-            await db.update(characters).set({ currentHp: newHp }).where(eq(characters.id, char.id));
+            // LR-014: Auto-manage "Downed" condition based on HP.
+            // Force-add at 0 HP, force-remove when HP rises above 0.
+            const existingConditions: string[] = ((char.conditions as any[]) || []).map((c: any) => String(c));
+            const hasDowned = existingConditions.some(c => c.toLowerCase() === "downed");
+            let nextConditions: string[] | undefined = undefined;
+            if (newHp <= 0 && !hasDowned) {
+              nextConditions = [...existingConditions, "Downed"];
+            } else if (newHp > 0 && hasDowned) {
+              nextConditions = existingConditions.filter(c => c.toLowerCase() !== "downed");
+            }
+            await db.update(characters).set({
+              currentHp: newHp,
+              ...(nextConditions !== undefined ? { conditions: nextConditions } : {}),
+            }).where(eq(characters.id, char.id));
             await db.insert(gameEvents).values({
               partyId, campaignId, eventType: "HP_CHANGED", actorId: "gm",
               payload: { character_id: update.character_id, delta: update.delta, new_hp: newHp, reason: update.reason },

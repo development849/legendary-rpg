@@ -341,6 +341,7 @@ export default function CreateCharacterPage() {
           cls: selectedClass,
           race: selectedRace,
           background,
+          gender: selectedGender || undefined,
           personality: selectedTraits.join(", ") || undefined,
           motivation: motivation.trim() || undefined,
           flaw: flaw.trim() || undefined,

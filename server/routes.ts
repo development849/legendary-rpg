@@ -82,7 +82,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/characters/generate-backstory", requireAuth, async (req: any, res) => {
     try {
-      const { name, cls, race, background, personality, motivation, flaw } = req.body;
+      const { name, cls, race, background, personality, motivation, flaw, gender } = req.body;
       if (!cls || !race || !background) {
         return res.status(400).json({ error: "Missing required fields" });
       }
@@ -93,17 +93,29 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       });
 
+      const pronounMap: Record<string, string> = {
+        male: "he/him/his",
+        female: "she/her/hers",
+        "non-binary": "they/them/theirs",
+        agender: "they/them/theirs",
+        genderfluid: "they/them/theirs",
+      };
+      const pronouns = gender && pronounMap[gender] ? pronounMap[gender] : null;
+      const genderLabel = gender && gender !== "prefer-not-to-say" ? gender : null;
+
       const prompt = [
         `Write a compelling 2–3 paragraph backstory for a fantasy RPG character with the following details:`,
         `Name: ${name || "Unknown"}`,
         `Race: ${race}`,
         `Class: ${cls}`,
+        genderLabel ? `Gender: ${genderLabel}` : null,
+        pronouns ? `Pronouns: ${pronouns} — you MUST use these pronouns consistently throughout the backstory.` : null,
         `Background: ${background}`,
         personality ? `Personality traits: ${personality}` : null,
         motivation ? `Core motivation: ${motivation}` : null,
         flaw ? `Flaw or dark secret: ${flaw}` : null,
         ``,
-        `Write in third person. Make it vivid, immersive, and true to high fantasy. Focus on formative events, key relationships, and the moment that set them on an adventuring path. Do not include game stats or mechanics. 2–3 paragraphs only.`,
+        `Write in third person. Make it vivid, immersive, and true to high fantasy. Focus on formative events, key relationships, and the moment that set them on an adventuring path. Do not include game stats or mechanics. 2–3 paragraphs only.${pronouns ? ` Use the character's specified pronouns (${pronouns}) throughout — never use opposite-gender pronouns.` : ""}`,
       ].filter(Boolean).join("\n");
 
       const completion = await openai.chat.completions.create({

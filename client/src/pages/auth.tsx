@@ -194,6 +194,19 @@ export default function AuthPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/85" />
       </div>
 
+      {/* Compact mobile hero (visible below lg) */}
+      <div
+        className="lg:hidden absolute top-0 left-0 right-0 z-20 flex items-center justify-center gap-2 px-4 bg-card/90 backdrop-blur-sm border-b-[3px] border-primary"
+        style={{ height: "80px" }}
+        data-testid="mobile-auth-hero"
+      >
+        <LegendaryLogo className="w-8 h-8" glow={false} />
+        <div className="text-center">
+          <p className="font-sans font-bold tracking-widest text-sm leading-tight">LEGENDARY RPG<sup className="text-[8px] align-super ml-px">℠</sup></p>
+          <p className="text-primary font-sans tracking-widest text-[10px] uppercase leading-tight">The Living Chronicle</p>
+        </div>
+      </div>
+
       {/* Left: Feature panel */}
       <div className="hidden lg:flex flex-col justify-center px-12 w-[480px] flex-shrink-0 relative overflow-hidden border-r border-border z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-900/10 pointer-events-none" />
@@ -238,7 +251,7 @@ export default function AuthPage() {
       </div>
 
       {/* Right: Auth forms */}
-      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
+      <div className="flex-1 flex items-center justify-center p-6 pt-[96px] lg:pt-6 relative z-10">
         <div className="w-full max-w-md space-y-6">
           {/* Tab switcher */}
           <div className="flex rounded-md border border-border bg-secondary/30 p-1 gap-1">

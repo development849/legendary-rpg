@@ -1,0 +1,41 @@
+Two remaining tasks from the sprint backlog batch. Please complete both before we close this session.
+
+Task 1 — UXF-003 + UXF-004: Character creation sticky CTA (quick fix)
+Check create-character.tsx now. These two fixes were in the plan but aren't in your completion summary:
+
+UXF-003: On the class selection step, the "Next: Choose Race" button falls below the fold on a 1440px display. Add a sticky bottom bar that keeps the Next CTA always visible without scrolling.
+UXF-004: On the race selection step, the "Next: Attributes" button is visually active before a race is selected. Disable it until a valid race is chosen and add a short tooltip or inline message explaining why (e.g. "Select a race to continue").
+
+Both fixes live in the same component and can be handled as one sticky bottom CTA bar implementation. If they're already in the code, confirm that and move on. If not, apply them now.
+✓ Success check: On the class step, the Next button is visible without scrolling. On the race step, Next is greyed out and non-clickable until a race card is selected.
+
+Task 2 — FR-003: Full mobile responsive overhaul (four flows)
+The spec is in sprints/SPRINT_09_REPLIT.md. Implement all four flows in priority order. Target: every core flow works on a 390px viewport with no horizontal scroll. Use max-width: 768px as the breakpoint throughout.
+Flow 1 — Game session (highest priority)
+
+Character sheet: convert to an off-canvas drawer that slides in from the right, triggered by a button in the session header
+Chat input bar: fix to bottom of viewport with padding-bottom: env(safe-area-inset-bottom) (iOS home indicator clearance — partial fix already shipped; confirm it's complete)
+Quick action pills: horizontal scroll row, no wrapping
+Session header: icon-only at mobile (hide text labels)
+CharacterHintPill: confirm bottom: 120px clears the fixed input bar on mobile
+
+Flow 2 — Character creation
+
+Replace step tab labels with a compact progress bar at mobile
+Class and race cards: 2-column grid at mobile (currently too wide to tap)
+All text inputs and select dropdowns: full-width
+Sticky bottom CTA bar (from Task 1 above) should already handle this — confirm it has the safe-area inset applied
+
+Flow 3 — Dashboard
+
+Campaign cards: 1-column stack at mobile
+"Create Hero" and "Start Campaign" CTAs: vertical stack, full-width buttons
+Any sidebar or multi-column layout: single column at mobile
+
+Flow 4 — Auth page
+
+Hero/logo block: compact (max 80px height) at mobile
+Sign in / Create Account form: single-column, full-width inputs and submit button
+
+After completing all four flows, run document.documentElement.scrollWidth > window.innerWidth in the browser console on each page at 390px width to confirm no horizontal overflow. Report the result for each flow.
+✓ Success check: All four flows render correctly at 390px with no horizontal scroll and all interactive elements have at least 44×44px touch targets.

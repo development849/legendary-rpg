@@ -489,7 +489,7 @@ export default function CreateCharacterPage() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-10">
+      <div className="max-w-4xl mx-auto px-4 py-10 pb-24">
         {/* Step: Class */}
         {step === "class" && (
           <div className="space-y-6">
@@ -497,7 +497,7 @@ export default function CreateCharacterPage() {
               <h2 className="text-2xl font-sans font-bold tracking-widest">Choose Your Class</h2>
               <p className="text-muted-foreground font-serif italic">Your calling defines your strengths and abilities</p>
             </div>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {CLASSES.map((cls) => (
                 <button
                   key={cls.id}
@@ -529,8 +529,11 @@ export default function CreateCharacterPage() {
                 </button>
               ))}
             </div>
-            <div className="flex justify-end">
-              <Button onClick={() => setStep("race")} disabled={!selectedClass} data-testid="button-next-race">
+            <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-card/95 backdrop-blur-sm border-t border-border flex items-center justify-between gap-3 z-20" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
+              <p className="text-xs text-muted-foreground font-serif italic min-w-0 flex-1">
+                {selectedClass ? `Class: ${CLASSES.find(c => c.id === selectedClass)?.name}` : "Select a class to continue"}
+              </p>
+              <Button onClick={() => setStep("race")} disabled={!selectedClass} data-testid="button-next-race" className="min-h-11">
                 Next: Choose Race
               </Button>
             </div>
@@ -544,7 +547,7 @@ export default function CreateCharacterPage() {
               <h2 className="text-2xl font-sans font-bold tracking-widest">Choose Your Race</h2>
               <p className="text-muted-foreground font-serif italic">Your heritage shapes your place in the world</p>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
               {RACES.map((race) => (
                 <button
                   key={race.name}
@@ -569,9 +572,12 @@ export default function CreateCharacterPage() {
                 </button>
               ))}
             </div>
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep("class")} data-testid="button-back-class">Back</Button>
-              <Button onClick={goToStats} disabled={!selectedRace} data-testid="button-next-stats">Next: Attributes</Button>
+            <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-card/95 backdrop-blur-sm border-t border-border flex items-center justify-between gap-3 z-20" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
+              <Button variant="outline" onClick={() => setStep("class")} data-testid="button-back-class" className="min-h-11">Back</Button>
+              {!selectedRace && (
+                <p className="text-xs text-muted-foreground font-serif italic hidden sm:block min-w-0 flex-1 text-center">Select a race to continue</p>
+              )}
+              <Button onClick={goToStats} disabled={!selectedRace} data-testid="button-next-stats" className="min-h-11" title={!selectedRace ? "Select a race to continue" : undefined}>Next: Attributes</Button>
             </div>
           </div>
         )}

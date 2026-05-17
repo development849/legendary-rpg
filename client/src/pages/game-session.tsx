@@ -2609,7 +2609,8 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
                         const renderLocationCard = (loc: any, depth: number) => {
                           const isCurrent = loc.name === currentLocation;
-                          const sceneImg = findSceneImage(loc.name, loc.title);
+                          const isRumored = loc.rumored === true && !isCurrent;
+                          const sceneImg = isRumored ? null : findSceneImage(loc.name, loc.title);
                           return (
                             <div
                               key={loc.name}
@@ -2617,7 +2618,9 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                               className={`rounded-md border px-2.5 py-2 ${
                                 isCurrent
                                   ? "border-primary/50 bg-primary/5"
-                                  : "border-border bg-card/60"
+                                  : isRumored
+                                    ? "border-dashed border-border/60 bg-card/30"
+                                    : "border-border bg-card/60"
                               }`}
                             >
                               <div className="flex items-start gap-2">
@@ -2631,21 +2634,23 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                     <img src={sceneImg} alt={loc.name} className="w-full h-full object-cover" />
                                   </button>
                                 ) : (
-                                  <div className="flex-shrink-0 w-10 h-10 rounded bg-muted/30 border border-border/40 flex items-center justify-center">
+                                  <div className={`flex-shrink-0 w-10 h-10 rounded ${isRumored ? "bg-muted/10 border border-dashed border-border/40" : "bg-muted/30 border border-border/40"} flex items-center justify-center`}>
                                     {loc.threat ? (
                                       <Skull className="w-4 h-4 text-red-400/60" />
                                     ) : (
-                                      <MapPin className={`w-4 h-4 ${isCurrent ? "text-primary/60" : "text-muted-foreground/30"}`} />
+                                      <MapPin className={`w-4 h-4 ${isCurrent ? "text-primary/60" : isRumored ? "text-muted-foreground/20" : "text-muted-foreground/30"}`} />
                                     )}
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between gap-1">
-                                    <p className={`text-xs font-sans font-semibold leading-tight truncate ${isCurrent ? "text-primary" : "text-foreground"}`}>
+                                    <p className={`text-xs font-sans font-semibold leading-tight truncate ${isCurrent ? "text-primary" : isRumored ? "text-muted-foreground italic" : "text-foreground"}`}>
                                       {loc.name}
                                     </p>
                                     {isCurrent ? (
                                       <span className="text-[10px] font-sans text-primary/70 flex-shrink-0 bg-primary/10 px-1.5 rounded">here</span>
+                                    ) : isRumored ? (
+                                      <span className="text-[10px] font-sans text-muted-foreground/60 flex-shrink-0 border border-dashed border-border/60 px-1.5 rounded" data-testid={`badge-rumored-${loc.name}`}>rumored</span>
                                     ) : (
                                       <Tooltip>
                                         <TooltipTrigger asChild>
@@ -2670,7 +2675,11 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                     </p>
                                   )}
                                   <div className="flex items-center gap-2 mt-1">
-                                    <p className="text-[10px] text-muted-foreground/40">Turn {loc.firstVisitedTurn}</p>
+                                    <p className="text-[10px] text-muted-foreground/40">
+                                      {isRumored
+                                        ? `Heard on turn ${loc.mentionedTurn ?? "?"}`
+                                        : `Turn ${loc.firstVisitedTurn ?? "?"}`}
+                                    </p>
                                     {savedLocationMaps?.some((m: any) => m.locationName === loc.name) ? (
                                       <button
                                         onClick={() => setViewingLocationMap(loc.name)}

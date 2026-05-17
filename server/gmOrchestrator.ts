@@ -1161,6 +1161,7 @@ Step 1 — Named NPCs: Scan every line of your narrative AND the current SITUATI
    ✅ CORRECT: "The Rusty Seagull" is a location → no NPC_MET. "Adventurers" is a crowd → no NPC_MET. Only emit NPC_MET for the NAMED INDIVIDUAL characters in the scene (e.g. "Marta the bartender", "Captain Bryn").
 Step 2 — NPC Relationships: For each NPC in this scene who IS already in KNOWN NPCS, check their [relationship] tag. Has the player's action this turn made that NPC feel differently about the party? Helped them → friendlier. Threatened them → more hostile. Killed → deceased. If any relationship should change → NPC_RELATIONSHIP_CHANGED required.
 Step 3 — Gold: Did any gold/coins/money change hands in any way — found, looted, picked up, earned, received, paid, spent, gambled, stolen? If the narrative mentions coins, a coin pouch, a bag of gold, a reward, or any currency amount → GOLD_CHANGED is MANDATORY with the correct positive or negative delta. Finding a "bag of coins" without a GOLD_CHANGED update is ALWAYS a bug. The character's coin pouch will NOT update unless you emit this.
+   COMMITTED TAKING OF PREVIOUSLY-ANNOUNCED LOOT — CRITICAL: When you described loot in a PRIOR turn (e.g. "you find a pouch containing 5 gold coins and a crude map") and the player NOW commits to take it (e.g. "take the loot", "grab the coins", "pocket everything"), THIS turn's narrative confirms the taking ("you pocket the gold and tuck the map away"). You MUST emit GOLD_CHANGED for the EXACT amount you announced earlier (+5 in this example) AND ITEM_GRANTED for EACH non-gold item announced (the map). Do NOT assume the previous turn's amount somehow carries over — it does NOT. The update must be emitted in the SAME turn the player commits to taking it, using the amount/items from the prior announcement. A confirmation narrative like "you pocket the gold" without GOLD_CHANGED is ALWAYS a bug.
 Step 4 — Items: Did anyone gain an item? → ITEM_GRANTED required (+ GOLD_CHANGED if purchased). Did anyone sell, trade, use up, discard, or lose an item? → ITEM_REMOVED required for EACH item lost (+ GOLD_CHANGED if sold). GOLD_CHANGED alone does NOT remove items from inventory.
    EQUIPPING ITEMS: When a player equips new gear, do NOT emit ITEM_REMOVED for the old gear they were wearing. The old item stays in their inventory — the player can equip/unequip items through the character sheet UI. Only emit ITEM_REMOVED when an item is truly GONE (sold, consumed, destroyed, lost). Swapping equipment is NOT removing an item.
    SILENT UPDATES: All ITEM_GRANTED, ITEM_REMOVED, GOLD_CHANGED, XP_GRANTED, and other mechanical updates happen SILENTLY through the proposed_updates array. NEVER narrate "updating your inventory", "adding items", "stand by while I process changes", or any meta-commentary about the update process. Just tell the STORY — the system handles the rest automatically.
@@ -1640,17 +1641,35 @@ export async function runGM(
   if (!hasGoldUpdate && !isDistribution && ctx.actingCharacterId) {
     const goldMentionPattern = /\b(\d+)\s*(?:gold|gp|coins?|copper|silver|pieces?)\b/i;
     const goldContextPattern = /\b(?:found?|pick(?:ed|s)?\s+up|loot(?:ed|s)?|discover(?:ed|s)?|collect(?:ed|s)?|grab(?:bed|s)?|open(?:ed|s)?|contain(?:s|ed)?|inside|within|stash|pile|pouch|bag|chest|hoard|treasure|reward(?:ed)?|earn(?:ed|s)?|receive[ds]?|pocket(?:ed|s)?|scoop(?:ed|s)?|take(?:s)?|took|claim(?:ed|s)?)\b/i;
-    const goldMentionMatch = narrative.match(goldMentionPattern);
+    // Detects explicit player commitment to take previously-announced loot
+    // (e.g. "You pocket the gold and tuck the map") even when the current turn
+    // does not restate the amount.
+    const takeLootConfirm = /\b(?:pocket(?:ed|s)?|take(?:s)?|took|grab(?:bed|s)?|scoop(?:ed|s)?|collect(?:ed|s)?|claim(?:ed|s)?|loot(?:ed|s)?|stash(?:ed|es)?)\s+(?:the |all |any |that |those |these |their |his |her |its )?(?:gold|coins?|coin\s*pouch|pouch|loot|spoils|treasure|money|reward)\b/i;
+    let goldMentionMatch = narrative.match(goldMentionPattern);
     const hasGoldContext = goldContextPattern.test(narrative);
+    let amountSource: "current" | "prior" = "current";
 
-    if (goldMentionMatch && hasGoldContext) {
+    // Fallback: if the current narrative confirms the player is taking gold/coins/loot
+    // but doesn't restate the amount, look at the previous GM message for the
+    // announced amount (e.g. "5 gold coins") and inject from there.
+    if (!goldMentionMatch && takeLootConfirm.test(narrative) && prevGmMsg?.content) {
+      const prevMatch = String(prevGmMsg.content).match(goldMentionPattern);
+      if (prevMatch) {
+        goldMentionMatch = prevMatch;
+        amountSource = "prior";
+      }
+    }
+
+    if (goldMentionMatch && (hasGoldContext || amountSource === "prior")) {
       const amount = parseInt(goldMentionMatch[1]) || 5;
-      console.log(`[GM Safety Net] Narrative mentions ${amount} gold/coins with acquisition context but no GOLD_CHANGED emitted. Auto-injecting for character ${ctx.actingCharacterId}`);
+      console.log(`[GM Safety Net] Narrative mentions ${amount} gold/coins with acquisition context but no GOLD_CHANGED emitted (source=${amountSource}). Auto-injecting for character ${ctx.actingCharacterId}`);
       updates.push({
         type: "GOLD_CHANGED",
         character_id: ctx.actingCharacterId,
         delta: amount,
-        reason: "Coins found (auto-detected from narrative)",
+        reason: amountSource === "prior"
+          ? "Coins taken (auto-detected from prior narrative)"
+          : "Coins found (auto-detected from narrative)",
       });
     }
   }

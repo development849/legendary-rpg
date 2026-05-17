@@ -506,6 +506,15 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
 
   const soundtrack = useSoundtrack(partyData?.campaign?.id);
 
+  // World image fallback: always available, generated at campaign creation,
+  // shown behind the per-scene background until that specific scene art loads.
+  const { data: worldImageData } = useQuery<{ imageData: string | null; pending: boolean }>({
+    queryKey: [`/api/campaigns/${partyData?.campaign?.id}/world-image`],
+    enabled: !!partyData?.campaign?.id,
+    refetchInterval: (q) => (q.state.data?.pending ? 6000 : false),
+  });
+  const worldBackground = worldImageData?.imageData ?? null;
+
   const { data: situations = [] } = useQuery<any[]>({
     queryKey: [`/api/parties/${partyId}/situations`],
     refetchInterval: 8000,
@@ -1378,7 +1387,22 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
       <div className="flex flex-1 overflow-hidden relative">
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
-          {/* Scene background */}
+          {/* World image fallback — always rendered when available; per-scene image layers on top */}
+          {worldBackground && (
+            <div
+              className="absolute inset-0 z-0"
+              style={{
+                backgroundImage: `url(${worldBackground})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center center",
+                backgroundRepeat: "no-repeat",
+              }}
+              data-testid="img-world-background"
+            >
+              <div className="absolute inset-0 bg-background/65" />
+            </div>
+          )}
+          {/* Scene background (per-location, layered above world image) */}
           {sceneBackground && (
             <div
               className="absolute inset-0 z-0"

@@ -1022,7 +1022,7 @@ Characters with MP (Magic Points) can cast spells. MP is shown in the character 
 - If a character doesn't have enough MP for a spell, tell them they lack the magical energy. They can still attempt the spell at a cost — using their remaining MP and taking fatigue or HP damage for the difference.
 - MP RECOVERY: MP regenerates during rests. A short rest recovers 25% of max MP (rounded up). A long rest fully restores MP. Mana potions restore MP instantly — emit MP_CHANGED with a positive delta.
 - NON-CASTERS: Characters with 0 max MP (fighters, rogues, barbarians) cannot cast spells innately. They can still use scrolls and magic items.
-- SPELL ATTACKS: Offensive spells that target enemies require an attack roll (d20 + intellect modifier for wizards, will modifier for clerics) vs target's AC, OR a saving throw from the target. The GM decides which is appropriate.
+- SPELL ATTACKS — CRITICAL: Offensive spells that target enemies (arcane blast, fire bolt, magic missile, lightning, eldritch ray, divine smite, etc.) ALWAYS require a dice roll BEFORE the spell's outcome is narrated. Emit a "dice_requests" entry with d20 + intellect modifier (wizards/mages) OR will modifier (clerics/druids) vs target's AC — OR request a saving throw from the target. NEVER describe the spell hitting, missing, or its damage until the roll resolves. A response that narrates "you unleash the blast / the bolt streaks toward / arcane energy surges" without emitting a dice_request is BROKEN and traps the player. Spell attacks are mechanically identical to weapon attacks: roll → hit/miss → on hit, damage roll → HP_CHANGED. Treat "cast spell at X", "blast X", "zap X", "hurl bolt at X", "smite X" exactly like "attack X with sword" — all require a dice_request.
 - When narrating spell effects, include the MP cost so the player always knows what they spent.
 
 SCROLLS — CRITICAL:
@@ -1866,11 +1866,16 @@ export async function runGM(
   if (diceRequests.length === 0) {
     const rawNarrFull = (parsed?.narrative ?? fullText).toLowerCase();
     const rawNarr = rawNarrFull.replace(/"[^"]*"/g, " ").replace(/\u201c[^\u201d]*\u201d/g, " ").replace(/'[^']*'/g, " ").replace(/\u2018[^\u2019]*\u2019/g, " ");
-    const rollIndicators = /\b(?:rolling to|roll for|rolls? (?:a |the )?d(?:20|ice)|attack roll|make (?:a |an )?(?:check|save|roll)|swing(?:s|ing)? (?:your|the|at) |strike(?:s|ing)? at |slash(?:es|ing)? (?:at|through|into) |shoot(?:s|ing)? (?:your|an? |the )|fire(?:s|ing)? (?:your|an? |the )|thrust(?:s|ing)? (?:your|at |toward))\b/i;
-    const combatAction = /\b(?:attacks?|swings? at|strikes? at|slashes? at|stabs?|shoots? at|hurls? at|charges? (?:at|toward)|lunges? (?:at|toward)|smashes?|cleaves?)\b/i;
-    const combatWeaponCtx = /\b(?:aim|hit|miss|damage|weapon|sword|axe|bow|spear|blade|arrow|dagger|mace|hammer)\b/i;
+    const rollIndicators = /\b(?:rolling to|roll for|rolls? (?:a |the )?d(?:20|ice)|attack roll|make (?:a |an )?(?:check|save|roll)|swing(?:s|ing)? (?:your|the|at) |strike(?:s|ing)? at |slash(?:es|ing)? (?:at|through|into) |shoot(?:s|ing)? (?:your|an? |the )|fire(?:s|ing)? (?:your|an? |the )|thrust(?:s|ing)? (?:your|at |toward)|unleash(?:es|ing)? (?:a |the |your )|hurl(?:s|ing)? (?:a |the |your )|cast(?:s|ing)? (?:a |the |your )|loose(?:s|ing)? (?:a |the |your )|releas(?:es|ing) (?:a |the |your ))\b/i;
+    const combatAction = /\b(?:attacks?|swings? at|strikes? at|slashes? at|stabs?|shoots? at|hurls?|charges? (?:at|toward)|lunges? (?:at|toward)|smashes?|cleaves?|blasts?|casts?|unleash(?:es)?|looses?|channels?|zaps?|streaks? toward|surges? toward)\b/i;
+    const combatWeaponCtx = /\b(?:aim|hit|miss|damage|weapon|sword|axe|bow|spear|blade|arrow|dagger|mace|hammer|spell|magic|arcane|bolt|blast|ray|flame|lightning|fire|ice|frost|force|energy|missile|shimmering|crackling)\b/i;
     const playerIntent = (ctx.playerIntent ?? "").toLowerCase();
-    const playerIntentCombat = /\b(?:attack|fight|strike|hit|slash|stab|shoot|swing|charge|lunge|smash|cleave|kill|slay)\b/i.test(playerIntent);
+    const playerIntentCombat = /\b(?:attack|fight|strike|hit|slash|stab|shoot|swing|charge|lunge|smash|cleave|kill|slay|blast|cast|spell|zap|unleash|hurl|loose|channel|smite)\b/i.test(playerIntent);
+    // Utility-spell exclusion: if the player intent or narrative is clearly a non-attack
+    // cast (light, detect, heal, ward, shield self, mage hand, etc.) suppress the
+    // safety-net so we don't auto-generate an attack roll for a utility action.
+    const utilityCastPattern = /\b(?:cast(?:s|ing)? (?:light|detect|invisibility|mage hand|prestidigitation|message|ward(?:ing)?|protection|shield(?: self)?|identify|comprehend|read|alarm|unseen servant|feather ?fall|levitate|water breathing|disguise|sleep|charm|sanctuary|silence|fog|mist|darkness|locate)|heal(?:s|ing)?|cure (?:wounds|disease|poison)|mend(?:s|ing)?|bandage|patch up|tend (?:to|the wound)|pray (?:to|for)|meditate|bless(?:es|ing)?|buff)\b/i;
+    const isUtilityCast = utilityCastPattern.test(playerIntent) || utilityCastPattern.test(rawNarr);
     const partyCharsForCtx = await db.select().from(characters)
       .innerJoin(partyMembers, eq(characters.id, partyMembers.characterId))
       .where(eq(partyMembers.partyId, ctx.partyId));
@@ -1881,7 +1886,7 @@ export async function runGM(
       for (const c of companions) charNames.push(c.name.toLowerCase());
     }
     const hasCharRef = /\byou\b|\byour\b/i.test(rawNarr) || charNames.some(n => rawNarr.includes(n));
-    if (rollIndicators.test(rawNarr) || (combatAction.test(rawNarr) && combatWeaponCtx.test(rawNarr) && (hasCharRef || playerIntentCombat))) {
+    if (!isUtilityCast && (rollIndicators.test(rawNarr) || (combatAction.test(rawNarr) && combatWeaponCtx.test(rawNarr) && (hasCharRef || playerIntentCombat)))) {
       const partyChars = partyCharsForCtx;
       const actingChar = ctx.actingCharacterId
         ? partyChars.find(r => r.characters.id === ctx.actingCharacterId)?.characters

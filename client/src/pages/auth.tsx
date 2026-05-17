@@ -208,7 +208,7 @@ export default function AuthPage() {
       </div>
 
       {/* Left: Feature panel */}
-      <div className="hidden lg:flex flex-col justify-center px-12 w-[480px] flex-shrink-0 relative overflow-hidden border-r border-border z-10">
+      <div className="hidden lg:flex flex-col justify-center px-12 w-[480px] flex-shrink-0 relative overflow-hidden z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-900/10 pointer-events-none" />
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-900/10 rounded-full blur-3xl pointer-events-none" />

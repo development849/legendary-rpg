@@ -161,14 +161,30 @@ export interface ChroniclerResult {
  *  Better to surface narrator updates a beat sooner than make the player wait. */
 const CHRONICLER_TIMEOUT_MS = 8000;
 
+/**
+ * DESIGN NOTE on false negatives: when the chronicler produces `{updates:[]}`
+ * for a scene that did introduce a real NPC, this function returns ok:true
+ * and runGM strips the narrator's NPC_MET with nothing replacing it. That
+ * silent miss is intentional — rule 8 of the prompt is "when in doubt, emit
+ * nothing", because a phantom NPC poisons the ledger permanently while a
+ * missed NPC will usually be picked up on a later turn when they reappear.
+ * We accept the false-negative tradeoff in exchange for a clean registry.
+ */
 export async function runChronicler(ctx: ChroniclerContext): Promise<ChroniclerResult> {
   if (!ctx.narrative || ctx.narrative.trim().length < 20) {
     return { ok: true, updates: [] };
   }
 
+  // AbortController + timeout: if the upstream LLM hangs we MUST cancel the
+  // underlying request, not just abandon the promise. Without abort(), the
+  // dangling fetch keeps consuming tokens, memory, and a socket per stalled
+  // turn — over a busy session that adds up.
+  const abortCtl = new AbortController();
+  const timeoutHandle = setTimeout(() => abortCtl.abort(), CHRONICLER_TIMEOUT_MS);
+
   let raw = "";
   try {
-    const callPromise = openai.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
       temperature: 0.2,
@@ -177,15 +193,15 @@ export async function runChronicler(ctx: ChroniclerContext): Promise<ChroniclerR
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: buildUserPrompt(ctx) },
       ],
-    });
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`chronicler timeout after ${CHRONICLER_TIMEOUT_MS}ms`)), CHRONICLER_TIMEOUT_MS),
-    );
-    const response = await Promise.race([callPromise, timeoutPromise]);
+    }, { signal: abortCtl.signal });
     raw = response.choices[0]?.message?.content?.trim() ?? "{}";
   } catch (err: any) {
-    console.error("[Chronicler] LLM call failed:", err?.message ?? err);
-    return { ok: false, updates: [], reason: `llm_call_failed: ${err?.message ?? "unknown"}` };
+    const aborted = abortCtl.signal.aborted;
+    const msg = aborted ? `timeout after ${CHRONICLER_TIMEOUT_MS}ms` : (err?.message ?? "unknown");
+    console.error("[Chronicler] LLM call failed:", msg);
+    return { ok: false, updates: [], reason: `llm_call_failed: ${msg}` };
+  } finally {
+    clearTimeout(timeoutHandle);
   }
 
   let parsed: unknown;
@@ -263,11 +279,19 @@ function applyDisambiguation(updates: ChroniclerUpdateT[], ctx: ChroniclerContex
 
   // Build a map: "hollow" -> "Braegad's Hollow" so we can detect when a
   // proposed NPC name is actually the place-noun half of a possessive location.
+  // Allow up to two leading title/qualifier words so "Old Marek's Rest",
+  // "Saint Eilis's Forge", "Lady Tessa's Manor" all register correctly.
   const possessivePlaceTails = new Map<string, string>();
-  const possessiveRe = /\b([A-Z][a-z]+)'s\s+([A-Z][a-z]+)\b/g;
+  const possessiveRe = /\b(?:[A-Z][a-z]+\s+){0,2}([A-Z][a-z]+)'s\s+([A-Z][a-z]+)\b/g;
   let m: RegExpExecArray | null;
   while ((m = possessiveRe.exec(narrative)) !== null) {
-    possessivePlaceTails.set(m[2].toLowerCase(), `${m[1]}'s ${m[2]}`);
+    // Only the trailing place noun is suppressed (e.g. "Rest" from "Old
+    // Marek's Rest"). Do NOT suppress the possessor itself ("Marek") — if the
+    // same scene independently introduces them as a person ("Marek greets
+    // you"), the chronicler must still be allowed to emit NPC_MET for them.
+    const placeNoun = m[2];
+    const fullMatch = m[0];
+    possessivePlaceTails.set(placeNoun.toLowerCase(), fullMatch);
   }
 
   const out: ChroniclerUpdateT[] = [];

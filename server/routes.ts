@@ -1415,6 +1415,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           res.write(`data: ${JSON.stringify({ type: "done", message: gmMsg, updates, diceRequests, quickActions, turnHint, levelUps, sceneMood, combatStall: combatStall ?? null })}\n\n`);
           res.end();
         },
+        // onPhase: surface dice prompts to the client as soon as the narrator
+        // has produced them, BEFORE the chronicler entity-bookkeeping pass
+        // (which can take 1–3s). The client uses this to render roll buttons
+        // immediately while the chronicler finishes in the background.
+        (phase, payload) => {
+          if (phase === "dice_ready") {
+            res.write(`data: ${JSON.stringify({ type: "dice_ready", diceRequests: payload.diceRequests, narrative: payload.narrative })}\n\n`);
+          }
+        },
       );
     } catch (e: any) {
       console.error("[GM action error]", e.message ?? e);

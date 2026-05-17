@@ -929,6 +929,22 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               setStreamingContent(accumulated);
               // FR-002: signal threshold to dismiss on first non-empty GM chunk
               if (!gmHasStarted && evt.content) setGmHasStarted(true);
+            } else if (evt.type === "dice_ready") {
+              // Server has narrator dice prompts ready ~1–3s before the
+              // chronicler pass finishes. Inject a "pending-gm" message so the
+              // dice UI renders immediately. The real message arrives on
+              // `done` and replaces this one (filter below strips pending-gm-*).
+              const reqs: any[] = evt.diceRequests ?? [];
+              const narr: string = evt.narrative ?? accumulated;
+              if (reqs.length > 0 && narr) {
+                const pendingId = `pending-gm-${Date.now()}`;
+                setIsStreaming(false);
+                setStreamingContent("");
+                setMessages(prev => [
+                  ...prev.filter(m => !m.id.startsWith("pending-gm-")),
+                  { id: pendingId, role: "gm", content: narr, metadata: { diceRequests: reqs }, createdAt: new Date().toISOString() } as any,
+                ]);
+              }
             } else if (evt.type === "done") {
               clearStreamTimeout();
               lastSentRef.current = null;
@@ -943,7 +959,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
               if (evt.message) {
                 setMessages(prev => {
                   if (prev.find(m => m.id === evt.message.id)) return prev;
-                  return [...prev.filter(m => !m.id.startsWith("opt-")), evt.message];
+                  return [...prev.filter(m => !m.id.startsWith("opt-") && !m.id.startsWith("pending-gm-")), evt.message];
                 });
               }
               const qa = evt.quickActions ?? evt.message?.metadata?.quickActions ?? [];
@@ -2638,7 +2654,7 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                     {loc.threat ? (
                                       <Skull className="w-4 h-4 text-red-400/60" />
                                     ) : (
-                                      <MapPin className={`w-4 h-4 ${isCurrent ? "text-primary/60" : isRumored ? "text-muted-foreground/20" : "text-muted-foreground/30"}`} />
+                                      <MapPin className={`w-4 h-4 ${isCurrent ? "text-primary/60" : isRumored ? "text-amber-400/50" : "text-muted-foreground/30"}`} />
                                     )}
                                   </div>
                                 )}
@@ -2650,7 +2666,21 @@ export default function GameSessionPage({ partyId }: GameSessionPageProps) {
                                     {isCurrent ? (
                                       <span className="text-[10px] font-sans text-primary/70 flex-shrink-0 bg-primary/10 px-1.5 rounded">here</span>
                                     ) : isRumored ? (
-                                      <span className="text-[10px] font-sans text-muted-foreground/60 flex-shrink-0 border border-dashed border-border/60 px-1.5 rounded" data-testid={`badge-rumored-${loc.name}`}>rumored</span>
+                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                        <span className="text-[10px] font-sans text-amber-300/80 flex-shrink-0 border border-dashed border-amber-700/50 bg-amber-950/20 px-1.5 rounded" data-testid={`badge-rumored-${loc.name}`}>rumored</span>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <button
+                                              data-testid={`pursue-lead-${loc.name}`}
+                                              onClick={() => sendAction(`[ACTION] Let's investigate ${loc.name}.`)}
+                                              className="p-0.5 rounded hover:bg-amber-900/30 text-amber-400/60 hover:text-amber-300 transition-colors"
+                                            >
+                                              <Target className="w-3 h-3" />
+                                            </button>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="left" className="text-xs">Pursue this lead</TooltipContent>
+                                        </Tooltip>
+                                      </div>
                                     ) : (
                                       <Tooltip>
                                         <TooltipTrigger asChild>

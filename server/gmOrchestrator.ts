@@ -1384,6 +1384,7 @@ export async function runGM(
   ctx: GMContext,
   onChunk: (chunk: string) => void,
   onDone: (fullText: string, updates: any[], diceRequests: any[], quickActions: string[], turnHint?: any, levelUps?: { characterId: string; characterName: string; newLevel: number; hpGain: number; mpGain: number }[], sceneMood?: string, combatStall?: { stalled: boolean; reasons: string[] } | null) => void,
+  onPhase?: (phase: "dice_ready", payload: { diceRequests: any[]; narrative: string }) => void,
 ): Promise<void> {
   // Load context
   const [party] = await db.select().from(parties).where(eq(parties.id, ctx.partyId));
@@ -1675,6 +1676,62 @@ export async function runGM(
     }
   }
 
+  // === EARLY DICE_READY ===
+  // Dice requests come straight from the narrator's parsed JSON. The chronicler
+  // (next) only touches entity bookkeeping — it never changes which dice should
+  // roll. So we parse dice + run the dice safety net BEFORE the chronicler and
+  // emit a dice_ready SSE event, letting the client surface roll prompts ~1–3s
+  // sooner during combat. Acceptable race: if the player rolls before the
+  // chronicler finishes, the next runGM may read worldState a beat stale —
+  // bounded to one turn and no worse than the existing concurrent-player race.
+  let diceRequests: any[] = parsed?.dice_requests ?? [];
+  if (diceRequests.length === 0) {
+    const rawNarrFull = (parsed?.narrative ?? fullText).toLowerCase();
+    const rawNarr = rawNarrFull.replace(/"[^"]*"/g, " ").replace(/\u201c[^\u201d]*\u201d/g, " ").replace(/'[^']*'/g, " ").replace(/\u2018[^\u2019]*\u2019/g, " ");
+    const rollIndicators = /\b(?:rolling to|roll for|rolls? (?:a |the )?d(?:20|ice)|attack roll|make (?:a |an )?(?:check|save|roll)|swing(?:s|ing)? (?:your|the|at) |strike(?:s|ing)? at |slash(?:es|ing)? (?:at|through|into) |shoot(?:s|ing)? (?:your|an? |the )|fire(?:s|ing)? (?:your|an? |the )|thrust(?:s|ing)? (?:your|at |toward)|unleash(?:es|ing)? (?:a |the |your )|hurl(?:s|ing)? (?:a |the |your )|cast(?:s|ing)? (?:a |the |your )|loose(?:s|ing)? (?:a |the |your )|releas(?:es|ing) (?:a |the |your ))\b/i;
+    const combatAction = /\b(?:attacks?|swings? at|strikes? at|slashes? at|stabs?|shoots? at|hurls?|charges? (?:at|toward)|lunges? (?:at|toward)|smashes?|cleaves?|blasts?|casts?|unleash(?:es)?|looses?|channels?|zaps?|streaks? toward|surges? toward)\b/i;
+    const combatWeaponCtx = /\b(?:aim|hit|miss|damage|weapon|sword|axe|bow|spear|blade|arrow|dagger|mace|hammer|spell|magic|arcane|bolt|blast|ray|flame|lightning|fire|ice|frost|force|energy|missile|shimmering|crackling)\b/i;
+    const playerIntent = (ctx.playerIntent ?? "").toLowerCase();
+    const playerIntentCombat = /\b(?:attack|fight|strike|hit|slash|stab|shoot|swing|charge|lunge|smash|cleave|kill|slay|blast|cast|spell|zap|unleash|hurl|loose|channel|smite)\b/i.test(playerIntent);
+    const utilityCastPattern = /\b(?:cast(?:s|ing)? (?:light|detect|invisibility|mage hand|prestidigitation|message|ward(?:ing)?|protection|shield(?: self)?|identify|comprehend|read|alarm|unseen servant|feather ?fall|levitate|water breathing|disguise|sleep|charm|sanctuary|silence|fog|mist|darkness|locate)|heal(?:s|ing)?|cure (?:wounds|disease|poison)|mend(?:s|ing)?|bandage|patch up|tend (?:to|the wound)|pray (?:to|for)|meditate|bless(?:es|ing)?|buff)\b/i;
+    const isUtilityCast = utilityCastPattern.test(playerIntent) || utilityCastPattern.test(rawNarr);
+    const partyCharsForCtx = await db.select().from(characters)
+      .innerJoin(partyMembers, eq(characters.id, partyMembers.characterId))
+      .where(eq(partyMembers.partyId, ctx.partyId));
+    const charNames = partyCharsForCtx.map(r => r.characters.name.toLowerCase());
+    if (campaign.npcControl === "player") {
+      const companions = await db.select().from(npcLog)
+        .where(and(eq(npcLog.partyId, ctx.partyId), eq(npcLog.isPartyMember, true)));
+      for (const c of companions) charNames.push(c.name.toLowerCase());
+    }
+    const hasCharRef = /\byou\b|\byour\b/i.test(rawNarr) || charNames.some(n => rawNarr.includes(n));
+    if (!isUtilityCast && (rollIndicators.test(rawNarr) || (combatAction.test(rawNarr) && combatWeaponCtx.test(rawNarr) && (hasCharRef || playerIntentCombat)))) {
+      const actingChar = ctx.actingCharacterId
+        ? partyCharsForCtx.find(r => r.characters.id === ctx.actingCharacterId)?.characters
+        : partyCharsForCtx[0]?.characters;
+      if (actingChar) {
+        const weapons = ((actingChar.inventory as any[]) ?? []).filter((i: any) => i.type === "weapon" && i.equipped);
+        const weapon = weapons[0];
+        const modifier = weapon?.properties?.bonus ?? Math.floor(((actingChar.stats as any)?.might ?? 10 - 10) / 2);
+        diceRequests = [{
+          character: actingChar.name,
+          die: "d20",
+          modifier: modifier,
+          advantage: "normal",
+          purpose: `Attack roll${weapon ? ` with ${weapon.name}` : ""}`,
+        }];
+        console.log(`[GM] Safety net: auto-generated dice request for ${actingChar.name} — GM forgot to include dice_requests`);
+      }
+    }
+  }
+  if (onPhase && diceRequests.length > 0) {
+    try {
+      onPhase("dice_ready", { diceRequests, narrative: cleanNarrative });
+    } catch (e) {
+      console.error("[GM] onPhase(dice_ready) emit failed:", e);
+    }
+  }
+
   // === CHRONICLER PASS ===
   // The narrator just wrote prose. Now a second model — focused, conservative,
   // JSON-only — re-reads the narrative and is the sole authority for entity
@@ -1826,53 +1883,9 @@ export async function runGM(
     generateSummary(ctx.partyId, turnNum).catch(console.error);
   }
 
-  let diceRequests = parsed?.dice_requests ?? [];
-
-  // Safety net: if the narrative suggests a roll should happen but dice_requests is empty,
-  // generate a fallback dice request so the player isn't stuck
-  if (diceRequests.length === 0) {
-    const rawNarrFull = (parsed?.narrative ?? fullText).toLowerCase();
-    const rawNarr = rawNarrFull.replace(/"[^"]*"/g, " ").replace(/\u201c[^\u201d]*\u201d/g, " ").replace(/'[^']*'/g, " ").replace(/\u2018[^\u2019]*\u2019/g, " ");
-    const rollIndicators = /\b(?:rolling to|roll for|rolls? (?:a |the )?d(?:20|ice)|attack roll|make (?:a |an )?(?:check|save|roll)|swing(?:s|ing)? (?:your|the|at) |strike(?:s|ing)? at |slash(?:es|ing)? (?:at|through|into) |shoot(?:s|ing)? (?:your|an? |the )|fire(?:s|ing)? (?:your|an? |the )|thrust(?:s|ing)? (?:your|at |toward)|unleash(?:es|ing)? (?:a |the |your )|hurl(?:s|ing)? (?:a |the |your )|cast(?:s|ing)? (?:a |the |your )|loose(?:s|ing)? (?:a |the |your )|releas(?:es|ing) (?:a |the |your ))\b/i;
-    const combatAction = /\b(?:attacks?|swings? at|strikes? at|slashes? at|stabs?|shoots? at|hurls?|charges? (?:at|toward)|lunges? (?:at|toward)|smashes?|cleaves?|blasts?|casts?|unleash(?:es)?|looses?|channels?|zaps?|streaks? toward|surges? toward)\b/i;
-    const combatWeaponCtx = /\b(?:aim|hit|miss|damage|weapon|sword|axe|bow|spear|blade|arrow|dagger|mace|hammer|spell|magic|arcane|bolt|blast|ray|flame|lightning|fire|ice|frost|force|energy|missile|shimmering|crackling)\b/i;
-    const playerIntent = (ctx.playerIntent ?? "").toLowerCase();
-    const playerIntentCombat = /\b(?:attack|fight|strike|hit|slash|stab|shoot|swing|charge|lunge|smash|cleave|kill|slay|blast|cast|spell|zap|unleash|hurl|loose|channel|smite)\b/i.test(playerIntent);
-    // Utility-spell exclusion: if the player intent or narrative is clearly a non-attack
-    // cast (light, detect, heal, ward, shield self, mage hand, etc.) suppress the
-    // safety-net so we don't auto-generate an attack roll for a utility action.
-    const utilityCastPattern = /\b(?:cast(?:s|ing)? (?:light|detect|invisibility|mage hand|prestidigitation|message|ward(?:ing)?|protection|shield(?: self)?|identify|comprehend|read|alarm|unseen servant|feather ?fall|levitate|water breathing|disguise|sleep|charm|sanctuary|silence|fog|mist|darkness|locate)|heal(?:s|ing)?|cure (?:wounds|disease|poison)|mend(?:s|ing)?|bandage|patch up|tend (?:to|the wound)|pray (?:to|for)|meditate|bless(?:es|ing)?|buff)\b/i;
-    const isUtilityCast = utilityCastPattern.test(playerIntent) || utilityCastPattern.test(rawNarr);
-    const partyCharsForCtx = await db.select().from(characters)
-      .innerJoin(partyMembers, eq(characters.id, partyMembers.characterId))
-      .where(eq(partyMembers.partyId, ctx.partyId));
-    const charNames = partyCharsForCtx.map(r => r.characters.name.toLowerCase());
-    if (campaign.npcControl === "player") {
-      const companions = await db.select().from(npcLog)
-        .where(and(eq(npcLog.partyId, ctx.partyId), eq(npcLog.isPartyMember, true)));
-      for (const c of companions) charNames.push(c.name.toLowerCase());
-    }
-    const hasCharRef = /\byou\b|\byour\b/i.test(rawNarr) || charNames.some(n => rawNarr.includes(n));
-    if (!isUtilityCast && (rollIndicators.test(rawNarr) || (combatAction.test(rawNarr) && combatWeaponCtx.test(rawNarr) && (hasCharRef || playerIntentCombat)))) {
-      const partyChars = partyCharsForCtx;
-      const actingChar = ctx.actingCharacterId
-        ? partyChars.find(r => r.characters.id === ctx.actingCharacterId)?.characters
-        : partyChars[0]?.characters;
-      if (actingChar) {
-        const weapons = ((actingChar.inventory as any[]) ?? []).filter((i: any) => i.type === "weapon" && i.equipped);
-        const weapon = weapons[0];
-        const modifier = weapon?.properties?.bonus ?? Math.floor(((actingChar.stats as any)?.might ?? 10 - 10) / 2);
-        diceRequests = [{
-          character: actingChar.name,
-          die: "d20",
-          modifier: modifier,
-          advantage: "normal",
-          purpose: `Attack roll${weapon ? ` with ${weapon.name}` : ""}`,
-        }];
-        console.log(`[GM] Safety net: auto-generated dice request for ${actingChar.name} — GM forgot to include dice_requests`);
-      }
-    }
-  }
+  // diceRequests + safety net already ran before the chronicler pass — see
+  // "=== EARLY DICE_READY ===" above. The variable is in scope for the rest of
+  // this function (combat-stall, onDone, etc).
 
   // Shop safety net: if the player asked to shop/browse/buy and narrative mentions wares/items
   // but the GM forgot to emit SHOP_OPENED, auto-generate shop inventory
@@ -2662,9 +2675,22 @@ export async function processUpdates(updates: any[], partyId: string, campaignId
           const lowerName = locName.toLowerCase();
           // Dedup: if already known (visited or rumored), skip.
           if (locations.some((l: any) => (l.name ?? "").toLowerCase() === lowerName)) break;
+          // Region fallback ladder: explicit > currentRegion > most-recently-visited
+          // region > region of any non-rumored location > "Unknown Lands". This
+          // avoids dumping rumored places into an "Unknown Lands" bucket when
+          // the party has already established a region elsewhere.
+          const explicit = (update.region ?? "").trim();
+          const visitedRegions = locations
+            .filter((l: any) => !l.rumored && l.region && l.region !== "Unknown Lands")
+            .map((l: any) => ({ region: l.region as string, turn: l.firstVisitedTurn ?? 0 }));
+          visitedRegions.sort((a: any, b: any) => b.turn - a.turn);
+          const fallbackRegion = explicit
+            || currentState.currentRegion
+            || visitedRegions[0]?.region
+            || "Unknown Lands";
           locations.push({
             name: locName,
-            region: (update.region ?? "").trim() || currentState.currentRegion || "Unknown Lands",
+            region: fallbackRegion,
             rumored: true,
             mentionedTurn: currentSnap?.turnNumber ?? 0,
             source: (update.source ?? "").trim() || null,

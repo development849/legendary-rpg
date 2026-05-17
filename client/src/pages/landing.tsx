@@ -75,10 +75,6 @@ export default function LandingPage() {
           </p>
         </div>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-muted-foreground/40 z-10">
-          <div className="w-px h-12 bg-gradient-to-b from-transparent to-primary/30" />
-        </div>
       </div>
 
       {/* Features Section */}

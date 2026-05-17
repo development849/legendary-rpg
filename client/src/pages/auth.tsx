@@ -189,9 +189,9 @@ export default function AuthPage() {
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" data-testid="hero-bg-auth" aria-hidden="true">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat animate-hero-drift"
-          style={{ backgroundImage: `url(${hero.url})`, opacity: 0.4 }}
+          style={{ backgroundImage: `url(${hero.url})`, opacity: 0.75 }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/85" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-background/40 to-background/60" />
       </div>
 
       {/* Compact mobile hero (visible below lg) */}

@@ -5,6 +5,66 @@ import { z } from "zod";
 
 export * from "./models/auth";
 
+// ─── Eras / Settings ──────────────────────────────────────────────────────────
+// Shared between character + campaign creation, AI prompts, and join-time warnings.
+
+export const ERAS = [
+  {
+    id: "high-fantasy",
+    label: "High Fantasy",
+    blurb: "Swords, sorcery, dragons. Classic medieval magic.",
+    promptHint: "high fantasy (medieval swords, sorcery, dragons, knights, wizards)",
+  },
+  {
+    id: "dark-ages",
+    label: "Dark Ages",
+    blurb: "Gritty sword & sorcery. Low magic, hard living.",
+    promptHint: "dark ages sword & sorcery (gritty medieval, low magic, grim, weathered)",
+  },
+  {
+    id: "steampunk",
+    label: "Steampunk",
+    blurb: "Victorian gears, brass, steam, and clockwork.",
+    promptHint: "steampunk victorian (brass gears, steam machinery, top hats, goggles, clockwork)",
+  },
+  {
+    id: "modern",
+    label: "Modern Day",
+    blurb: "Present day. Phones, cars, suits, denim.",
+    promptHint: "modern day contemporary (smartphones, cars, jeans, jackets, urban)",
+  },
+  {
+    id: "cyberpunk",
+    label: "Cyberpunk",
+    blurb: "Neon-lit megacities. Implants, corps, rain.",
+    promptHint: "cyberpunk near-future (neon city, cybernetic implants, megacorps, rain, holograms)",
+  },
+  {
+    id: "sci-fi",
+    label: "Sci-Fi",
+    blurb: "Starships, alien worlds, energy weapons.",
+    promptHint: "science fiction space opera (starships, alien worlds, energy weapons, futuristic)",
+  },
+  {
+    id: "post-apocalyptic",
+    label: "Post-Apocalyptic",
+    blurb: "Ruined world. Scavenged gear. Hard choices.",
+    promptHint: "post-apocalyptic wasteland (ruined cities, scavenged gear, dust, makeshift armour)",
+  },
+  {
+    id: "custom",
+    label: "Custom",
+    blurb: "Describe your own setting.",
+    promptHint: "custom setting",
+  },
+] as const;
+
+export type EraId = typeof ERAS[number]["id"];
+
+export function getEra(id: string | null | undefined) {
+  return ERAS.find(e => e.id === id) ?? ERAS[0];
+}
+
 // ─── Characters ───────────────────────────────────────────────────────────────
 
 export const characters = pgTable("characters", {
@@ -15,6 +75,7 @@ export const characters = pgTable("characters", {
   race: text("race").notNull(),
   gender: text("gender").default(""),
   background: text("background").notNull(),
+  era: text("era").notNull().default("high-fantasy"),
   appearance: text("appearance").default(""),
   backstory: text("backstory").default(""),
   profilePicture: text("profile_picture").default(""),
@@ -47,6 +108,7 @@ export const campaigns = pgTable("campaigns", {
   name: text("name").notNull(),
   description: text("description").default(""),
   setting: text("setting").default(""),
+  era: text("era").notNull().default("high-fantasy"),
   worldName: text("world_name"),
   worldDescription: text("world_description"),
   worldImage: text("world_image"),

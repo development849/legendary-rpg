@@ -250,6 +250,8 @@ const FANTASY_NAMES = [
   "Grimshaw", "Isolde", "Kaelen", "Liora", "Mazrek", "Niamh", "Ondra", "Ravenna",
 ];
 
+import { ERAS } from "@shared/schema";
+
 type Step = "class" | "race" | "stats" | "details" | "confirm" | "portrait";
 
 export default function CreateCharacterPage() {
@@ -261,6 +263,7 @@ export default function CreateCharacterPage() {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedRace, setSelectedRace] = useState<string>("");
   const [selectedGender, setSelectedGender] = useState<string>("");
+  const [selectedEra, setSelectedEra] = useState<string>("high-fantasy");
   const [customStats, setCustomStats] = useState<Record<string, number> | null>(null);
   const [name, setName] = useState("");
   const [background, setBackground] = useState("");
@@ -341,6 +344,7 @@ export default function CreateCharacterPage() {
           cls: selectedClass,
           race: selectedRace,
           background,
+          era: selectedEra,
           gender: selectedGender || undefined,
           personality: selectedTraits.join(", ") || undefined,
           motivation: motivation.trim() || undefined,
@@ -388,6 +392,7 @@ export default function CreateCharacterPage() {
           backstory: backstory.trim() || undefined,
           customBaseStats: customStats ?? undefined,
           gender: selectedGender || undefined,
+          era: selectedEra,
         }),
       });
       if (res.status === 401) {
@@ -734,6 +739,32 @@ export default function CreateCharacterPage() {
                       </button>
                     ))}
                   </div>
+                </div>
+              </div>
+
+              {/* Era / Setting */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Era / Setting *</label>
+                <p className="text-xs text-muted-foreground font-serif italic">
+                  Picks the world your hero comes from. Backstory and portrait will match this era.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {ERAS.map(e => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => setSelectedEra(e.id)}
+                      data-testid={`button-era-${e.id}`}
+                      className={`p-3 rounded-md border text-left transition-all hover-elevate ${
+                        selectedEra === e.id
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-card text-foreground"
+                      }`}
+                    >
+                      <div className="text-sm font-sans tracking-wide">{e.label}</div>
+                      <div className="text-[11px] text-muted-foreground font-serif mt-0.5">{e.blurb}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
 

@@ -6,6 +6,7 @@ import { ArrowLeft, Scroll, Sparkles, Shield, Swords, Palette, ImageOff, AlertTr
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ERAS, getEra } from "@shared/schema";
 import type { Character } from "@shared/schema";
 
 const GM_MODES = [
@@ -53,6 +54,7 @@ export default function CreateCampaignPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [setting, setSetting] = useState("");
+  const [era, setEra] = useState("high-fantasy");
   const [worldName, setWorldName] = useState("");
   const [worldDescription, setWorldDescription] = useState("");
   const [gmMode, setGmMode] = useState("balanced");
@@ -98,7 +100,7 @@ export default function CreateCampaignPage() {
       const res = await fetch("/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description, setting, worldName: worldName.trim() || null, worldDescription: worldDescription.trim() || null, worldSeed: worldSeed ?? undefined, themes: selectedThemes, gmMode, contentRating, noRomance, noHorror, fadeToBlack }),
+        body: JSON.stringify({ name: name.trim(), description, setting, era, worldName: worldName.trim() || null, worldDescription: worldDescription.trim() || null, worldSeed: worldSeed ?? undefined, themes: selectedThemes, gmMode, contentRating, noRomance, noHorror, fadeToBlack }),
       });
       if (!res.ok) throw new Error(await res.text());
       const { campaign, party } = await res.json();
@@ -163,6 +165,32 @@ export default function CreateCampaignPage() {
               maxLength={500}
               data-testid="textarea-description"
             />
+          </div>
+
+          {/* Era / Setting */}
+          <div className="space-y-2">
+            <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Era / Setting *</label>
+            <p className="text-xs text-muted-foreground font-serif italic">
+              Defines the world's genre, technology, and vocabulary. The GM will keep everything true to this era.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {ERAS.map(e => (
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => setEra(e.id)}
+                  data-testid={`button-campaign-era-${e.id}`}
+                  className={`p-3 rounded-md border text-left transition-all hover-elevate ${
+                    era === e.id
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card text-foreground"
+                  }`}
+                >
+                  <div className="text-sm font-sans tracking-wide">{e.label}</div>
+                  <div className="text-[11px] text-muted-foreground font-serif mt-0.5">{e.blurb}</div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* World Setting */}
@@ -412,6 +440,21 @@ export default function CreateCampaignPage() {
                     </div>
                   </button>
                 ))}
+              </div>
+            )}
+            {selectedChar && selectedChar.era && selectedChar.era !== era && (
+              <div className="mt-3 p-3 rounded-md border border-amber-500/40 bg-amber-500/10 flex items-start gap-2" data-testid="warning-era-mismatch">
+                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="text-sm font-serif">
+                  <p className="text-amber-200">
+                    Era mismatch: <span className="font-semibold">{selectedChar.name}</span> hails from{" "}
+                    <span className="font-semibold">{getEra(selectedChar.era).label}</span>, but this campaign is set in{" "}
+                    <span className="font-semibold">{getEra(era).label}</span>.
+                  </p>
+                  <p className="text-amber-200/70 text-xs mt-1 italic">
+                    They'll be treated as a displaced traveller — a fish-out-of-water in this world.
+                  </p>
+                </div>
               </div>
             )}
 

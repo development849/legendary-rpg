@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sword, Shield, Plus, LogOut, ScrollText, Users, Dices, ChevronRight, Scroll, Target, Star, Flame, Music, Trash2, Pencil } from "lucide-react";
-import FriendsPanel from "@/components/FriendsPanel";
 import { apiRequest } from "@/lib/queryClient";
 import type { Character } from "@shared/schema";
 import { LegendaryLogo } from "@/components/LegendaryLogo";

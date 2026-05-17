@@ -82,9 +82,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/characters/generate-backstory", requireAuth, async (req: any, res) => {
     try {
-      const { name, cls, race, background, personality, motivation, flaw, gender } = req.body;
+      const { name, cls, race, background, personality, motivation, flaw, gender, era } = req.body;
       if (!cls || !race || !background) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
+      const { ERAS: ERAS_ALLOW } = await import("@shared/schema");
+      if (era !== undefined && era !== null && !ERAS_ALLOW.some(e => e.id === era)) {
+        return res.status(400).json({ error: "Invalid era" });
       }
 
       const OpenAI = (await import("openai")).default;
@@ -103,8 +107,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const pronouns = gender && pronounMap[gender] ? pronounMap[gender] : null;
       const genderLabel = gender && gender !== "prefer-not-to-say" ? gender : null;
 
+      const { getEra } = await import("@shared/schema");
+      const eraDef = getEra(era);
+
       const prompt = [
-        `Write a compelling 2–3 paragraph backstory for a fantasy RPG character with the following details:`,
+        `Write a compelling 2–3 paragraph backstory for an RPG character set in ${eraDef.promptHint}.`,
+        `Setting era: ${eraDef.label} — ${eraDef.blurb}`,
+        `Use clothing, technology, vocabulary, locations, and references appropriate to this era.`,
+        ``,
+        `Character details:`,
         `Name: ${name || "Unknown"}`,
         `Race: ${race}`,
         `Class: ${cls}`,
@@ -115,7 +126,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         motivation ? `Core motivation: ${motivation}` : null,
         flaw ? `Flaw or dark secret: ${flaw}` : null,
         ``,
-        `Write in third person. Make it vivid, immersive, and true to high fantasy. Focus on formative events, key relationships, and the moment that set them on an adventuring path. Do not include game stats or mechanics. 2–3 paragraphs only.${pronouns ? ` Use the character's specified pronouns (${pronouns}) throughout — never use opposite-gender pronouns.` : ""}`,
+        `Write in third person. Make it vivid and immersive, true to the ${eraDef.label} setting. Focus on formative events, key relationships, and the moment that set them on an adventuring path. Do not include game stats or mechanics. 2–3 paragraphs only.${pronouns ? ` Use the character's specified pronouns (${pronouns}) throughout — never use opposite-gender pronouns.` : ""}`,
       ].filter(Boolean).join("\n");
 
       const completion = await openai.chat.completions.create({
@@ -142,11 +153,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/characters", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
-      const { name, class: cls, race, background, appearance, backstory, customBaseStats, gender } = req.body;
+      const { name, class: cls, race, background, appearance, backstory, customBaseStats, gender, era } = req.body;
       if (!name || !cls || !race || !background) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-      const char = await createCharacter(userId, { name, class: cls, race, background, appearance, backstory, customBaseStats, gender });
+      const { ERAS: ERAS_ALLOW } = await import("@shared/schema");
+      if (era !== undefined && era !== null && !ERAS_ALLOW.some(e => e.id === era)) {
+        return res.status(400).json({ error: "Invalid era" });
+      }
+      const char = await createCharacter(userId, { name, class: cls, race, background, appearance, backstory, customBaseStats, gender, era });
       res.status(201).json(char);
     } catch (e) { res.status(500).json({ error: "Failed to create character" }); }
   });
@@ -193,6 +208,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const stats = (char.stats as Record<string, number>) || {};
 
+      const { getEra } = await import("@shared/schema");
+      const eraDef = getEra((char as any).era);
+      const isFantasy = eraDef.id === "high-fantasy" || eraDef.id === "dark-ages";
+
       const classOutfitMap: Record<string, string> = {
         fighter: "storied full plate armour with engraved pauldrons, a longsword at their hip",
         barbarian: "fur-trimmed leather vest, runic tribal tattoos, athletic muscular build",
@@ -237,26 +256,36 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         appearanceDetails,
       ].filter(Boolean).join(", ");
 
-      const outfitHint = classOutfitMap[char.class as string] ?? "detailed fantasy adventurer outfit";
-      const bgAtmosphere = backgroundAtmosphereMap[char.background as string] ?? "dramatic fantasy environment with atmospheric depth";
+      const outfitHint = isFantasy
+        ? (classOutfitMap[char.class as string] ?? "detailed fantasy adventurer outfit")
+        : `era-appropriate ${eraDef.label} outfit suited to a ${char.class}`;
+      const bgAtmosphere = isFantasy
+        ? (backgroundAtmosphereMap[char.background as string] ?? "dramatic fantasy environment with atmospheric depth")
+        : `era-appropriate ${eraDef.label} setting`;
 
       const genderDesc = char.gender && char.gender !== "prefer-not-to-say"
         ? ` ${char.gender}` : "";
+      const styleOpener = isFantasy
+        ? `Cinematic fantasy portrait painting`
+        : `Cinematic ${eraDef.label} portrait`;
+      const styleCloser = isFantasy
+        ? `painterly fine brushwork, cinematic depth of field, atmospheric bokeh background, portrait to waist framing, fantasy concept art, high quality illustration`
+        : `cinematic depth of field, atmospheric bokeh background, portrait to waist framing, ${eraDef.promptHint}, high quality concept art`;
       const prompt = [
-        `Cinematic fantasy portrait painting of a${genderDesc} ${levelDesc} ${char.race} ${char.class} named ${char.name},`,
+        `${styleOpener} of a${genderDesc} ${levelDesc} ${char.race} ${char.class} named ${char.name},`,
+        `Setting era: ${eraDef.promptHint} — visuals, clothing, and props MUST match this era.`,
         appearanceParts ? `${appearanceParts},` : "",
         `wearing ${outfitHint},`,
         `set against ${bgAtmosphere},`,
         `ultra-detailed luminous digital painting, photorealistic expressive face, dramatic volumetric rim lighting,`,
-        `deep cinematic colour palette with rich shadows and glowing highlights, intricate fabric and armour detail,`,
-        `painterly fine brushwork, cinematic depth of field, atmospheric bokeh background, portrait to waist framing,`,
-        `fantasy concept art, high quality illustration`,
+        `deep cinematic colour palette with rich shadows and glowing highlights, intricate fabric and material detail,`,
+        styleCloser,
       ].filter(Boolean).join(" ");
 
       const fs = await import("fs");
       const path = await import("path");
       const styleRefPath = path.join(process.cwd(), "attached_assets", "Snip20260221_1_1771705188223.png");
-      const styleRefBase64 = fs.existsSync(styleRefPath)
+      const styleRefBase64 = isFantasy && fs.existsSync(styleRefPath)
         ? fs.readFileSync(styleRefPath).toString("base64")
         : null;
 
@@ -554,9 +583,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/campaigns", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
-      const { name, description, setting, worldName, worldDescription, worldSeed, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack } = req.body;
+      const { name, description, setting, worldName, worldDescription, worldSeed, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack, era } = req.body;
       if (!name) return res.status(400).json({ error: "Name required" });
-      const campaign = await createCampaign(userId, { name, description, setting, worldName, worldDescription, worldSeed, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack });
+      const { ERAS: ERAS_ALLOW } = await import("@shared/schema");
+      if (era !== undefined && era !== null && !ERAS_ALLOW.some(e => e.id === era)) {
+        return res.status(400).json({ error: "Invalid era" });
+      }
+      const campaign = await createCampaign(userId, { name, description, setting, worldName, worldDescription, worldSeed, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack, era });
       const party = await createParty(campaign.id, "The Company");
       res.status(201).json({ campaign, party });
     } catch (e) { res.status(500).json({ error: "Failed to create campaign" }); }

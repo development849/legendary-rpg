@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { db } from "./db";
-import { chatMessages, gameEvents, worldState, sceneSummaries, characters, parties, campaigns, partyMembers, arcs, locationScenes, characterSituations, npcLog, locationMaps } from "@shared/schema";
+import { chatMessages, gameEvents, worldState, sceneSummaries, characters, parties, campaigns, partyMembers, arcs, locationScenes, characterSituations, npcLog, locationMaps, getEra } from "@shared/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { rollDice, enforceHandLimits } from "./gameEngine";
 import { saveCampaignSoundtrack } from "./storage";
@@ -780,12 +780,22 @@ Achievements: ${((c.achievements as any[]) || []).map((a: any) => `${a.title} [$
     ].filter(Boolean).join("\n");
   }).join("\n\n");
 
-  return `You are the Game Master for "${campaign.name}", an online fantasy RPG using the Legendary Lite ruleset.
+  const campaignEra = getEra(campaign.era);
+  const mismatchedChars = (chars as any[]).filter(c => c.era && c.era !== campaign.era);
+  const mismatchBlock = mismatchedChars.length > 0
+    ? `\nDISPLACED TRAVELLERS — Some party members hail from a different era and have entered this world as outsiders. Treat them as fish-out-of-water characters who do not fully fit this setting:\n${mismatchedChars.map(c => `- ${c.name}: from ${getEra(c.era).label} (${getEra(c.era).blurb})`).join("\n")}\n`
+    : "";
 
-CAMPAIGN SETTING:
+  return `You are the Game Master for "${campaign.name}", an online RPG using the Legendary Lite ruleset.
+
+CAMPAIGN ERA / SETTING: ${campaignEra.label} — ${campaignEra.blurb}
+Genre: ${campaignEra.promptHint}
+All NPCs, locations, technology, clothing, vocabulary, and items MUST match this era. Do not introduce anachronisms.
+${mismatchBlock}
+CAMPAIGN PREMISE:
 ${campaign.worldSeed
   ? `WORLD PREMISE (GM-chosen backdrop — treat as the foundational reality of this world):\n${campaign.worldSeed}\n\n${campaign.description || ""}`
-  : campaign.description || "A rich fantasy world full of danger and wonder."
+  : campaign.description || `A rich ${campaignEra.label} world full of danger and wonder.`
 }
 ${campaign.setting || ""}
 

@@ -19,7 +19,7 @@ import { getDefaultStats, getStartingInventory, getStartingAbilities, getBackgro
 
 export async function createCharacter(userId: string, data: {
   name: string; class: string; race: string; background: string; appearance?: string; backstory?: string;
-  customBaseStats?: Record<string, number>; gender?: string;
+  customBaseStats?: Record<string, number>; gender?: string; era?: string;
 }): Promise<Character> {
   const cls = data.class;
   const baseHp = CLASS_BASE_HP[cls] ?? 10;
@@ -40,6 +40,7 @@ export async function createCharacter(userId: string, data: {
     class: cls,
     race: data.race,
     background: data.background,
+    era: data.era ?? "high-fantasy",
     appearance: data.appearance ?? "",
     backstory: data.backstory ?? "",
     gender: data.gender ?? "",
@@ -84,13 +85,14 @@ export async function createCampaign(ownerId: string, data: {
   themes?: string[];
   contentRating?: string; noRomance?: boolean; noHorror?: boolean;
   fadeToBlack?: boolean; gmMode?: string; stylePack?: string;
-  npcControl?: string;
+  npcControl?: string; era?: string;
 }): Promise<Campaign> {
   const [campaign] = await db.insert(campaigns).values({
     ownerId,
     name: data.name,
     description: data.description,
     setting: data.setting,
+    era: data.era ?? "high-fantasy",
     worldName: data.worldName ?? null,
     worldDescription: data.worldDescription ?? null,
     worldSeed: data.worldSeed ?? null,

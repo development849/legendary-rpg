@@ -886,6 +886,150 @@ export const CLASS_SKILL_TREES: Record<string, SkillTier[]> = {
       ],
     },
   ],
+  aetherist: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "ae_arc_lance", name: "Arc Lance", description: "Focus the bolt into a single concentrated lance.", mechanicalEffect: "+1d8 damage on Aether Bolt; costs 1 extra Aether Charge" },
+        { id: "ae_capacitor_efficiency", name: "Capacitor Efficiency", description: "You waste nothing when you draw on the lattice.", mechanicalEffect: "Reduce Aether Charge cost of all workings by 1 (minimum 1)" },
+        { id: "ae_aether_shield", name: "Aether Shield", description: "A constant whisper of charge wards the worst of it off.", mechanicalEffect: "+2 AC; resistance to force damage" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "ae_disrupt_engine", name: "Disrupt Engine", description: "Reach into a working aetheric device and unmake it.", mechanicalEffect: "Disable any aetheric engine or device for 1 minute (costs 3 Aether Charge)" },
+        { id: "ae_lightning_step", name: "Lightning Step", description: "Step through the lattice — appear elsewhere in a crackle of blue-white.", mechanicalEffect: "Teleport up to 30ft as a bonus action (costs 2 Aether Charge)" },
+        { id: "ae_arc_chain", name: "Arc Chain", description: "The bolt forks between targets.", mechanicalEffect: "Aether Bolt chains to up to 3 targets within 15ft" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "ae_overcharge", name: "Overcharge", description: "Spend more than is wise and watch the room shake.", mechanicalEffect: "Convert any working into AoE 20ft for double Aether Charge cost" },
+        { id: "ae_drawn_from_air", name: "Drawn From the Air", description: "Idle aether drifts into your capacitor without your asking.", mechanicalEffect: "Regenerate 1d4 Aether Charge per round in combat" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "ae_master_of_the_lattice", name: "Master of the Lattice", description: "You do not channel the aether. You move it.", mechanicalEffect: "+4 Intellect; all workings cost half Aether Charge; double range" },
+        { id: "ae_pull_the_engines_down", name: "Pull the Engines Down", description: "Drop every aether-powered device in a city block.", mechanicalEffect: "Silence all aetheric devices in 100ft for 1 hour, per day" },
+      ],
+    },
+  ],
+  clockwright: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "cw_clockwork_companion", name: "Clockwork Companion", description: "Upgrade the brass owl into a battlefield companion.", mechanicalEffect: "Owl gains combat actions (1d6 damage, scouting, distraction)" },
+        { id: "cw_mechanical_advantage", name: "Mechanical Advantage", description: "Years of fine work mean any mechanism yields to you.", mechanicalEffect: "Auto-succeed on lock-picking, trap disarmament, and clockwork repair" },
+        { id: "cw_walking_stick_blade", name: "Walking-Stick Blade", description: "The sword-cane is, you grant, an old gentleman's trick. It works.", mechanicalEffect: "+1d6 sneak-attack damage when undisclosed weapon is drawn" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "cw_field_workshop", name: "Field Workshop", description: "Set up a portable bench anywhere you can put down a satchel.", mechanicalEffect: "Build two contraptions per scene instead of one; repair allied gear" },
+        { id: "cw_smoke_bombs", name: "Pocket Smoke-Bombs", description: "A pair of glass spheres at the belt, ready for the wrong corridor.", mechanicalEffect: "Deploy a 20ft smoke cloud as a bonus action, per encounter" },
+        { id: "cw_grapnel_launcher", name: "Grapnel Launcher", description: "A spring-loaded brass and steel launcher does what climbing won't.", mechanicalEffect: "Bonus-action 30ft swing; ignore vertical terrain" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "cw_automaton_ally", name: "Automaton Ally", description: "A full-size clockwork servant — slow, durable, useful in a fight.", mechanicalEffect: "Summon a clockwork automaton with 25 HP, 1d10 attack, per day" },
+        { id: "cw_anticipate", name: "Anticipate", description: "You wound the trap last week, exactly for this moment.", mechanicalEffect: "Declare one pre-placed device or contingency retroactively, per session" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "cw_master_artisan", name: "Master Artisan", description: "There is no mechanism in the Empire you cannot understand at a glance.", mechanicalEffect: "+4 Intellect; unlimited contraptions per scene; auto-repair any clockwork or aetheric device" },
+        { id: "cw_workshop_in_the_pocket", name: "Workshop in the Pocket", description: "You carry the relevant fragment of every workshop you have ever owned.", mechanicalEffect: "Produce any reasonable small mechanical object on demand, per day" },
+      ],
+    },
+  ],
+  airship_pilot: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "ap_dead_aim", name: "Dead Aim", description: "Years on the foredeck steady the wrist.", mechanicalEffect: "+2 to ranged attack rolls" },
+        { id: "ap_evasive_footwork", name: "Evasive Footwork", description: "Move like the deck is pitching, even when it isn't.", mechanicalEffect: "+3 AC against ranged attacks" },
+        { id: "ap_swashbuckler", name: "Swashbuckler", description: "A duellist's grace is also a sky-pirate's.", mechanicalEffect: "+1d6 damage on the first melee attack each round" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "ap_fan_the_hammer", name: "Fan the Hammer", description: "Empty both revolvers in the time most men take to draw one.", mechanicalEffect: "Fire 4 ranged attacks as one attack action, per encounter" },
+        { id: "ap_rigging_artist", name: "Rigging Artist", description: "Vault, swing, drop — anywhere there is a rope.", mechanicalEffect: "Bonus-action 30ft swing/vault; ignore difficult vertical terrain" },
+        { id: "ap_captains_orders", name: "Captain's Orders", description: "A bark of command and the crew acts on it.", mechanicalEffect: "Grant an ally a bonus action on your turn, per encounter" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "ap_called_shot", name: "Called Shot", description: "Take the hand, the helmet, or the powder-flask. Your choice.", mechanicalEffect: "Disarm or stagger target on a successful ranged hit" },
+        { id: "ap_ace_pilot", name: "Ace Pilot", description: "There is nothing in the sky you cannot wring a final mile out of.", mechanicalEffect: "+4 to all piloting/vehicle checks; ignore vehicle damage thresholds" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "ap_legend_of_the_skies", name: "Legend of the Skies", description: "Half the broadsheets have run your face, the other half have run it wrong.", mechanicalEffect: "Auto-succeed initiative; +4 Agility; allies gain advantage on first attacks in your presence" },
+        { id: "ap_one_perfect_shot", name: "One Perfect Shot", description: "Once a day, a round that arrives where it must arrive.", mechanicalEffect: "Auto-crit ranged attack, per day" },
+      ],
+    },
+  ],
+  alchemist: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "al_broad_spectrum", name: "Broad-Spectrum Tincture", description: "A single tincture does the work of three.", mechanicalEffect: "Restorative Tincture also cures one poison or disease" },
+        { id: "al_potent_reagents", name: "Potent Reagents", description: "You source from the better apothecaries; your work shows it.", mechanicalEffect: "+1d4 to all alchemical damage and healing" },
+        { id: "al_immunity_dose", name: "Immunity Dose", description: "A sip of your own brew, and the next bad one rolls off.", mechanicalEffect: "Immune to one poison/disease of your choice per day" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "al_paralysis_phial", name: "Paralysis Phial", description: "A vapour that locks the limbs without dropping the lungs.", mechanicalEffect: "Paralyse a target for 1 round on a hit (DC 14 Will), per encounter" },
+        { id: "al_explosive_compound", name: "Explosive Compound", description: "A measured mixture that detonates on contact.", mechanicalEffect: "Hurl a flask: 3d6 fire damage in 15ft, costs 3 Reagents" },
+        { id: "al_field_lab", name: "Field Lab", description: "Brew on the move — your satchel is never empty long.", mechanicalEffect: "Regenerate 1d4 Reagents per short rest" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "al_grand_restorative", name: "Grand Restorative", description: "A masterwork mixture that pulls an ally back from the dead.", mechanicalEffect: "Revive a downed ally to full HP, costs 6 Reagents, per day" },
+        { id: "al_universal_solvent", name: "Universal Solvent", description: "There is little your work cannot dissolve.", mechanicalEffect: "Dissolve any non-magical material; cure any non-magical condition" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "al_master_apothecary", name: "Master Apothecary", description: "Your name is on the patent of every tincture worth knowing.", mechanicalEffect: "+4 Intellect; all alchemy at half Reagent cost; double effect duration" },
+        { id: "al_panacea", name: "Panacea", description: "One vial. Every wound, every sickness, every curse.", mechanicalEffect: "Fully heal and cure all conditions on a target, per day" },
+      ],
+    },
+  ],
   brawler: [
     {
       level: 5,
@@ -1316,6 +1460,25 @@ export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
   ],
   Symbiotic: [
     { id: "sym_symbiote_voice", name: "Symbiote Voice", description: "The thing bonded to you speaks. Sometimes it warns you. Sometimes it just gloats.", mechanicalEffect: "Once per session, the GM tells you one true thing the symbiote perceives that you would miss" },
+  ],
+  // ─── Steampunk origin bonus skills ────────────────────────────────────────
+  Gentry: [
+    { id: "gn_letters", name: "Letters of Introduction", description: "A calling card and a name open most polite doors.", mechanicalEffect: "Auto-access to drawing-rooms, clubs, and educated/establishment NPCs; +2 to social rolls with peers" },
+  ],
+  "Brass-Limb": [
+    { id: "bl_clockwork_prosthetic", name: "Clockwork Prosthetic", description: "The hinged brass works as well as a hand of meat — better, in a fight.", mechanicalEffect: "Prosthetic limb cannot be disarmed or severed; +1 unarmed damage; GM may exploit it in cold or wet weather" },
+  ],
+  "Tinker-Kin": [
+    { id: "tk_workshop_raised", name: "Workshop-Raised", description: "Cogs were toys before they were tools.", mechanicalEffect: "Advantage on any check involving clockwork, aether-engines, or mechanical traps" },
+  ],
+  "Sky-Born": [
+    { id: "sb_sky_legs", name: "Sky-Legs", description: "Rigging, ratlines, swaying decks — your feet know what to do.", mechanicalEffect: "Immune to vertigo; advantage on balance and climbing in rigging or on airships" },
+  ],
+  "Aether-Touched": [
+    { id: "at_aether_sense", name: "Aether Sense", description: "The lattice hums at your fingertips, even when you would prefer it didn't.", mechanicalEffect: "Always perceive working aetheric devices and currents within 100ft" },
+  ],
+  "Foundry-Forged": [
+    { id: "ff_hardened", name: "Hardened", description: "The heat of the foundry doesn't leave you. Most things don't, after the foundry.", mechanicalEffect: "Resistance to fire and heat damage; advantage on Endurance saves" },
   ],
 };
 

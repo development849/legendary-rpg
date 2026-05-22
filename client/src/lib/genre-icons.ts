@@ -11,7 +11,8 @@ import {
   Network, Users, Wrench,
   Search, Ghost, Cross,
   Package, Axe, Syringe,
-  BookOpen, GraduationCap, HelpCircle,
+  BookOpen, GraduationCap,
+  Sparkles, Anchor, FlaskConical, HelpCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Search, Ghost, Cross,
   Package, Axe, Syringe,
   BookOpen, GraduationCap,
+  Sparkles, Anchor, FlaskConical,
 };
 
 export function resolveGenreIcon(iconName: string | null | undefined): LucideIcon {

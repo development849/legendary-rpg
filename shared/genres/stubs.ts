@@ -35,14 +35,6 @@ function stub(args: {
   };
 }
 
-export const STEAMPUNK = stub({
-  id: "steampunk",
-  label: "Steampunk",
-  tagline: "Brass, steam, and impossible machines.",
-  description: "Victorian-era invention run wild. Airships, automatons, and arcane engineering in a soot-stained world.",
-  iconName: "Cog",
-});
-
 export const WEIRD_WEST = stub({
   id: "weirdwest",
   label: "Weird West",
@@ -52,5 +44,5 @@ export const WEIRD_WEST = stub({
 });
 
 export const STUB_GENRES: GenreDefinition[] = [
-  STEAMPUNK, WEIRD_WEST,
+  WEIRD_WEST,
 ];

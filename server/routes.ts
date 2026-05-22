@@ -843,6 +843,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           bgKey,
           settingCtx,
           locDesc,
+          (campaign as any)?.genre,
         ).catch(console.error);
         if (fallbackRow) {
           res.json({ pending: true, imageData: fallbackRow.imageData, locationName: bgKey });
@@ -886,7 +887,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const locData = locations.find((l: any) => l.name === currentLocation);
       const locDesc = locData?.description ?? "";
 
-      generateLocationBackground(partyId, currentLocation, bgKey, settingCtx, locDesc).catch(console.error);
+      generateLocationBackground(partyId, currentLocation, bgKey, settingCtx, locDesc, (campaign as any)?.genre).catch(console.error);
 
       res.json({ ok: true, pending: true, locationName: bgKey });
     } catch (e) {
@@ -983,7 +984,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const party = await getParty(partyId);
         const campaign = party ? await getCampaign(party.campaignId) : null;
         const setting = [(campaign as any)?.setting ?? "", (campaign as any)?.description ?? ""].join(" ").trim();
-        generateRegionMap(partyId, setting).catch(console.error);
+        generateRegionMap(partyId, setting, (campaign as any)?.genre).catch(console.error);
       }
 
       res.json({ mapImage: effectiveMapImage, locations: mapLocations, generating: !effectiveMapImage && locations.length > 0 });
@@ -1074,7 +1075,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const locData = (state.locations ?? []).find((l: any) => l.name === locationName);
       const context = locData?.title || "";
 
-      generateLocationMap(partyId, locationName, locationType, setting, context).catch(console.error);
+      generateLocationMap(partyId, locationName, locationType, setting, context, (campaign as any)?.genre).catch(console.error);
       res.json({ status: "generating" });
     } catch (e) {
       console.error("Location map generate error:", e);

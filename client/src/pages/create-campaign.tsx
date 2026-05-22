@@ -163,6 +163,8 @@ export default function CreateCampaignPage() {
                     onClick={() => !disabled && setGenre(g.id)}
                     disabled={disabled}
                     data-testid={`button-genre-${g.id}`}
+                    title={disabled ? `${g.label} — Coming soon. Stay tuned for a future release.` : g.tagline}
+                    aria-label={disabled ? `${g.label}, coming soon` : g.label}
                     className={`relative p-3 rounded-md border text-left transition-all ${
                       disabled
                         ? "border-border/40 bg-card/40 opacity-50 cursor-not-allowed"

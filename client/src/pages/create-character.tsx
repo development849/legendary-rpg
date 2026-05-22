@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,15 +77,35 @@ export default function CreateCharacterPage() {
   const steps: Step[] = ["class", "race", "stats", "details", "confirm", "portrait"];
   const stepIdx = steps.indexOf(step);
 
-  // Genre is fixed at page entry via ?genre= (defaults to fantasy). All class /
-  // race / background / flavour data flows from the registry for that genre so
+  // Genre source preference: ?campaignId= (authoritative — load the
+  // campaign's genre) > ?genre= (fast path used when a campaign isn't
+  // bound yet) > DEFAULT_GENRE_ID. All class / race / background /
+  // flavour data flows from the registry for the resolved genre so
   // adding a new playable genre pack works without touching this file.
-  const [genre] = useState<string>(() => {
+  const [genre, setGenreState] = useState<string>(() => {
     try {
       const q = new URLSearchParams(window.location.search).get("genre");
       return q && isGenrePlayable(q) ? q : DEFAULT_GENRE_ID;
     } catch { return DEFAULT_GENRE_ID; }
   });
+  useEffect(() => {
+    try {
+      const campaignId = new URLSearchParams(window.location.search).get("campaignId");
+      if (!campaignId) return;
+      let cancelled = false;
+      (async () => {
+        try {
+          const res = await fetch(`/api/campaigns/${encodeURIComponent(campaignId)}`);
+          if (!res.ok) return;
+          const c = await res.json();
+          if (cancelled) return;
+          const g = (c?.genre as string | undefined) ?? null;
+          if (g && isGenrePlayable(g)) setGenreState(g);
+        } catch { /* fall back to URL/default genre */ }
+      })();
+      return () => { cancelled = true; };
+    } catch { /* noop */ }
+  }, []);
   const genreDef = useMemo(() => getGenre(genre), [genre]);
   const CLASSES = useMemo(() => genreDef.classes.map(c => ({
     id: c.id,

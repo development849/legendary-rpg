@@ -46,6 +46,10 @@ export async function generateLocationBackground(
   sceneTitle: string,
   campaignSetting: string,
   locationDescription?: string,
+  // Optional genre id for the owning campaign. Used to pull the registry
+  // painterly style + a generic "environment painting" opener so non-fantasy
+  // genres don't ship with fantasy-flavoured prompts. Defaults to fantasy.
+  genreId?: string | null,
 ): Promise<void> {
   try {
     const bgKey = sceneTitle || locationName;
@@ -69,7 +73,8 @@ export async function generateLocationBackground(
 
     const isShopOrIndoor = /shop|store|market|stall|wares|wonders|emporium|bazaar|inn|tavern|smithy|forge|library|temple|guild|hall/i.test(sceneTitle || locationName);
     const shopHint = isShopOrIndoor ? " This is an INTERIOR scene — show the inside of the building/shop with shelves, goods, and atmospheric lighting. Do NOT show underwater or ocean scenes even if the name sounds aquatic — it is a land-based shop." : "";
-    const prompt = `Wide cinematic fantasy environment painting of "${sceneTitle || locationName}".${descPart} The scene is set at "${locationName}".${shopHint} Paint exactly what this location looks like — if it is a shop, show its interior; if it is a city, market, forest, cave, etc., depict THAT environment faithfully. Do NOT assume underwater setting unless the scene explicitly says "underwater" or "submerged".${settingPart} Environment only, no people or characters in frame. Landscape orientation, immersive wide shot. ${getStylePrompt()}`;
+    const genreLabel = getGenre(genreId).label.toLowerCase();
+    const prompt = `Wide cinematic ${genreLabel} environment painting of "${sceneTitle || locationName}".${descPart} The scene is set at "${locationName}".${shopHint} Paint exactly what this location looks like — if it is a shop, show its interior; if it is a city, market, forest, cave, etc., depict THAT environment faithfully. Do NOT assume underwater setting unless the scene explicitly says "underwater" or "submerged".${settingPart} Environment only, no people or characters in frame. Landscape orientation, immersive wide shot. ${getStylePrompt(genreId)}`;
 
     const parts: any[] = await getStyleRefParts();
     parts.push({ text: prompt });
@@ -191,7 +196,7 @@ export async function generateCampaignWorldImage(campaignId: string): Promise<vo
 
 let _mapGenInFlight = new Set<string>();
 
-export async function generateRegionMap(partyId: string, campaignSetting: string): Promise<void> {
+export async function generateRegionMap(partyId: string, campaignSetting: string, genreId?: string | null): Promise<void> {
   if (_mapGenInFlight.has(partyId)) return;
   const [snap] = await db.select({ mapImageData: worldState.mapImageData, state: worldState.state }).from(worldState).where(eq(worldState.partyId, partyId));
   if (snap?.mapImageData) return;
@@ -204,7 +209,8 @@ export async function generateRegionMap(partyId: string, campaignSetting: string
       httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
     });
 
-    const settingDesc = campaignSetting?.slice(0, 200) || "a classic high-fantasy realm";
+    const genreLabel = getGenre(genreId).label.toLowerCase();
+    const settingDesc = campaignSetting?.slice(0, 200) || `a classic ${genreLabel} realm`;
     const storyState = snap?.state as any;
     const locations: any[] = storyState?.locations ?? [];
     const regionSet = new Set<string>();
@@ -225,7 +231,7 @@ export async function generateRegionMap(partyId: string, campaignSetting: string
     const terrainCtx = uniqueTerrain ? ` The landscape features ${uniqueTerrain}.` : "";
     const regionCtx = regionList ? ` Key regions: ${regionList}.` : "";
 
-    const prompt = `Top-down bird's eye view fantasy region map of ${settingDesc}.${regionCtx}${terrainCtx} Parchment and ink cartography style with aged paper texture. Show varied terrain: forests as clusters of tiny trees, mountains as small peaked ridges, rivers as winding blue lines, plains as open space, a coastline if appropriate. Include small settlement markers (tiny building clusters) where towns would be. Compass rose in one corner. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, forest green, dusty blue for water. Square aspect ratio. ${getStylePrompt()}`;
+    const prompt = `Top-down bird's eye view ${genreLabel} region map of ${settingDesc}.${regionCtx}${terrainCtx} Parchment and ink cartography style with aged paper texture. Show varied terrain: forests as clusters of tiny trees, mountains as small peaked ridges, rivers as winding blue lines, plains as open space, a coastline if appropriate. Include small settlement markers (tiny building clusters) where towns would be. Compass rose in one corner. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, forest green, dusty blue for water. Square aspect ratio. ${getStylePrompt(genreId)}`;
 
     let imageData: string | null = null;
     try {
@@ -287,6 +293,7 @@ export async function generateLocationMap(
   locationType: string,
   campaignSetting: string,
   locationContext?: string,
+  genreId?: string | null,
 ): Promise<void> {
   const flightKey = `${partyId}:${locationName}`;
   if (_locationMapGenInFlight.has(flightKey)) return;
@@ -304,7 +311,8 @@ export async function generateLocationMap(
       httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
     });
 
-    const settingDesc = campaignSetting?.slice(0, 200) || "a classic high-fantasy realm";
+    const locGenreLabel = getGenre(genreId).label.toLowerCase();
+    const settingDesc = campaignSetting?.slice(0, 200) || `a classic ${locGenreLabel} realm`;
     const ctx = locationContext?.slice(0, 300) || "";
 
     const typePrompts: Record<string, string> = {
@@ -318,7 +326,7 @@ export async function generateLocationMap(
     };
 
     const basePrompt = typePrompts[locationType] || typePrompts.generic;
-    const prompt = `${basePrompt}${ctx ? ` Context: ${ctx}.` : ""} Parchment and ink cartography style with aged paper texture. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, dark grey for walls, dusty blue for water. Square aspect ratio. Clear room/area boundaries. ${getStylePrompt()}`;
+    const prompt = `${basePrompt}${ctx ? ` Context: ${ctx}.` : ""} Parchment and ink cartography style with aged paper texture. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, dark grey for walls, dusty blue for water. Square aspect ratio. Clear room/area boundaries. ${getStylePrompt(genreId)}`;
 
     let imageData: string | null = null;
     try {
@@ -1841,6 +1849,7 @@ export async function runGM(
         sceneTitle,
         (campaign?.setting ?? "") + " " + (campaign?.description ?? ""),
         scene.description ?? "",
+        (campaign as any)?.genre,
       ).catch(console.error);
     } else {
       const titleChanged = existing.title !== sceneTitle;
@@ -1865,6 +1874,7 @@ export async function runGM(
           sceneTitle,
           (campaign?.setting ?? "") + " " + (campaign?.description ?? ""),
           scene.description ?? "",
+          (campaign as any)?.genre,
         ).catch(console.error);
       }
     }

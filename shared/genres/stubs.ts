@@ -35,14 +35,6 @@ function stub(args: {
   };
 }
 
-export const SCIFI = stub({
-  id: "scifi",
-  label: "Sci-Fi",
-  tagline: "Starships, alien worlds, and the long dark between stars.",
-  description: "Hard-edged space opera. Pilot starships, broker peace with alien empires, and explore the deep frontier.",
-  iconName: "Rocket",
-});
-
 export const CYBERPUNK = stub({
   id: "cyberpunk",
   label: "Cyberpunk",
@@ -100,6 +92,6 @@ export const WEIRD_WEST = stub({
 });
 
 export const STUB_GENRES: GenreDefinition[] = [
-  SCIFI, CYBERPUNK, SUPERNATURAL, POSTAPOC,
+  CYBERPUNK, SUPERNATURAL, POSTAPOC,
   COSMIC_HORROR, SUPERHERO, STEAMPUNK, WEIRD_WEST,
 ];

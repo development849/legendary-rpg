@@ -310,6 +310,150 @@ export const CLASS_SKILL_TREES: Record<string, SkillTier[]> = {
       ],
     },
   ],
+  starfarer: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "sf_dead_eye", name: "Dead-Eye", description: "Years on the firing line sharpen your aim with any sidearm.", mechanicalEffect: "+2 to ranged attack rolls" },
+        { id: "sf_evasive_pilot", name: "Evasive Pilot", description: "You've talked more ships out of more crashes than you can count.", mechanicalEffect: "+2 AC vs ranged attacks" },
+        { id: "sf_smooth_talker", name: "Smooth Talker", description: "Customs, dock-bosses, and customs again — all charmed past.", mechanicalEffect: "+4 to persuasion/deception" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "sf_double_tap", name: "Double Tap", description: "Fire your sidearm twice in a single attack action.", mechanicalEffect: "+1 ranged attack per attack action (passive)" },
+        { id: "sf_combat_roll", name: "Combat Roll", description: "Dive 15ft as a bonus action without provoking attacks of opportunity.", mechanicalEffect: "15ft bonus-action dash, no AoO" },
+        { id: "sf_field_repair", name: "Field Repair", description: "Patch a damaged ally or piece of kit with whatever's at hand.", mechanicalEffect: "Restore 2d6 HP or repair 1 device per rest" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "sf_called_shot", name: "Called Shot", description: "A surgical hit to the weapon, helmet, or limb — disarming or hobbling on hit.", mechanicalEffect: "Disarm/stagger target on hit" },
+        { id: "sf_combat_veteran", name: "Combat Veteran", description: "You've seen this before. Whatever it is.", mechanicalEffect: "Advantage on initiative, reroll one missed attack per encounter" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "sf_ace", name: "Ace", description: "There is nothing flying or rolling you cannot pilot at the edge of its envelope.", mechanicalEffect: "+4 to all piloting/vehicle checks, ignore vehicle damage thresholds" },
+        { id: "sf_one_in_the_chamber", name: "One in the Chamber", description: "Once per long rest, fire a perfectly-placed shot that auto-crits.", mechanicalEffect: "Auto-crit ranged attack, per day" },
+      ],
+    },
+  ],
+  xeno_biologist: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "xb_combat_stim", name: "Combat Stim", description: "Hit yourself or an ally with a battlefield adrenal cocktail.", mechanicalEffect: "Bonus action: target gains +2 attack and 1d6 temp HP for 1 minute" },
+        { id: "xb_weakness_protocol", name: "Weakness Protocol", description: "Your scans reveal exactly where to hit.", mechanicalEffect: "Mark a target — allies gain +1d6 damage against it for 1 minute" },
+        { id: "xb_polyglot", name: "Polyglot", description: "You parse alien tongues fast enough to negotiate first contact in real time.", mechanicalEffect: "Auto-succeed routine language/cultural checks" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "xb_antitoxin", name: "Antitoxin Cocktail", description: "Brew a broad-spectrum counter-agent in the field.", mechanicalEffect: "Cure any poison/disease on a target, per rest" },
+        { id: "xb_engineered_pathogen", name: "Engineered Pathogen", description: "Deploy a targeted biotech payload against organic foes.", mechanicalEffect: "AoE: 3d6 necrotic damage, organics only, per rest" },
+        { id: "xb_biotech_armor", name: "Biotech Armor", description: "A living mesh of microbial armour reinforces your suit.", mechanicalEffect: "+2 AC, regenerate 1 HP/round out of combat" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "xb_apex_specimen", name: "Apex Specimen", description: "You have catalogued enough alien biology to predict almost any creature's next move.", mechanicalEffect: "Advantage on attacks and saves vs. living creatures you've scanned" },
+        { id: "xb_regenerative_serum", name: "Regenerative Serum", description: "A masterwork stim that pulls an ally back from the brink.", mechanicalEffect: "Revive a downed ally to half HP, per day" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "xb_first_contact", name: "First Contact Master", description: "There is no biology or society you cannot read fast enough to survive.", mechanicalEffect: "Always know one critical weakness/desire of any creature within 1 minute" },
+        { id: "xb_panacea", name: "Panacea", description: "A single dose that mends almost any biological insult.", mechanicalEffect: "Fully heal and cure all conditions on a target, per day" },
+      ],
+    },
+  ],
+  mech_pilot: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "mp_burst_fire", name: "Burst Fire", description: "Loose a controlled three-round burst that overwhelms a single target.", mechanicalEffect: "+1d8 damage on a successful rifle hit, per encounter" },
+        { id: "mp_reactive_armor", name: "Reactive Armor", description: "Explosive plates blunt the first major hit you take each fight.", mechanicalEffect: "Halve damage from one attack per combat (passive)" },
+        { id: "mp_shoulder_check", name: "Shoulder Check", description: "Use the bulk of your exo-frame to bowl an enemy over.", mechanicalEffect: "Bonus action: knock target prone, 1d6 damage" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "mp_heavy_weapons", name: "Heavy Weapons Specialist", description: "Rocket launchers, autocannons, plasma flamers — all in your wheelhouse.", mechanicalEffect: "+2 damage per die with heavy weapons" },
+        { id: "mp_ironclad", name: "Ironclad", description: "Your exo-frame's plating thickens with every system upgrade.", mechanicalEffect: "Resistance to non-energy physical damage" },
+        { id: "mp_overwatch", name: "Overwatch", description: "Hold a firing lane — the first enemy to cross it eats a rifle round.", mechanicalEffect: "Reaction attack on a designated lane (passive)" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "mp_assault_protocol", name: "Assault Protocol", description: "A combined-arms blitz that opens fights on your terms.", mechanicalEffect: "First round of combat: extra attack and +10ft move" },
+        { id: "mp_ablative_armor", name: "Ablative Armor", description: "Sacrificial plating absorbs hits that would cripple a lesser suit.", mechanicalEffect: "Reduce all incoming damage by 3 (passive)" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "mp_walking_arsenal", name: "Walking Arsenal", description: "You and your exo-frame are functionally a small armoured vehicle.", mechanicalEffect: "+4 Might, +30 max HP, unlimited heavy-weapon ammo in encounter" },
+        { id: "mp_last_stand", name: "Last Stand", description: "When the frame is breached, you fight harder.", mechanicalEffect: "When dropped to 0 HP, return at half HP and gain advantage on all attacks for 1 minute, per day" },
+      ],
+    },
+  ],
+  psion: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "ps_telekinetic_shield", name: "Telekinetic Shield", description: "A spherical barrier of force-thought absorbs incoming fire.", mechanicalEffect: "Temp HP shield equal to level x2" },
+        { id: "ps_mind_lash", name: "Mind Lash", description: "Detonate a bead of psionic energy in a target's frontal cortex.", mechanicalEffect: "6d6 psychic AoE damage, Will save half" },
+        { id: "ps_calm_emotions", name: "Calm Emotions", description: "Smooth a fraught negotiation with a brush of mental projection.", mechanicalEffect: "Suppress hostility in a group for 1 minute" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "ps_phase_step", name: "Phase Step", description: "Slip 30ft through nearby space in a single thought.", mechanicalEffect: "30ft teleport, bonus action" },
+        { id: "ps_dominate", name: "Dominate", description: "Briefly take control of a target's motor functions.", mechanicalEffect: "Control 1 enemy for 1 round, per rest" },
+        { id: "ps_kinetic_storm", name: "Kinetic Storm", description: "A roaring sphere of telekinetic debris tears through a battlefield.", mechanicalEffect: "30ft AoE: 4d8 force damage, scatters terrain" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "ps_mass_suggestion", name: "Mass Suggestion", description: "Plant an idea in a crowd that they will swear was always theirs.", mechanicalEffect: "Charm/suggest entire group, per rest" },
+        { id: "ps_psionic_recall", name: "Psionic Recall", description: "Recover spent Focus by re-orienting your own mind.", mechanicalEffect: "Recover all spent Focus, per day" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "ps_apex_psion", name: "Apex Psion", description: "Your thought is force — your will reshapes local reality.", mechanicalEffect: "Cast Kinetic Push and Mind Touch without Focus cost; +4 Will" },
+        { id: "ps_overmind", name: "Overmind", description: "For one moment, your consciousness expands beyond the limits of a single body.", mechanicalEffect: "Take 3 free actions on your turn, per day" },
+      ],
+    },
+  ],
 };
 
 export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
@@ -342,6 +486,22 @@ export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
   ],
   Tabaxi: [
     { id: "nine_lives", name: "Nine Lives", description: "Feline luck grants you a second chance at death's door (recharges after a long rest).", mechanicalEffect: "Survive lethal damage at 1 HP, per day" },
+  ],
+  // ─── Sci-Fi species bonus skills ──────────────────────────────────────────
+  Synthetic: [
+    { id: "synth_subroutine", name: "Combat Subroutine", description: "Load a tactical subroutine that gives you machine-precise reflexes for a fight.", mechanicalEffect: "+2 to attack rolls for 1 minute, per rest" },
+  ],
+  Uplifted: [
+    { id: "uplifted_predator", name: "Predator Instincts", description: "Your engineered lineage remembers the hunt.", mechanicalEffect: "+1d6 damage on the first attack against a target each combat" },
+  ],
+  Voidborn: [
+    { id: "void_acrobat", name: "Void Acrobat", description: "Microgravity is your home and you fight there like nowhere else.", mechanicalEffect: "Advantage on Agility saves, +10ft move in zero-g" },
+  ],
+  "Symbiote-Bonded": [
+    { id: "symbiote_surge", name: "Symbiote Surge", description: "Your symbiote floods your system with biotic adrenaline.", mechanicalEffect: "Bonus action: +2 to all attacks and saves for 1 minute, per day" },
+  ],
+  Cogniform: [
+    { id: "cogniform_overclock", name: "Overclock", description: "Push your constructed nervous system past safe limits.", mechanicalEffect: "Take 1 extra action on your turn, per rest" },
   ],
 };
 

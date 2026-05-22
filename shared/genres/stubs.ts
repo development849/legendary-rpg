@@ -35,14 +35,6 @@ function stub(args: {
   };
 }
 
-export const POSTAPOC = stub({
-  id: "postapoc",
-  label: "Post-Apocalyptic",
-  tagline: "After the end — scavenge, build, endure.",
-  description: "The world burned and what remains is yours to claim. Wasteland survival amid the ruins of the old world.",
-  iconName: "Skull",
-});
-
 export const COSMIC_HORROR = stub({
   id: "cosmichorror",
   label: "Cosmic Horror",
@@ -76,6 +68,5 @@ export const WEIRD_WEST = stub({
 });
 
 export const STUB_GENRES: GenreDefinition[] = [
-  POSTAPOC,
   COSMIC_HORROR, SUPERHERO, STEAMPUNK, WEIRD_WEST,
 ];

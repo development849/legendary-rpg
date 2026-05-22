@@ -742,6 +742,150 @@ export const CLASS_SKILL_TREES: Record<string, SkillTier[]> = {
       ],
     },
   ],
+  scavenger: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "sc_keen_eye", name: "Keen Eye", description: "You spot what others miss in the rubble.", mechanicalEffect: "Advantage on perception/investigation in ruins" },
+        { id: "sc_lockbreaker", name: "Lockbreaker", description: "Pre-fall locks, modern padlocks, jury-rigged latches — all the same to you.", mechanicalEffect: "Auto-open routine locks; advantage on hard ones" },
+        { id: "sc_pack_mule", name: "Pack Mule", description: "You've hauled loads that broke bigger backs than yours.", mechanicalEffect: "Double carrying capacity, no encumbrance penalty" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "sc_master_tinker", name: "Master Tinker", description: "Build a one-shot custom device from scrap in a single round.", mechanicalEffect: "Build a one-shot gadget per encounter (GM-arbitrated)" },
+        { id: "sc_better_loot", name: "Better Loot", description: "Wherever you scavenge, you find one more thing worth taking.", mechanicalEffect: "Always recover one extra useful item per search" },
+        { id: "sc_silent_runner", name: "Silent Runner", description: "Cross broken ground without disturbing a stone.", mechanicalEffect: "Move at full speed while sneaking; advantage on stealth" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "sc_pre_fall_expert", name: "Pre-Fall Expert", description: "You can read pre-fall signage, schematics, and machinery on sight.", mechanicalEffect: "Operate any pre-fall device with a short examination" },
+        { id: "sc_vanish_into_ruins", name: "Vanish Into Ruins", description: "Step around a corner and disappear.", mechanicalEffect: "Become invisible as a bonus action while in ruined terrain" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "sc_master_scavenger", name: "Master Scavenger", description: "There is no ruin you cannot strip and no derelict you cannot get running.", mechanicalEffect: "Auto-succeed all scavenging/repair; +4 Intellect" },
+        { id: "sc_treasure_hunter", name: "Treasure Hunter", description: "You always know where the good cache is, even before you've looked.", mechanicalEffect: "Declare a major piece of loot exists nearby, per day" },
+      ],
+    },
+  ],
+  wastelander: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "wl_extra_attack", name: "Extra Swing", description: "Two heavy hits where there used to be one.", mechanicalEffect: "+1 attack per attack action (passive)" },
+        { id: "wl_thick_hide", name: "Thick Hide", description: "Years of bad weather and worse fights have toughened you everywhere.", mechanicalEffect: "Reduce incoming physical damage by 2" },
+        { id: "wl_walking_dead", name: "Walking Dead", description: "You've taken worse and kept walking.", mechanicalEffect: "+10 max HP; advantage on death saves" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "wl_brawler", name: "Brawler", description: "Fists, boots, broken bottles — whatever's at hand kills just as dead.", mechanicalEffect: "Improvised weapons deal 1d10; +2 to unarmed/improvised damage" },
+        { id: "wl_unbreakable", name: "Unbreakable", description: "Drop you and you get back up. Drop you again and you get back up angrier.", mechanicalEffect: "When dropped to 0 HP, get up at 1 HP, per rest" },
+        { id: "wl_grit", name: "Grit", description: "Pain doesn't stop you. Almost nothing does.", mechanicalEffect: "Immune to fear, exhaustion, and stunning" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "wl_road_warrior", name: "Road Warrior", description: "Every fight is a fight you've already won, somewhere.", mechanicalEffect: "Reroll one missed attack per encounter; first attack each fight has advantage" },
+        { id: "wl_iron_will", name: "Iron Will", description: "Whatever broke the world hasn't broken you.", mechanicalEffect: "Advantage on all saves; resistance to psychic damage" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "wl_apex_survivor", name: "Apex Survivor", description: "You have outlived everything that should have killed you.", mechanicalEffect: "+4 Endurance, +4 Might, +30 max HP" },
+        { id: "wl_last_one_standing", name: "Last One Standing", description: "When everyone else is down, you find another gear.", mechanicalEffect: "When you are the last conscious ally: +4 to all rolls, take 2 actions per turn" },
+      ],
+    },
+  ],
+  survivor_medic: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "sm_combat_medic", name: "Combat Medic", description: "Stim an ally without leaving cover.", mechanicalEffect: "Heal an ally within 30ft as a bonus action" },
+        { id: "sm_diagnostician", name: "Diagnostician", description: "One look and you know what's wrong, including what they're hiding.", mechanicalEffect: "Identify diseases, poisons, mutations on sight" },
+        { id: "sm_steady_hands", name: "Steady Hands", description: "You do not panic, even when the patient is.", mechanicalEffect: "Cannot be interrupted while administering medical aid" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "sm_mass_stim", name: "Mass Stim", description: "Roll a stim grenade into the middle of the firefight.", mechanicalEffect: "Heal all allies in 15ft for 2d6 HP, per rest" },
+        { id: "sm_chem_master", name: "Chem Master", description: "Brew battlefield drugs that push allies past their normal limits.", mechanicalEffect: "Brew combat chems: +2 attack/damage for one ally for 1 minute, per rest" },
+        { id: "sm_decontaminate", name: "Decontaminate", description: "Strip radiation, infection, or poison from an ally in seconds.", mechanicalEffect: "Cure any condition on a target, per rest" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "sm_field_surgery", name: "Field Surgery", description: "Open someone up on a packing crate and put them back together.", mechanicalEffect: "Restore a fallen ally to half HP, per rest" },
+        { id: "sm_pharmacist", name: "Pharmacist", description: "Your supply lasts longer than anyone else's.", mechanicalEffect: "Med Supply costs reduced by half; recover 5 Med Supplies on short rest" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "sm_miracle_worker", name: "Miracle Worker", description: "If there's a heartbeat, you can save them.", mechanicalEffect: "Revive an ally dead under 1 hour to full HP, per day" },
+        { id: "sm_master_apothecary", name: "Master Apothecary", description: "You have a brew, a stim, or a counter-toxin for almost anything.", mechanicalEffect: "Auto-succeed all medical/chem checks; unlimited stims per encounter" },
+      ],
+    },
+  ],
+  raider: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "rd_steady_aim", name: "Steady Aim", description: "You don't waste rounds. You never had enough to waste.", mechanicalEffect: "+2 to ranged attack rolls" },
+        { id: "rd_fearsome", name: "Fearsome", description: "Your reputation does half the work before the gun even comes out.", mechanicalEffect: "+4 to intimidation; weak NPCs may flee on sight" },
+        { id: "rd_quick_reload", name: "Quick Reload", description: "Spent magazine out, fresh one in, all in the same heartbeat.", mechanicalEffect: "Reload as a free action" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "rd_dual_pistols", name: "Dual Pistols", description: "Two sidearms, both barking — and both hitting.", mechanicalEffect: "Wield two pistols, +1 attack per attack action" },
+        { id: "rd_called_shot", name: "Called Shot", description: "A precise hit to the weapon, the leg, or the helmet.", mechanicalEffect: "Disarm or stagger target on a successful ranged hit" },
+        { id: "rd_take_what_you_want", name: "Take What You Want", description: "Other people's gear becomes yours when they drop.", mechanicalEffect: "Loot a fallen enemy as a bonus action; +1 free useful item" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "rd_executioner", name: "Executioner", description: "You finish wounded enemies fast and without ceremony.", mechanicalEffect: "Auto-kill any enemy at or below 1/4 max HP on a hit" },
+        { id: "rd_warlord", name: "Warlord", description: "Your name is known on every road. Lesser raiders follow you.", mechanicalEffect: "Command a small band of NPC raider followers" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "rd_apex_killer", name: "Apex Killer", description: "There is no fight you cannot win and no target you cannot reach.", mechanicalEffect: "+4 Agility, first attack each round auto-hits, ignore cover" },
+        { id: "rd_legend_of_the_waste", name: "Legend of the Wastes", description: "Half the wasteland tells stories about you, and most of them are true.", mechanicalEffect: "Settlements concede on sight; +4 to all social rolls with raiders/survivors" },
+      ],
+    },
+  ],
 };
 
 export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
@@ -828,6 +972,25 @@ export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
   ],
   Reincarnated: [
     { id: "re_past_life", name: "Past-Life Recall", description: "A buried lifetime surfaces at exactly the right moment.", mechanicalEffect: "Once per session, gain temporary proficiency and advantage on any one skill check" },
+  ],
+  // ─── Post-Apocalyptic origin bonus skills ─────────────────────────────────
+  "Pre-Fall Survivor": [
+    { id: "pfs_old_world_lore", name: "Old World Lore", description: "You remember what the buildings used to be for.", mechanicalEffect: "Always identify pre-fall tech, brands, and locations" },
+  ],
+  "Vault-Born": [
+    { id: "vb_sheltered_education", name: "Sheltered Education", description: "The vault taught you to read, count, and run a clean med-bay.", mechanicalEffect: "+2 to all knowledge and technical checks" },
+  ],
+  "Wasteland-Born": [
+    { id: "wb_adapted_to_hardship", name: "Adapted to Hardship", description: "Bad water, worse weather — none of it slows you down any more.", mechanicalEffect: "Resistance to environmental damage; ignore exhaustion from travel" },
+  ],
+  Mutant: [
+    { id: "mut_resilience", name: "Mutant Resilience", description: "Whatever rewrote you also armoured you.", mechanicalEffect: "Resistance to radiation and poison; +5 max HP" },
+  ],
+  "Ghoul-Touched": [
+    { id: "gt_rad_healing", name: "Radiation Healing", description: "Standing in a rad-zone makes you better, not worse.", mechanicalEffect: "Radiation damage heals you instead of harming; immune to disease" },
+  ],
+  "Cult Refugee": [
+    { id: "cr_doctrine", name: "Cult Doctrine", description: "You know how their rituals work, because you used to lead them.", mechanicalEffect: "Identify any wasteland cult; advantage on saves vs. charm/indoctrination" },
   ],
 };
 

@@ -454,6 +454,150 @@ export const CLASS_SKILL_TREES: Record<string, SkillTier[]> = {
       ],
     },
   ],
+  netrunner: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "nr_ice_pick", name: "ICE Pick", description: "You read corporate defences like a bad poem.", mechanicalEffect: "Advantage on netrun intrusion checks" },
+        { id: "nr_overload", name: "Overload", description: "Push a target's cyberware until it shorts.", mechanicalEffect: "2d8 cyber damage, stun cybered target for 1 round" },
+        { id: "nr_data_thief", name: "Data Thief", description: "Pull a single relevant secret from any system you breach.", mechanicalEffect: "Recover 1 useful datum per successful run" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "nr_zero_day", name: "Zero-Day", description: "Carry a hoarded exploit that opens any commercial-tier ICE.", mechanicalEffect: "Auto-breach 1 system, per rest" },
+        { id: "nr_remote_jack", name: "Remote Jack", description: "Run the Net from across the room — no physical jack needed.", mechanicalEffect: "Netrun wirelessly within 60ft" },
+        { id: "nr_quickhack_master", name: "Quickhack Master", description: "Cast netrun abilities on the fly mid-firefight.", mechanicalEffect: "Quickhacks become bonus actions" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "nr_black_ice", name: "Black ICE Rider", description: "You walk through Black ICE like a ghost — the lethal kind is no longer lethal to you.", mechanicalEffect: "Resistance to cyber/psychic damage" },
+        { id: "nr_daemon_swarm", name: "Daemon Swarm", description: "Unleash a swarm of self-replicating daemons through a connected network.", mechanicalEffect: "AoE: 4d8 cyber damage to all networked targets, per rest" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "nr_legendary_netrunner", name: "Legendary Netrunner", description: "Your name is whispered on every board — there is no system you cannot crack given time.", mechanicalEffect: "Auto-succeed all routine netruns; +4 Intellect" },
+        { id: "nr_constructed_ai", name: "Constructed AI", description: "You have built (or befriended) a true AI that fights at your side in the Net.", mechanicalEffect: "Summon AI ally that mirrors your netrun actions" },
+      ],
+    },
+  ],
+  street_samurai: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "ss_kerenzikov", name: "Kerenzikov", description: "Subdermal reflex booster lets you act in the cracks between seconds.", mechanicalEffect: "+2 AC, +4 initiative" },
+        { id: "ss_gorilla_arms", name: "Gorilla Arms", description: "Reinforced cyber-arms turn unarmed strikes into hammer blows.", mechanicalEffect: "Unarmed attacks deal 1d10, count as melee weapons" },
+        { id: "ss_optic_targeting", name: "Optic Targeting", description: "Cybernetic eyes track and tag every shot.", mechanicalEffect: "+2 to all ranged attack rolls" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "ss_sandevistan", name: "Sandevistan", description: "Slow time for half a second and act with surgical precision.", mechanicalEffect: "Take 1 extra attack and 1 free move on your turn, per rest" },
+        { id: "ss_dermal_plating", name: "Dermal Plating", description: "Sub-skin armour layered through your torso.", mechanicalEffect: "Reduce all incoming physical damage by 3" },
+        { id: "ss_dual_wield", name: "Dual Wield Specialist", description: "Two guns, both empty before the threat realises it's dying.", mechanicalEffect: "Wield two ranged weapons, +1 attack per attack action" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "ss_blade_dancer", name: "Blade Dancer", description: "Your monowire moves with you — every enemy in reach takes a cut.", mechanicalEffect: "AoE melee attack against all adjacent enemies" },
+        { id: "ss_chrome_veteran", name: "Chrome Veteran", description: "You've ridden out enough firefights to know exactly when to move.", mechanicalEffect: "Reroll one missed attack per encounter; advantage on death saves" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "ss_apex_solo", name: "Apex Solo", description: "Among the killers, you are the killer.", mechanicalEffect: "+4 Might, +20 max HP, first attack each round auto-hits" },
+        { id: "ss_cyber_overdrive", name: "Cyber Overdrive", description: "Push every implant past its safety limits for one glorious, terrible minute.", mechanicalEffect: "Take 3 actions per turn for 1 minute, per day" },
+      ],
+    },
+  ],
+  fixer: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "fx_silver_tongue", name: "Silver Tongue", description: "You sell people what they already wanted to buy.", mechanicalEffect: "+4 to persuasion and deception checks" },
+        { id: "fx_blackmail", name: "Blackmail File", description: "You have something on someone, somewhere, for almost any occasion.", mechanicalEffect: "Once per session, declare leverage on an NPC" },
+        { id: "fx_quick_draw", name: "Quick Draw", description: "Hold-out pistol, drawn and fired in the same heartbeat.", mechanicalEffect: "Draw and fire as a bonus action, advantage on initiative" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "fx_owe_me_one", name: "Owe Me One", description: "Cash in a favour from your network at exactly the right moment.", mechanicalEffect: "Summon NPC contact with relevant capability, per rest" },
+        { id: "fx_fence_master", name: "Fence Master", description: "Move any score, anywhere, at the best rate in town.", mechanicalEffect: "Sell loot at +50% value, no questions asked" },
+        { id: "fx_hidden_holdout", name: "Hidden Holdout", description: "You're never really unarmed and never really alone.", mechanicalEffect: "Always have 1 concealed weapon; auto-evade pat-downs" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "fx_kingpin", name: "Kingpin", description: "Half the street already works for you, even if they don't know it.", mechanicalEffect: "Command crowd of NPCs in your territory" },
+        { id: "fx_diplomatic_immunity", name: "Diplomatic Immunity", description: "Even corp security thinks twice about touching you.", mechanicalEffect: "Auto-defuse 1 hostile encounter per session" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "fx_legend_of_the_street", name: "Legend of the Street", description: "Your name opens any door in the city.", mechanicalEffect: "Always succeed on social checks vs. anyone who's heard of you; +4 Presence" },
+        { id: "fx_perfect_setup", name: "Perfect Setup", description: "You called this exact play three moves ago.", mechanicalEffect: "Once per day, retroactively declare you set up a critical asset" },
+      ],
+    },
+  ],
+  techie: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "tk_drone_swarm", name: "Drone Swarm", description: "Field a second combat drone alongside the first.", mechanicalEffect: "Operate 2 drones simultaneously" },
+        { id: "tk_field_engineer", name: "Field Engineer", description: "You can fix anything with three minutes and the right swears.", mechanicalEffect: "Repair any damaged device in 1 minute; +2 to all tech checks" },
+        { id: "tk_grenadier", name: "Grenadier", description: "Pull, prime, throw — perfect arc every time.", mechanicalEffect: "+1d6 damage on thrown explosives, advantage to-hit" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "tk_smart_weapons", name: "Smart Weapons", description: "Your firearms acquire targets and chase them around cover.", mechanicalEffect: "Ranged attacks ignore cover, +2 to-hit" },
+        { id: "tk_jury_rig_master", name: "Jury-Rig Master", description: "Build one-shot gadgets in a single round.", mechanicalEffect: "Build a custom one-shot device per encounter (DM-arbitrated)" },
+        { id: "tk_drone_overlord", name: "Drone Overlord", description: "Hijack enemy drones and turn them against their operators.", mechanicalEffect: "Take control of 1 enemy drone, per rest" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "tk_arsenal", name: "Walking Arsenal", description: "You carry more gear than seems physically possible, and all of it works.", mechanicalEffect: "Always have the right tool/gadget for any tech problem" },
+        { id: "tk_emp_master", name: "EMP Master", description: "Detonate a focused electromagnetic pulse that hard-bricks enemy tech.", mechanicalEffect: "20ft AoE: permanently disable enemy cyberware/drones, per day" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "tk_apex_techie", name: "Apex Techie", description: "There is no machine you cannot understand, fix, or weaponise.", mechanicalEffect: "+4 Intellect, +30 max HP for drones, unlimited gadget budget in encounter" },
+        { id: "tk_singularity", name: "Singularity", description: "Your custom AI breaks containment and rewrites the local network on your behalf.", mechanicalEffect: "Take full control of any local network for 1 minute, per day" },
+      ],
+    },
+  ],
 };
 
 export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
@@ -502,6 +646,25 @@ export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
   ],
   Cogniform: [
     { id: "cogniform_overclock", name: "Overclock", description: "Push your constructed nervous system past safe limits.", mechanicalEffect: "Take 1 extra action on your turn, per rest" },
+  ],
+  // ─── Cyberpunk lineage bonus skills ───────────────────────────────────────
+  "Mostly-Flesh": [
+    { id: "mf_adaptable", name: "Adaptable", description: "Unaugmented and unspecialised — and weirdly hard to plan for.", mechanicalEffect: "+1 to any skill check, twice per session" },
+  ],
+  Wired: [
+    { id: "wired_overdrive", name: "Reflex Overdrive", description: "Spike your wired reflexes for a moment of impossible speed.", mechanicalEffect: "Take 1 extra action on your turn, per rest" },
+  ],
+  Borg: [
+    { id: "borg_chassis", name: "Reinforced Chassis", description: "Your converted body laughs off hits that would cripple a person.", mechanicalEffect: "Resistance to non-energy physical damage" },
+  ],
+  Clone: [
+    { id: "clone_imprint", name: "Imprinted Skill", description: "A buried memory surfaces at exactly the right time.", mechanicalEffect: "Auto-succeed one skill check per session, even without proficiency" },
+  ],
+  Edgerunner: [
+    { id: "edge_street_savvy", name: "Street Savvy", description: "You always know the way out, the way around, and who's watching.", mechanicalEffect: "Advantage on perception and stealth in urban settings" },
+  ],
+  "Corpo-Defector": [
+    { id: "cd_corp_access", name: "Lingering Corp Access", description: "Old credentials, still partially live.", mechanicalEffect: "Once per session, claim functioning low-level corporate access" },
   ],
 };
 

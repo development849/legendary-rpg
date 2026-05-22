@@ -35,14 +35,6 @@ function stub(args: {
   };
 }
 
-export const CYBERPUNK = stub({
-  id: "cyberpunk",
-  label: "Cyberpunk",
-  tagline: "Neon, chrome, and corporate sin.",
-  description: "Dystopian near-future. Hack the megacorps, jack into the net, and survive the streets of the sprawl.",
-  iconName: "Cpu",
-});
-
 export const SUPERNATURAL = stub({
   id: "supernatural",
   label: "Supernatural",
@@ -92,6 +84,6 @@ export const WEIRD_WEST = stub({
 });
 
 export const STUB_GENRES: GenreDefinition[] = [
-  CYBERPUNK, SUPERNATURAL, POSTAPOC,
+  SUPERNATURAL, POSTAPOC,
   COSMIC_HORROR, SUPERHERO, STEAMPUNK, WEIRD_WEST,
 ];

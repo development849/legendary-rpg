@@ -5,13 +5,14 @@
 import type { GenreDefinition, ClassDef, RaceDef } from "./types";
 import { FANTASY } from "./fantasy";
 import { SCIFI } from "./scifi";
+import { CYBERPUNK } from "./cyberpunk";
 import { STUB_GENRES } from "./stubs";
 
 export type { GenreDefinition, ClassDef, RaceDef } from "./types";
 
 export const DEFAULT_GENRE_ID = "fantasy";
 
-const REGISTRY: GenreDefinition[] = [FANTASY, SCIFI, ...STUB_GENRES];
+const REGISTRY: GenreDefinition[] = [FANTASY, SCIFI, CYBERPUNK, ...STUB_GENRES];
 
 const BY_ID: Record<string, GenreDefinition> = Object.fromEntries(
   REGISTRY.map(g => [g.id, g]),

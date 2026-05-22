@@ -126,36 +126,64 @@ const RACES: RaceDef[] = [
     description: "Born with the gene, the lineage, or the inexplicable. The powers have been there since adolescence — never trained for, never paid for, simply yours.",
     traits: "+2 to one stat tied to your power · +1 Endurance · Native Power (always-on, never disarmed)",
     bonuses: { endurance: 1, might: 1, will: 1 },
+    // Per spec: "Mutate gets ordinary clothes." Powers come from the body, not
+    // from gear — origin adds plain civilian wear and nothing else.
+    startingInventory: [
+      { name: "Ordinary Street Clothes", type: "tool", qty: 1, properties: { note: "A change of T-shirt and jeans. The powers don't need a costume." } },
+    ],
   },
   {
     name: "Tech",
     description: "The suit is the hero. Without it you are a clever person in their thirties with a sore back. With it, you are a household name.",
     traits: "+3 Intellect · +1 Agility · Workshop Access (rebuild/upgrade kit between missions) · -1 Might (no powers without the gear)",
     bonuses: { intellect: 3, agility: 1, might: -1 },
+    // Per spec: "Tech gets gear stack." Origin grants a meaningful additional
+    // gadget rack on top of whatever the class already carries.
+    startingInventory: [
+      { name: "Spare Power Cells", type: "consumable", qty: 6, properties: { note: "Keeps the suit, the comm, and the launcher running through a long fight." } },
+      { name: "Portable Workshop Kit", type: "tool", qty: 1, properties: { note: "Field-repair the gear when the bench is hours away." } },
+      { name: "Diagnostic Tablet", type: "tool", qty: 1, properties: {} },
+      { name: "EMP Slug (Extra)", type: "consumable", qty: 2, properties: {} },
+      { name: "Smoke Pellet (Extra)", type: "consumable", qty: 3, properties: {} },
+    ],
   },
   {
     name: "Cosmic",
     description: "Something from outside this solar system reached down and touched you. You can't fully explain what you are now, and neither can anyone else.",
     traits: "+2 Will · +1 Intellect · Star-Sight (perceive cosmic/extra-dimensional phenomena) · -1 Endurance (the body adjusts slowly)",
     bonuses: { will: 2, intellect: 1, endurance: -1 },
+    startingInventory: [
+      { name: "Star-Shard Pendant", type: "misc", qty: 1, properties: { note: "A fragment of whatever first touched you. Warm to the touch, hums under pressure." } },
+    ],
   },
   {
     name: "Trained",
     description: "Peak-human, no powers. Eighteen martial arts, three doctorates, more contingency plans than friends. The fact that you are in the room with the powered ones is the point.",
     traits: "+1 to all stats · Peak-Human Training (advantage on first attack of any encounter)",
     bonuses: { might: 1, agility: 1, endurance: 1, intellect: 1, will: 1, presence: 1 },
+    startingInventory: [
+      { name: "Training Wraps & Mouthguard", type: "tool", qty: 1, properties: {} },
+      { name: "Field First-Aid Kit", type: "consumable", qty: 1, properties: { heal: "2d4" } },
+    ],
   },
   {
     name: "Magical",
     description: "Patron, pact, bloodline, inheritance — the power is real and ancient, and so is the price. Most of your colleagues do not know quite what to do with you.",
     traits: "+2 Presence · +2 Will · Occult Sight (recognise rituals, sigils, supernatural beings)",
     bonuses: { presence: 2, will: 2 },
+    startingInventory: [
+      { name: "Focus Item (Heirloom Ring or Amulet)", type: "misc", qty: 1, properties: { focus: 2, note: "The rite is in the metal. The bargain is in the bearer." } },
+      { name: "Pocket Grimoire", type: "tool", qty: 1, properties: {} },
+    ],
   },
   {
     name: "Symbiotic",
     description: "The powers belong to the thing bonded to you. It is helpful, mostly. It is patient, mostly. When stressed it speaks, and people notice.",
     traits: "+3 Endurance · +1 Might · Symbiote Voice (the bond grants insight) · -1 Presence (the bond surfaces under pressure and unsettles others)",
     bonuses: { endurance: 3, might: 1, presence: -1 },
+    startingInventory: [
+      { name: "Containment Vial", type: "consumable", qty: 2, properties: { note: "A measured dose of the suppressant the bond doesn't enjoy. For the bad days." } },
+    ],
   },
 ];
 

@@ -20,6 +20,7 @@ import {
   getClassBaseMp,
   getDefaultStatsForClass,
   getStartingInventoryForClass,
+  getStartingInventoryForRace,
   getStartingAbilitiesForClass,
   getRaceBonusesFor,
 } from "@shared/genres";
@@ -39,7 +40,10 @@ export async function createCharacter(userId: string, data: {
   const stats = Object.fromEntries(
     Object.entries(baseStats).map(([k, v]) => [k, v + (raceBonuses[k] ?? 0)])
   );
-  const inventory = getStartingInventoryForClass(genre, cls);
+  const inventory = [
+    ...getStartingInventoryForClass(genre, cls),
+    ...getStartingInventoryForRace(genre, data.race),
+  ];
   const classAbilities = getStartingAbilitiesForClass(genre, cls);
   const backgroundAbility = getBackgroundAbility(data.background, cls);
   const abilities = [...classAbilities, backgroundAbility];

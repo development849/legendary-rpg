@@ -32,6 +32,12 @@ export interface RaceDef {
   description: string;
   traits: string;             // human-readable racial trait summary
   bonuses: Record<string, number>;
+  // Optional origin/lineage-level loadout modifier. When present, items here
+  // are appended to the class's startingInventory at character creation.
+  // Used by genres where the origin meaningfully changes the gear stack
+  // (e.g. Superhero: Tech gets a deeper gadget rack; Mutate stays in
+  // ordinary clothes; Magical gets a focus item).
+  startingInventory?: any[];
 }
 
 export interface GenreDefinition {

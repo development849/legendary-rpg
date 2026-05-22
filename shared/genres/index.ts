@@ -69,6 +69,15 @@ export function getStartingInventoryForClass(genreId: string, classId: string): 
   return getClassDef(genreId, classId)?.startingInventory ?? [];
 }
 
+/** Origin/lineage-level starting items, if the genre's RaceDef supplies any.
+ *  Appended to the class inventory in createCharacter so origin meaningfully
+ *  shapes the loadout (e.g. Superhero Tech gets extra gadgets; Mutate gets
+ *  ordinary clothes; Magical gets a focus item). Empty array for races
+ *  whose origin doesn't change gear. */
+export function getStartingInventoryForRace(genreId: string, raceName: string): any[] {
+  return getRaceDef(genreId, raceName)?.startingInventory ?? [];
+}
+
 export function getStartingAbilitiesForClass(genreId: string, classId: string): any[] {
   return getClassDef(genreId, classId)?.startingAbilities ?? [];
 }

@@ -1137,7 +1137,8 @@ export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
     { id: "cr_doctrine", name: "Cult Doctrine", description: "You know how their rituals work, because you used to lead them.", mechanicalEffect: "Identify any wasteland cult; advantage on saves vs. charm/indoctrination" },
   ],
   // ─── Cosmic Horror lineage bonus skills ───────────────────────────────────
-  // (Note: "Mundane" key is shared with the Supernatural pack — single entry above covers both.)
+  // "Mundane" is also a Supernatural lineage; both packs share the same key
+  // and bonus skill below applies to characters of either genre.
   "Touched-by-Dreams": [
     { id: "tbd_dream_sight", name: "Dream-Sight", description: "Sleep brings warnings you have learned to listen to.", mechanicalEffect: "Once per session, the GM tells you one true thing about the next scene" },
   ],

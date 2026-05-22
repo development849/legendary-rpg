@@ -15,6 +15,7 @@ const COMMON_INVENTORY = [
   { name: "Pocket Watch", type: "misc", qty: 1, properties: {} },
   { name: "Pack of Lucky Strikes", type: "consumable", qty: 1, properties: {} },
   { name: "Cash ($120)", type: "treasure", qty: 1, properties: { value: 120 } },
+  { name: "Motor-Car (Shared)", type: "tool", qty: 1, properties: { shared: true, note: "Party vehicle — a 1920s touring automobile shared between investigators." } },
 ];
 
 const BASE_STATS = { might: 10, agility: 10, endurance: 10, intellect: 10, will: 10, presence: 10 };
@@ -152,8 +153,8 @@ const RACES: RaceDef[] = [
   },
   {
     name: "Marked",
-    description: "Already touched by something — a scar that didn't come from anything human, a birthmark in a shape no parent recognised. The mark gives, and the mark takes.",
-    traits: "+2 Will · +1 Intellect · +1 Presence · Marked Sight (always see the unseen) · Reduced Resilience (the mind is thinner)",
+    description: "Already touched by something — a scar that didn't come from anything human, a birthmark in a shape no parent recognised. The mark gives, and the mark takes. The GM begins the campaign with a `sanity_state` plot fact already noted against this character: their mind is thinner than it should be, and the erosion has a head start.",
+    traits: "+2 Will · +1 Intellect · +1 Presence · Marked Sight (always see the unseen) · Reduced Sanity: GM seeds `sanity_state` with a pre-existing erosion at character creation",
     bonuses: { will: 2, intellect: 1, presence: 1 },
   },
   {

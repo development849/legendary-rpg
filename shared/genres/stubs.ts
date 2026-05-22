@@ -35,14 +35,4 @@ function stub(args: {
   };
 }
 
-export const WEIRD_WEST = stub({
-  id: "weirdwest",
-  label: "Weird West",
-  tagline: "Six-guns and dark frontier spirits.",
-  description: "The American frontier where gunslingers, hexslingers, and undead drifters wander a haunted West.",
-  iconName: "Crosshair",
-});
-
-export const STUB_GENRES: GenreDefinition[] = [
-  WEIRD_WEST,
-];
+export const STUB_GENRES: GenreDefinition[] = [];

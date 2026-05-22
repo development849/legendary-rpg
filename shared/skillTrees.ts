@@ -886,6 +886,150 @@ export const CLASS_SKILL_TREES: Record<string, SkillTier[]> = {
       ],
     },
   ],
+  gunslinger: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "gs_quickdraw", name: "Quickdraw", description: "The pistol is in your hand before the other man has touched leather.", mechanicalEffect: "+4 initiative; first shot each combat has advantage" },
+        { id: "gs_dead_eye_master", name: "Dead-Eye Master", description: "Aim is no longer something you do; it is something you are.", mechanicalEffect: "+2 to all ranged attack rolls" },
+        { id: "gs_two_gun_mojo", name: "Two-Gun Mojo", description: "A pistol in each hand, a target for each pistol.", mechanicalEffect: "+1 ranged attack per attack action when dual-wielding revolvers (passive)" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "gs_ricochet", name: "Ricochet", description: "A shot off a tin pail, a beam, a rock-face — and into the target.", mechanicalEffect: "Ignore cover and three-quarters concealment on ranged shots" },
+        { id: "gs_grit", name: "Grit", description: "Lived through worse. Twice.", mechanicalEffect: "Reduce incoming damage by 2; advantage on death saves" },
+        { id: "gs_trick_shot", name: "Trick Shot", description: "Take the hand, take the hat, take the cigar from the mouth.", mechanicalEffect: "Disarm or stagger target on a successful ranged hit" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "gs_bullet_time", name: "The Long Moment", description: "Time slows. The other men move like they are in molasses.", mechanicalEffect: "Take an extra action on your turn, per encounter" },
+        { id: "gs_gunfighter_eye", name: "Gunfighter's Eye", description: "You know who in the room can shoot before they do.", mechanicalEffect: "Always know combat ability of any armed NPC; advantage vs. weakest opponent" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "gs_legend", name: "Legend of the Territory", description: "The face is on the broadsheet from Tucson to the river.", mechanicalEffect: "Most opponents stand down on sight; +4 Agility; auto-win any stand-off initiative" },
+        { id: "gs_six_for_six", name: "Six for Six", description: "Six chambers, six targets. None left standing.", mechanicalEffect: "Once per day, fire 6 ranged attacks against up to 6 targets as one action" },
+      ],
+    },
+  ],
+  marshal: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "ma_authority", name: "Voice of Authority", description: "The badge does most of the talking. You don't have to.", mechanicalEffect: "+4 to intimidation and persuasion when the law is on your side" },
+        { id: "ma_steady_aim", name: "Steady Aim", description: "Years of careful, considered shots make a tidy column in the log-book.", mechanicalEffect: "+2 to ranged attack rolls with the carbine" },
+        { id: "ma_witness_protection", name: "Stand Between", description: "Step between a witness and the bullet meant for them.", mechanicalEffect: "Reaction: take an attack meant for an ally within 10ft" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "ma_warrant", name: "Warrant Power", description: "Produce a paper that opens the door, or knock the door down with the paper still in hand.", mechanicalEffect: "Auto-succeed legal/jurisdictional access in any US territory" },
+        { id: "ma_deputize", name: "Deputize", description: "Pin a badge on a willing ally. They fight under your authority.", mechanicalEffect: "Grant an ally +2 to attack and saves for the scene, per encounter" },
+        { id: "ma_called_shot", name: "Disarming Shot", description: "Put a round through the cylinder, not the man.", mechanicalEffect: "Disarm a target on a successful ranged hit" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "ma_calm_the_room", name: "Calm the Room", description: "Walk into a brewing fight and end it without raising your voice.", mechanicalEffect: "All hostile NPCs in 30ft make a DC 15 Will save or stand down for 1 minute, per encounter" },
+        { id: "ma_unkillable_lawman", name: "Unkillable Lawman", description: "Half the territory is telling the story of how you took six rounds and walked back into the saloon.", mechanicalEffect: "When reduced to 0 HP, return to half health instead, per day" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "ma_chief_marshal", name: "Chief Marshal", description: "The badge no longer needs the territory's permission.", mechanicalEffect: "+4 Presence; auto-succeed any social roll against lawful NPCs; allies gain +2 to all saves in your presence" },
+        { id: "ma_last_word", name: "Last Word", description: "Speak the line that ends the standoff. Most days, it works.", mechanicalEffect: "Once per day, one target surrenders, flees, or stands down at your word" },
+      ],
+    },
+  ],
+  snake_oil_doc: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "so_strong_brew", name: "Strong Brew", description: "Your tonic is more than rye and laudanum, most days.", mechanicalEffect: "+1d4 to all Tonic healing" },
+        { id: "so_silver_tongue", name: "Silver-Tongued", description: "Sell a cure to a man who doesn't have the disease and have him thank you for it.", mechanicalEffect: "+4 to deception and persuasion" },
+        { id: "so_held_pistol", name: "Hold-Out Specialist", description: "The little pistol in the boot has saved you more often than you'll admit.", mechanicalEffect: "+2 to attacks with hold-out pistol; surprise round damage doubled" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "so_combat_stim", name: "Combat Stim", description: "A different kind of tonic. Hits hard for a minute, costs the patient later.", mechanicalEffect: "Bonus action: target gains +2 attack and 1d6 temp HP for 1 minute (costs 2 Tonic)" },
+        { id: "so_acid_bottle", name: "Caustic Compound", description: "Some bottles aren't meant to be drunk. Hurl one.", mechanicalEffect: "Hurled flask: 2d6 acid damage in 10ft, costs 2 Tonic" },
+        { id: "so_bag_of_tricks", name: "Bag of Tricks", description: "Whatever the trouble, you have a bottle for it.", mechanicalEffect: "Once per scene, produce a reasonable alchemical solution on demand" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "so_revival", name: "Revival", description: "Pour the good stuff down a downed ally's throat and watch them sit back up.", mechanicalEffect: "Revive a downed ally to half HP, costs 4 Tonic, per day" },
+        { id: "so_immune_cocktail", name: "Immune Cocktail", description: "Drink a sip of your own brew before the day starts.", mechanicalEffect: "Resistance to poison and disease; cure self of one ongoing condition per rest" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "so_grand_panacea", name: "Grand Panacea", description: "The bottle the wagon-tail crowd has been waiting for.", mechanicalEffect: "Fully heal and cure all conditions on a target, per day" },
+        { id: "so_master_huckster", name: "Master Huckster", description: "Most of the territory believes at least one of your stories.", mechanicalEffect: "+4 Presence; auto-succeed any non-hostile social roll; allies gain +2 to social rolls in your presence" },
+      ],
+    },
+  ],
+  shaman: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "sh_listen_to_the_land", name: "Listen to the Land", description: "The country tells you what passed through it.", mechanicalEffect: "Advantage on tracking; surface one true fact about any place within 1 mile" },
+        { id: "sh_quiet_step", name: "Quiet Step", description: "The country walks with you, when it pleases. Most days it pleases.", mechanicalEffect: "Advantage on stealth in any natural terrain; ignore difficult terrain" },
+        { id: "sh_spirit_guard", name: "Spirit Guard", description: "An old presence stands at your shoulder. It does not always show.", mechanicalEffect: "+2 AC; advantage on saves against fear and supernatural effects" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "sh_call_the_dead", name: "Question the Dead", description: "A short conversation, no longer. The dead remember selectively.", mechanicalEffect: "Once per day, ask the recently dead three questions" },
+        { id: "sh_spirit_form", name: "Walk the Spirit Road", description: "Step into the other country for a moment, and back out somewhere else.", mechanicalEffect: "Teleport up to 60ft as a bonus action, costs 2 Spirit" },
+        { id: "sh_calm_beast", name: "Calm the Beast", description: "Any creature of the country — wolf, snake, horse — listens for a moment.", mechanicalEffect: "Calm any natural beast; mount and ride hostile horses; advantage on animal-handling" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "sh_banish", name: "Banish the Restless", description: "Speak to the thing that should not be here and ask it to go.", mechanicalEffect: "Banish or destroy an undead/spirit creature, costs 4 Spirit, per day" },
+        { id: "sh_rains", name: "Call the Rains", description: "The sky owes you a small favour. You ask for it.", mechanicalEffect: "Summon a rainstorm, dust-cloud, or fog over a wide area for 1 hour, per day" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "sh_one_with_the_country", name: "One with the Country", description: "The land knows you and answers when you speak.", mechanicalEffect: "+4 Will; all Spirit costs halved; the country provides one major favour per session" },
+        { id: "sh_great_working", name: "The Great Working", description: "Once in a great while, the country lets you ask something large.", mechanicalEffect: "Once per day, the GM grants one major narrative miracle within the country's reach" },
+      ],
+    },
+  ],
   aetherist: [
     {
       level: 5,
@@ -1460,6 +1604,25 @@ export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
   ],
   Symbiotic: [
     { id: "sym_symbiote_voice", name: "Symbiote Voice", description: "The thing bonded to you speaks. Sometimes it warns you. Sometimes it just gloats.", mechanicalEffect: "Once per session, the GM tells you one true thing the symbiote perceives that you would miss" },
+  ],
+  // ─── Weird West heritage bonus skills ─────────────────────────────────────
+  Settler: [
+    { id: "set_hardy", name: "Hardy", description: "Weather, hunger, hard nights — the body has been through worse.", mechanicalEffect: "Advantage on saves against weather, hunger, and exhaustion" },
+  ],
+  Drifter: [
+    { id: "dr_trail_wise", name: "Trail-Wise", description: "There isn't a town you can't slip out of by sundown.", mechanicalEffect: "Advantage on travel, foraging, and stealth in unfamiliar terrain" },
+  ],
+  "Frontier-Born": [
+    { id: "fb_horizon", name: "Eyes on the Horizon", description: "A rider on the ridge half a day before anyone else sees it.", mechanicalEffect: "Advantage on perception and tracking in open country" },
+  ],
+  "Civilized East": [
+    { id: "ce_lettered", name: "Lettered", description: "Literate, polished, and welcome in the better company.", mechanicalEffect: "+2 to social rolls with educated/establishment NPCs; auto-succeed routine literacy/research checks" },
+  ],
+  Outcast: [
+    { id: "oc_hidden_contacts", name: "Hidden Contacts", description: "Someone in every town owes you a night under a roof.", mechanicalEffect: "Always know one safe house, fence, or hideout in any town the GM names" },
+  ],
+  "Spirit-Touched": [
+    { id: "st_other_sight", name: "The Other Sight", description: "The country opened up once and never quite shut.", mechanicalEffect: "Always perceive ghosts, omens, and unquiet land within 60ft" },
   ],
   // ─── Steampunk origin bonus skills ────────────────────────────────────────
   Gentry: [

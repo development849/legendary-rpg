@@ -35,14 +35,6 @@ function stub(args: {
   };
 }
 
-export const COSMIC_HORROR = stub({
-  id: "cosmichorror",
-  label: "Cosmic Horror",
-  tagline: "Knowledge has a price. Sanity is the coin.",
-  description: "Lovecraftian dread. Investigators uncover truths the universe was not meant to share.",
-  iconName: "Eye",
-});
-
 export const SUPERHERO = stub({
   id: "superhero",
   label: "Superhero",
@@ -68,5 +60,5 @@ export const WEIRD_WEST = stub({
 });
 
 export const STUB_GENRES: GenreDefinition[] = [
-  COSMIC_HORROR, SUPERHERO, STEAMPUNK, WEIRD_WEST,
+  SUPERHERO, STEAMPUNK, WEIRD_WEST,
 ];

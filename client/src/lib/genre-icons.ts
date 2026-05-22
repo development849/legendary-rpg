@@ -10,7 +10,8 @@ import {
   Microscope, Bot, Brain,
   Network, Users, Wrench,
   Search, Ghost, Cross,
-  Package, Axe, Syringe, HelpCircle,
+  Package, Axe, Syringe,
+  BookOpen, GraduationCap, HelpCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Network, Users, Wrench,
   Search, Ghost, Cross,
   Package, Axe, Syringe,
+  BookOpen, GraduationCap,
 };
 
 export function resolveGenreIcon(iconName: string | null | undefined): LucideIcon {

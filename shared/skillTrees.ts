@@ -886,6 +886,150 @@ export const CLASS_SKILL_TREES: Record<string, SkillTier[]> = {
       ],
     },
   ],
+  investigator: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "iv_keen_observer", name: "Keen Observer", description: "You catch what others sweep past.", mechanicalEffect: "Advantage on perception/investigation in scenes" },
+        { id: "iv_steady_nerve", name: "Steady Nerve", description: "What you have seen has not yet broken you.", mechanicalEffect: "Advantage on fear and horror saves" },
+        { id: "iv_quick_pistol", name: "Quick Pistol", description: "Years of carrying a sidearm have made drawing it second nature.", mechanicalEffect: "Draw and fire as a bonus action; advantage on initiative" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "iv_network", name: "Network", description: "In every city there is a porter, a desk-sergeant, or a typist who owes you.", mechanicalEffect: "Summon NPC contact in any town, per rest" },
+        { id: "iv_press_harder", name: "Press Harder", description: "Witnesses tell you the thing they have not told the police.", mechanicalEffect: "Force one hidden truth from any NPC, per rest" },
+        { id: "iv_disguise", name: "Disguise", description: "Press, clergy, doctor, drifter — all worn convincingly.", mechanicalEffect: "Pass unrecognised at all routine social checks" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "iv_evidence_eye", name: "Evidence Eye", description: "Walk into a scene and reconstruct the last hour of it.", mechanicalEffect: "Reconstruct any recent event from physical evidence" },
+        { id: "iv_lucky", name: "Lucky", description: "Something keeps the worst of it off you. So far.", mechanicalEffect: "Reroll one failed roll per encounter" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "iv_inevitable", name: "Inevitable", description: "There is no case you cannot eventually crack, no thread you cannot pull.", mechanicalEffect: "Auto-succeed on all investigation; +4 Intellect" },
+        { id: "iv_a_favour_owed", name: "A Favour, Owed", description: "Some powerful person — magistrate, professor, dock-boss — owes you, and now they pay.", mechanicalEffect: "Declare a major NPC ally retroactively, per day" },
+      ],
+    },
+  ],
+  antiquarian: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "aq_glyph_of_warding", name: "Glyph of Warding", description: "Trace a sign that the unclean cannot easily cross.", mechanicalEffect: "Create a 10ft ward vs. supernatural for 1 hour" },
+        { id: "aq_cited_lore", name: "Cited Lore", description: "You can footnote a creature, ritual, or sign on sight.", mechanicalEffect: "Identify any supernatural entity and one weakness" },
+        { id: "aq_pact_armor", name: "Pact Armour", description: "A long-standing arrangement with something patient grants you a measure of protection.", mechanicalEffect: "+2 AC, resistance to psychic damage" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "aq_bind_lesser", name: "Bind Lesser Entity", description: "A working strong enough to chain a small horror to a command — for a while.", mechanicalEffect: "Bind a minor supernatural to a single task, per day" },
+        { id: "aq_blast_of_unmaking", name: "Blast of Unmaking", description: "Hurl a sliver of un-reality at a target.", mechanicalEffect: "3d8 psychic damage, single target, per rest" },
+        { id: "aq_translate_all", name: "Translate All", description: "Read any script, mortal or otherwise, by candle-light.", mechanicalEffect: "Read any language or cipher fluently" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "aq_greater_banishment", name: "Greater Banishment", description: "A working strong enough to send back the larger ones — at a cost.", mechanicalEffect: "Banish a major supernatural entity, per day" },
+        { id: "aq_forbidden_insight", name: "Forbidden Insight", description: "Know one true and useful thing the GM had not planned to share.", mechanicalEffect: "Declare a true plot fact once per session (GM-arbitrated)" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "aq_archmage_of_the_outside", name: "Archmage of the Outside", description: "Your library is complete enough that you can answer almost any question — and you have paid for it.", mechanicalEffect: "Auto-succeed on occult lore; cast Focus rites at half cost" },
+        { id: "aq_pact_made", name: "Pact, Made", description: "Something old has agreed to act on your behalf, once.", mechanicalEffect: "Call in a major supernatural intervention, per day (GM-arbitrated)" },
+      ],
+    },
+  ],
+  dreamer: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "dr_lucid_walking", name: "Lucid Walking", description: "You enter the Dreamlands without preparation and remember everything when you wake.", mechanicalEffect: "Project into the Dreamlands as a bonus action" },
+        { id: "dr_dream_armor", name: "Dream-Armour", description: "What touches you in the waking world strikes a dreamer's body — a fraction less real.", mechanicalEffect: "+2 AC, resistance to psychic damage" },
+        { id: "dr_prophetic_glimpse", name: "Prophetic Glimpse", description: "A flash of what the next hour holds.", mechanicalEffect: "Once per rest, reroll any single roll after seeing the result" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "dr_dream_sending", name: "Dream-Sending", description: "Pass a short message into a sleeping mind across any distance.", mechanicalEffect: "Send a message to any sleeping target, per rest" },
+        { id: "dr_drag_into_dream", name: "Drag Into Dream", description: "Force a creature briefly into a half-dream where you set the rules.", mechanicalEffect: "Stun a target for 1 round + 1d6 psychic damage, per rest" },
+        { id: "dr_walk_unseen", name: "Walk Unseen", description: "The waking world has trouble holding onto you for long.", mechanicalEffect: "Turn invisible as a bonus action for 1 minute, per rest" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "dr_dreamlands_master", name: "Dreamlands Master", description: "The geography of the dream is yours. You arrive where you want to arrive.", mechanicalEffect: "Travel anywhere on Earth via the Dreamlands, per day" },
+        { id: "dr_borrow_from_sleeper", name: "Borrow From a Sleeper", description: "Reach into any sleeping mind and lift a skill, memory, or instinct for one scene.", mechanicalEffect: "Gain temporary proficiency in any one skill for 1 scene" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "dr_dreaming_god", name: "Of the Dreaming City", description: "You have walked far enough that the city remembers you. You are partly of it now.", mechanicalEffect: "+4 Will; phase out of reality for 1 round, per day" },
+        { id: "dr_pull_into_dream", name: "Pull Into Dream", description: "Drag one target body and soul into the Dreamlands — they may not return alone.", mechanicalEffect: "Remove a single creature from the encounter, per day" },
+      ],
+    },
+  ],
+  scholar: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "sh_silver_tongue", name: "Silver Tongue", description: "A precise vocabulary opens doors a less educated knock cannot.", mechanicalEffect: "+4 to persuasion and deception" },
+        { id: "sh_archive_master", name: "Archive Master", description: "Given an hour with any library, you find what is hidden in it.", mechanicalEffect: "Auto-succeed all research checks" },
+        { id: "sh_letter_of_credit", name: "Letter of Credit", description: "Your name and your colleagues' names open most academic and clerical doors.", mechanicalEffect: "Auto-access universities, museums, and quiet collections" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "sh_polyglot", name: "Polyglot", description: "There are perhaps three languages you do not read; you avoid mentioning which.", mechanicalEffect: "Read and speak any human language" },
+        { id: "sh_deductive_master", name: "Deductive Master", description: "Six facts and you have the seventh — usually within an hour.", mechanicalEffect: "Once per rest, the GM tells you one currently-hidden truth" },
+        { id: "sh_calm_under_pressure", name: "Calm Under Pressure", description: "Even with the thing in the corridor, your hands do not shake.", mechanicalEffect: "Immune to fear; advantage on all mental saves" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "sh_lore_of_the_outside", name: "Lore of the Outside", description: "You have read enough that almost no supernatural appearance is wholly new.", mechanicalEffect: "Identify any creature, ritual, or sign on sight" },
+        { id: "sh_quiet_authority", name: "Quiet Authority", description: "Doctors, deans, judges, priests — they listen, because you have earned it.", mechanicalEffect: "Auto-succeed social checks with educated/establishment NPCs" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "sh_emeritus", name: "Emeritus", description: "There is no question you cannot eventually answer; no archive you cannot access.", mechanicalEffect: "+4 Intellect; auto-succeed all knowledge/research" },
+        { id: "sh_correspondence", name: "Correspondence", description: "Your decades of letters now pay back — a peer somewhere always has the right book.", mechanicalEffect: "Summon any non-occult fact within 24 hours, per day" },
+      ],
+    },
+  ],
 };
 
 export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
@@ -991,6 +1135,23 @@ export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
   ],
   "Cult Refugee": [
     { id: "cr_doctrine", name: "Cult Doctrine", description: "You know how their rituals work, because you used to lead them.", mechanicalEffect: "Identify any wasteland cult; advantage on saves vs. charm/indoctrination" },
+  ],
+  // ─── Cosmic Horror lineage bonus skills ───────────────────────────────────
+  // (Note: "Mundane" key is shared with the Supernatural pack — single entry above covers both.)
+  "Touched-by-Dreams": [
+    { id: "tbd_dream_sight", name: "Dream-Sight", description: "Sleep brings warnings you have learned to listen to.", mechanicalEffect: "Once per session, the GM tells you one true thing about the next scene" },
+  ],
+  "Old-Blood": [
+    { id: "ob_inherited_memory", name: "Inherited Memory", description: "Something in the blood remembers what the family forgot.", mechanicalEffect: "Once per session, recall one true ancestral fact relevant to the scene" },
+  ],
+  "Crossroads-Born": [
+    { id: "cb_thin_veil", name: "Thin Veil", description: "The world is a thin curtain to you; you feel what is behind it.", mechanicalEffect: "Always sense supernatural presences within 100ft" },
+  ],
+  Marked: [
+    { id: "mk_marked_sight", name: "Marked Sight", description: "What you see is what is there — not what others agree is there.", mechanicalEffect: "See through illusions; perceive the supernatural always" },
+  ],
+  Wayfarer: [
+    { id: "wf_travelled_eye", name: "Travelled Eye", description: "Six continents and twenty-odd languages; little surprises you about people.", mechanicalEffect: "Recognise foreign sigils, customs, and currencies; +2 to social rolls with foreigners" },
   ],
 };
 

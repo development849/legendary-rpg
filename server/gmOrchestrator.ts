@@ -794,10 +794,18 @@ Achievements: ${((c.achievements as any[]) || []).map((a: any) => `${a.title} [$
     ? `\nDISPLACED TRAVELLERS — Some party members hail from a different era and have entered this world as outsiders. Treat them as fish-out-of-water characters who do not fully fit this setting:\n${mismatchedChars.map(c => `- ${c.name}: from ${getEra(c.era).label} (${getEra(c.era).blurb})`).join("\n")}\n`
     : "";
 
+  // Genre voice — registry-supplied tone/vocabulary directive that the GM
+  // must adopt for the duration of the campaign. Fantasy's gmVoice keeps
+  // the original behaviour; future genre packs (sci-fi etc.) ship their own.
+  const genreDef = getGenre((campaign as any).genre);
+  const genreVoiceBlock = genreDef.gmVoice
+    ? `\nGENRE VOICE — ${genreDef.label}:\n${genreDef.gmVoice}\n`
+    : "";
+
   return `You are the Game Master for "${campaign.name}", an online RPG using the Legendary Lite ruleset.
 
 CAMPAIGN ERA / SETTING: ${campaignEra.label} — ${campaignEra.blurb}
-Genre: ${campaignEra.promptHint}
+Genre: ${campaignEra.promptHint}${genreVoiceBlock}
 All NPCs, locations, technology, clothing, vocabulary, and items MUST match this era. Do not introduce anachronisms.
 ${mismatchBlock}
 CAMPAIGN PREMISE:

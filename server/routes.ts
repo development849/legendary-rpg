@@ -218,8 +218,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const stats = (char.stats as Record<string, number>) || {};
 
       const { getEra } = await import("@shared/schema");
+      const { getGenre } = await import("@shared/genres");
       const eraDef = getEra((char as any).era);
       const isFantasy = eraDef.id === "high-fantasy" || eraDef.id === "dark-ages";
+      // The registry-supplied painterly style for the character's genre.
+      // Fantasy's portraitStyle preserves the original look verbatim;
+      // future genres can ship their own painter direction.
+      const genreDef = getGenre((char as any).genre);
+      const genrePortraitStyle = genreDef.portraitStyle;
 
       const classOutfitMap: Record<string, string> = {
         fighter: "storied full plate armour with engraved pauldrons, a longsword at their hip",
@@ -289,6 +295,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         `ultra-detailed luminous digital painting, photorealistic expressive face, dramatic volumetric rim lighting,`,
         `deep cinematic colour palette with rich shadows and glowing highlights, intricate fabric and material detail,`,
         styleCloser,
+        // Registry-supplied painterly style directive for this genre.
+        // For fantasy this is the same painterly language already used above,
+        // so the resulting prompt remains behaviour-equivalent.
+        genrePortraitStyle ? `Style direction: ${genrePortraitStyle}` : "",
       ].filter(Boolean).join(" ");
 
       const fs = await import("fs");

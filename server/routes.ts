@@ -15,6 +15,7 @@ import {
   getCampaignSoundtracks, saveCampaignSoundtrack,
 } from "./storage";
 import { rollDice, parseDieString, enforceHandLimits } from "./gameEngine";
+import { DEFAULT_GENRE_ID, getGenre, isGenrePlayable, getClassBaseHp, getDefaultStatsForClass } from "@shared/genres";
 import { runGM, generateLocationBackground, generateCampaignWorldImage, generateRegionMap, generateLocationMap, isLocationMapGenerating, assignLocationCoords, assignAllLocationCoords, isCoinItem, consolidateCoins, sortInventory, generateSoundtrackProfiles } from "./gmOrchestrator";
 import { registerAdminRoutes } from "./adminRoutes";
 import { db } from "./db";
@@ -145,15 +146,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/game/class-defaults/:cls", (req, res) => {
-    const { getDefaultStats, CLASS_BASE_HP } = require("./gameEngine");
     const cls = req.params.cls;
-    res.json({ stats: getDefaultStats(cls), hp: CLASS_BASE_HP[cls] ?? 10 });
+    const genre = (req.query.genre as string) || DEFAULT_GENRE_ID;
+    res.json({
+      stats: getDefaultStatsForClass(genre, cls),
+      hp: getClassBaseHp(genre, cls),
+    });
   });
 
   app.post("/api/characters", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
-      const { name, class: cls, race, background, appearance, backstory, customBaseStats, gender, era } = req.body;
+      const { name, class: cls, race, background, appearance, backstory, customBaseStats, gender, era, genre } = req.body;
       if (!name || !cls || !race || !background) {
         return res.status(400).json({ error: "Missing required fields" });
       }
@@ -161,7 +165,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (era !== undefined && era !== null && !ERAS_ALLOW.some(e => e.id === era)) {
         return res.status(400).json({ error: "Invalid era" });
       }
-      const char = await createCharacter(userId, { name, class: cls, race, background, appearance, backstory, customBaseStats, gender, era });
+      // Reject genres that have no shipped content pack so character creation
+      // can't be coerced into a coming-soon genre via a hand-crafted request.
+      if (genre !== undefined && genre !== null && !isGenrePlayable(genre)) {
+        return res.status(400).json({ error: "Invalid or unavailable genre" });
+      }
+      const char = await createCharacter(userId, { name, class: cls, race, background, appearance, backstory, customBaseStats, gender, era, genre });
       res.status(201).json(char);
     } catch (e) { res.status(500).json({ error: "Failed to create character" }); }
   });
@@ -583,13 +592,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/campaigns", requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
-      const { name, description, setting, worldName, worldDescription, worldSeed, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack, era } = req.body;
+      const { name, description, setting, worldName, worldDescription, worldSeed, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack, era, genre } = req.body;
       if (!name) return res.status(400).json({ error: "Name required" });
       const { ERAS: ERAS_ALLOW } = await import("@shared/schema");
       if (era !== undefined && era !== null && !ERAS_ALLOW.some(e => e.id === era)) {
         return res.status(400).json({ error: "Invalid era" });
       }
-      const campaign = await createCampaign(userId, { name, description, setting, worldName, worldDescription, worldSeed, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack, era });
+      if (genre !== undefined && genre !== null && !isGenrePlayable(genre)) {
+        return res.status(400).json({ error: "Invalid or unavailable genre" });
+      }
+      const campaign = await createCampaign(userId, { name, description, setting, worldName, worldDescription, worldSeed, themes, contentRating, noRomance, noHorror, fadeToBlack, gmMode, stylePack, era, genre });
       const party = await createParty(campaign.id, "The Company");
       res.status(201).json({ campaign, party });
     } catch (e) { res.status(500).json({ error: "Failed to create campaign" }); }

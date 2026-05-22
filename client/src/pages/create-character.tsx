@@ -8,163 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
 
-const CLASSES = [
-  {
-    id: "fighter",
-    name: "Fighter",
-    icon: Sword,
-    color: "text-red-400",
-    hp: 12,
-    description: "Masters of martial combat. Strong, resilient, and capable of extraordinary physical feats.",
-    stats: "Might 14, Endurance 12",
-    abilities: "Second Wind, Action Surge",
-    gear: "Longsword, Chain Mail, Shield",
-  },
-  {
-    id: "rogue",
-    name: "Rogue",
-    icon: Dices,
-    color: "text-emerald-400",
-    hp: 8,
-    description: "Cunning and agile. Masters of stealth, subterfuge, and striking at the perfect moment.",
-    stats: "Agility 14, Presence 12",
-    abilities: "Sneak Attack, Cunning Action",
-    gear: "Short Sword, Daggers, Thieves' Tools",
-  },
-  {
-    id: "wizard",
-    name: "Wizard",
-    icon: ScrollText,
-    color: "text-violet-400",
-    hp: 6,
-    description: "Scholars of arcane lore. Wield powerful spells and reshape reality through study and will.",
-    stats: "Intellect 14, Will 12",
-    abilities: "Arcane Blast, Mage Armor, Sleep",
-    gear: "Arcane Staff, Spellbook, Focus Crystal",
-  },
-  {
-    id: "cleric",
-    name: "Cleric",
-    icon: Shield,
-    color: "text-amber-400",
-    hp: 10,
-    description: "Divine conduits. Channel sacred power to heal allies, smite foes, and turn the tide of battle.",
-    stats: "Will 14, Presence 12",
-    abilities: "Sacred Flame, Healing Word, Divine Smite",
-    gear: "Mace, Scale Mail, Holy Symbol",
-  },
-  {
-    id: "ranger",
-    name: "Ranger",
-    icon: Target,
-    color: "text-teal-400",
-    hp: 10,
-    description: "Hunters of the wild. Expert trackers who blend martial skill with nature magic to stalk their prey.",
-    stats: "Agility 14, Endurance 12",
-    abilities: "Hunter's Mark, Volley, Natural Explorer",
-    gear: "Longbow, Short Sword, Studded Leather",
-  },
-  {
-    id: "paladin",
-    name: "Paladin",
-    icon: Star,
-    color: "text-yellow-300",
-    hp: 10,
-    description: "Holy warriors bound by sacred oaths. Combine martial prowess with divine grace to protect the innocent.",
-    stats: "Might 14, Will 12",
-    abilities: "Lay on Hands, Divine Smite, Aura of Protection",
-    gear: "Longsword, Half-Plate, Shield, Holy Symbol",
-  },
-  {
-    id: "barbarian",
-    name: "Barbarian",
-    icon: Flame,
-    color: "text-orange-400",
-    hp: 12,
-    description: "Primal warriors who tap into a furious rage. Fearsome and nigh-unstoppable on the battlefield.",
-    stats: "Might 14, Endurance 14",
-    abilities: "Rage, Reckless Attack, Danger Sense",
-    gear: "Greataxe, Handaxe, Hide Armor",
-  },
-  {
-    id: "bard",
-    name: "Bard",
-    icon: Music,
-    color: "text-rose-400",
-    hp: 8,
-    description: "Virtuosos of magic and charm. Inspire allies, confound enemies, and bend fate with song and story.",
-    stats: "Presence 14, Will 12",
-    abilities: "Bardic Inspiration, Cutting Words, Vicious Mockery",
-    gear: "Rapier, Lute, Leather Armor, Component Pouch",
-  },
-];
-
-const RACES = [
-  {
-    name: "Human",
-    description: "Adaptable and endlessly driven, humans spread across every corner of the world through ambition and will.",
-    traits: "+1 to all stats · Bonus Proficiency · Extra Language",
-  },
-  {
-    name: "Elf",
-    description: "Ancient and graceful, elves carry millennia of memory in their eyes and move like living poetry through any landscape.",
-    traits: "+2 Agility · Darkvision · Trance (4-hr rest) · Keen Senses",
-  },
-  {
-    name: "Dwarf",
-    description: "Born of stone and tradition, dwarves are unyielding in battle and fiercely loyal to kin, clan, and craft.",
-    traits: "+2 Endurance · Darkvision · Poison Resistance · Stone Sense",
-  },
-  {
-    name: "Halfling",
-    description: "Small in stature but boundless in courage, halflings carry an uncanny luck that bends fate to their favor.",
-    traits: "+2 Agility · Lucky (reroll 1s) · Brave · Naturally Stealthy",
-  },
-  {
-    name: "Half-Orc",
-    description: "Born between two worlds, half-orcs channel primal fury into devastating strength and shrug off blows that fell others.",
-    traits: "+2 Might · +1 Endurance · Relentless Endurance · Savage Attacks",
-  },
-  {
-    name: "Tiefling",
-    description: "Touched by infernal blood, tieflings bear the mark of the lower planes but forge their own destiny through will alone.",
-    traits: "+2 Presence · +1 Intellect · Darkvision · Hellish Rebuke · Fire Resistance",
-  },
-  {
-    name: "Dragonborn",
-    description: "Proud descendants of dragonkind who carry draconic power in their blood, unleashing elemental breath in battle.",
-    traits: "+2 Might · +1 Presence · Breath Weapon · Draconic Ancestry · Damage Resistance",
-  },
-  {
-    name: "Gnome",
-    description: "Inventive and irrepressibly curious, gnomes approach every problem with a tinkerer's mind and a trickster's heart.",
-    traits: "+2 Intellect · Gnome Cunning (adv. mental saves) · Darkvision · Tinker",
-  },
-  {
-    name: "Aasimar",
-    description: "Blessed with celestial lineage, aasimar radiate an inner light and are called by divine forces to champion the innocent.",
-    traits: "+2 Will · +1 Presence · Healing Hands · Radiant Soul · Celestial Resistance",
-  },
-  {
-    name: "Tabaxi",
-    description: "Feline wanderers driven by insatiable curiosity, tabaxi move with preternatural speed and strike like an uncoiled spring.",
-    traits: "+2 Agility · +1 Presence · Cat's Claws · Feline Agility · Darkvision",
-  },
-  {
-    name: "Genasi",
-    description: "Born of elemental fire and mortal blood, genasi blaze with inner heat that shapes their personality and powers alike.",
-    traits: "+2 Intellect · +1 Endurance · Fire Resistance · Reach to the Blaze · Darkvision",
-  },
-  {
-    name: "Firbolg",
-    description: "Gentle giants of the ancient forests, firbolgs commune with nature and prefer diplomacy — but are terrifying when roused.",
-    traits: "+2 Will · +1 Might · Detect Magic · Hidden Step · Powerful Build",
-  },
-];
-const BACKGROUNDS = [
-  "Soldier", "Scholar", "Criminal", "Acolyte", "Merchant", "Noble", "Outlander",
-  "Sailor", "Folk Hero", "Hermit", "Charlatan", "Guild Artisan",
-];
+import { getGenre, isGenrePlayable, DEFAULT_GENRE_ID } from "@shared/genres";
+import { resolveGenreIcon } from "@/lib/genre-icons";
+import { useMemo } from "react";
 
 const STAT_KEYS = ["might", "agility", "endurance", "intellect", "will", "presence"] as const;
 const STAT_LABELS: Record<string, string> = {
@@ -172,19 +18,19 @@ const STAT_LABELS: Record<string, string> = {
   intellect: "Intellect", will: "Will", presence: "Presence",
 };
 
-// Mirrors server/gameEngine.ts — getDefaultStats
-const CLASS_BASE_STATS: Record<string, Record<string, number>> = {
-  fighter:   { might: 14, agility: 10, endurance: 12, intellect: 10, will: 10, presence: 10 },
-  rogue:     { might: 10, agility: 14, endurance: 10, intellect: 10, will: 10, presence: 12 },
-  wizard:    { might: 10, agility: 10, endurance: 10, intellect: 14, will: 12, presence: 10 },
-  cleric:    { might: 10, agility: 10, endurance: 10, intellect: 10, will: 14, presence: 12 },
-  ranger:    { might: 10, agility: 14, endurance: 12, intellect: 10, will: 10, presence: 10 },
-  paladin:   { might: 14, agility: 10, endurance: 10, intellect: 10, will: 12, presence: 10 },
-  barbarian: { might: 14, agility: 10, endurance: 14, intellect: 10, will: 10, presence: 10 },
-  bard:      { might: 10, agility: 10, endurance: 10, intellect: 10, will: 12, presence: 14 },
-};
+const GENDERS = [
+  { id: "female", label: "Female" },
+  { id: "male", label: "Male" },
+  { id: "non-binary", label: "Non-Binary" },
+  { id: "agender", label: "Agender" },
+  { id: "genderfluid", label: "Genderfluid" },
+  { id: "prefer-not-to-say", label: "Prefer Not to Say" },
+];
 
-// Mirrors server/gameEngine.ts — getBackgroundAbility (preview names + descriptions)
+// Background ability preview text shown next to the picker. Mirrors the
+// fantasy entries in server/gameEngine.ts getBackgroundAbility. Future genre
+// packs that introduce new backgrounds will need their own previews; entries
+// missing from this map simply skip the preview block.
 const BACKGROUND_ABILITIES: Record<string, { name: string; description: string }> = {
   "Soldier":       { name: "Battle-Hardened",     description: "Advantage on Might saves vs. fear/exhaustion. Once per rest, rally an ally for +1d6 on their next attack." },
   "Scholar":       { name: "Wealth of Knowledge", description: "Identify magical items and recall lore without rolling. +2 to Intellect checks when researching with texts." },
@@ -199,56 +45,6 @@ const BACKGROUND_ABILITIES: Record<string, { name: string; description: string }
   "Charlatan":     { name: "Thousand Faces",      description: "Advantage on Presence checks to deceive or impersonate. Maintain a false identity for up to one week effortlessly." },
   "Guild Artisan": { name: "Master Crafter",      description: "Craft, identify, or repair any mundane item given materials. Advantage on Intellect checks relating to your craft." },
 };
-
-// Racial bonuses — mirrors server/gameEngine.ts getRaceBonuses
-const RACE_BONUSES: Record<string, Record<string, number>> = {
-  "Human":      { might: 1, agility: 1, endurance: 1, intellect: 1, will: 1, presence: 1 },
-  "Elf":        { agility: 2 },
-  "Dwarf":      { endurance: 2 },
-  "Halfling":   { agility: 2 },
-  "Half-Orc":   { might: 2, endurance: 1 },
-  "Tiefling":   { presence: 2, intellect: 1 },
-  "Dragonborn": { might: 2, presence: 1 },
-  "Gnome":      { intellect: 2 },
-  "Aasimar":    { will: 2, presence: 1 },
-  "Tabaxi":     { agility: 2, presence: 1 },
-  "Genasi":     { intellect: 2, endurance: 1 },
-  "Firbolg":    { will: 2, might: 1 },
-};
-
-const GENDERS = [
-  { id: "female", label: "Female" },
-  { id: "male", label: "Male" },
-  { id: "non-binary", label: "Non-Binary" },
-  { id: "agender", label: "Agender" },
-  { id: "genderfluid", label: "Genderfluid" },
-  { id: "prefer-not-to-say", label: "Prefer Not to Say" },
-];
-
-const PERSONALITY_TRAITS = [
-  "Brave", "Cunning", "Compassionate", "Ruthless", "Wise", "Reckless",
-  "Honourable", "Ambitious", "Haunted", "Cheerful", "Stoic", "Pious",
-  "Sarcastic", "Curious", "Loyal", "Mysterious",
-];
-
-const MOTIVATIONS = [
-  "Vengeance", "Redemption", "Wealth", "Knowledge", "Fame", "Justice",
-  "Protect loved ones", "Freedom", "Power", "Belonging", "Duty", "Survival",
-];
-
-const FLAWS = [
-  "Crippling guilt", "Blind rage", "Cowardice at heart", "Greed",
-  "Dark secret", "Reckless pride", "Betrayed a friend", "Addiction",
-  "Owes a dangerous debt", "Fears death above all", "Cannot trust anyone", "Lost faith",
-];
-
-const FANTASY_NAMES = [
-  "Aldric", "Brynn", "Caelum", "Dara", "Elara", "Fenwick", "Gael", "Hestia",
-  "Idris", "Jora", "Kael", "Lyra", "Morrigan", "Nyx", "Oren", "Petra",
-  "Quill", "Rowan", "Sable", "Theron", "Umber", "Vesper", "Wren", "Xara",
-  "Yara", "Zephyr", "Ashara", "Bram", "Cirdan", "Dahlia", "Eirik", "Freya",
-  "Grimshaw", "Isolde", "Kaelen", "Liora", "Mazrek", "Niamh", "Ondra", "Ravenna",
-];
 
 import { ERAS } from "@shared/schema";
 
@@ -280,6 +76,46 @@ export default function CreateCharacterPage() {
 
   const steps: Step[] = ["class", "race", "stats", "details", "confirm", "portrait"];
   const stepIdx = steps.indexOf(step);
+
+  // Genre is fixed at page entry via ?genre= (defaults to fantasy). All class /
+  // race / background / flavour data flows from the registry for that genre so
+  // adding a new playable genre pack works without touching this file.
+  const [genre] = useState<string>(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get("genre");
+      return q && isGenrePlayable(q) ? q : DEFAULT_GENRE_ID;
+    } catch { return DEFAULT_GENRE_ID; }
+  });
+  const genreDef = useMemo(() => getGenre(genre), [genre]);
+  const CLASSES = useMemo(() => genreDef.classes.map(c => ({
+    id: c.id,
+    name: c.name,
+    icon: resolveGenreIcon(c.iconName),
+    color: c.color,
+    hp: c.baseHp,
+    description: c.description,
+    stats: c.stats,
+    abilities: c.abilities,
+    gear: c.gear,
+  })), [genreDef]);
+  const RACES = useMemo(() => genreDef.races.map(r => ({
+    name: r.name,
+    description: r.description,
+    traits: r.traits,
+  })), [genreDef]);
+  const BACKGROUNDS = useMemo(() => genreDef.backgrounds, [genreDef]);
+  const CLASS_BASE_STATS = useMemo<Record<string, Record<string, number>>>(
+    () => Object.fromEntries(genreDef.classes.map(c => [c.id, c.baseStats])),
+    [genreDef],
+  );
+  const RACE_BONUSES = useMemo<Record<string, Record<string, number>>>(
+    () => Object.fromEntries(genreDef.races.map(r => [r.name, r.bonuses])),
+    [genreDef],
+  );
+  const PERSONALITY_TRAITS = useMemo(() => genreDef.personalityTraits, [genreDef]);
+  const MOTIVATIONS = useMemo(() => genreDef.motivations, [genreDef]);
+  const FLAWS = useMemo(() => genreDef.flaws, [genreDef]);
+  const FANTASY_NAMES = useMemo(() => genreDef.names, [genreDef]);
 
   // Stat customization helpers
   function getClassDefaults(): Record<string, number> {
@@ -393,6 +229,7 @@ export default function CreateCharacterPage() {
           customBaseStats: customStats ?? undefined,
           gender: selectedGender || undefined,
           era: selectedEra,
+          genre,
         }),
       });
       if (res.status === 401) {

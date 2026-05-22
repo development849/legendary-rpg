@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Scroll, Sparkles, Shield, Swords, Palette, ImageOff, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Scroll, Sparkles, Shield, Swords, Palette, ImageOff, AlertTriangle, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ERAS, getEra } from "@shared/schema";
 import type { Character } from "@shared/schema";
+import { getAvailableGenres, DEFAULT_GENRE_ID } from "@shared/genres";
+import { resolveGenreIcon } from "@/lib/genre-icons";
 
 const GM_MODES = [
   { id: "fast", label: "Fast", desc: "Brisk pacing. Quick scenes. Action-forward." },
@@ -51,6 +53,7 @@ export default function CreateCampaignPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [genre, setGenre] = useState<string>(DEFAULT_GENRE_ID);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [setting, setSetting] = useState("");
@@ -100,7 +103,7 @@ export default function CreateCampaignPage() {
       const res = await fetch("/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description, setting, era, worldName: worldName.trim() || null, worldDescription: worldDescription.trim() || null, worldSeed: worldSeed ?? undefined, themes: selectedThemes, gmMode, contentRating, noRomance, noHorror, fadeToBlack }),
+        body: JSON.stringify({ name: name.trim(), description, setting, era, genre, worldName: worldName.trim() || null, worldDescription: worldDescription.trim() || null, worldSeed: worldSeed ?? undefined, themes: selectedThemes, gmMode, contentRating, noRomance, noHorror, fadeToBlack }),
       });
       if (!res.ok) throw new Error(await res.text());
       const { campaign, party } = await res.json();
@@ -140,6 +143,50 @@ export default function CreateCampaignPage() {
         </div>
 
         <div className="space-y-6">
+          {/* Genre */}
+          <div className="space-y-3">
+            <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase flex items-center gap-2">
+              <Palette className="w-3.5 h-3.5 text-primary" /> Genre *
+            </label>
+            <p className="text-xs text-muted-foreground font-serif -mt-1">
+              Choose the genre of your world. This determines the available classes, races, and the GM's storytelling voice.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {getAvailableGenres().map(g => {
+                const Icon = resolveGenreIcon(g.iconName);
+                const disabled = g.comingSoon;
+                const active = genre === g.id;
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => !disabled && setGenre(g.id)}
+                    disabled={disabled}
+                    data-testid={`button-genre-${g.id}`}
+                    className={`relative p-3 rounded-md border text-left transition-all ${
+                      disabled
+                        ? "border-border/40 bg-card/40 opacity-50 cursor-not-allowed"
+                        : active
+                          ? "border-primary bg-primary/10 text-primary hover-elevate"
+                          : "border-border bg-card text-foreground hover-elevate"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span className="font-sans font-semibold text-sm tracking-wide">{g.label}</span>
+                      {disabled && (
+                        <span className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-amber-500/80">
+                          <Lock className="w-3 h-3" /> Soon
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground font-serif leading-snug">{g.tagline}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Campaign Name */}
           <div className="space-y-2">
             <label className="text-xs font-sans tracking-widest text-muted-foreground uppercase">Campaign Name *</label>

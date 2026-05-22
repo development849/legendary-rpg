@@ -5,13 +5,19 @@ import { eq, desc, and, inArray } from "drizzle-orm";
 import { rollDice, enforceHandLimits } from "./gameEngine";
 import { saveCampaignSoundtrack } from "./storage";
 import { runChronicler } from "./chronicler";
+import { getGenre, DEFAULT_GENRE_ID } from "@shared/genres";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const STYLE_PROMPT = "Semi-realistic painterly digital art in the style of modern fantasy concept art and JRPG illustration. Soft diffused volumetric lighting with atmospheric haze, god-rays, and dramatic silhouettes. Rich tonal depth — warm amber/gold highlights against cool blue-grey shadows. Loose, textured brushwork that suggests detail without hard edges. Cinematic composition with depth-of-field blur. Luminous, ethereal atmosphere. High-detail environment but slightly soft and painterly, never photorealistic or cartoony. Moody and evocative. No text, no HUD, no UI overlays.";
+// Per-genre painterly style prompt used by all image generation paths.
+// Defaults to fantasy when no genre is provided so callers without campaign
+// context (e.g. legacy callers) keep working.
+function getStylePrompt(genreId?: string | null): string {
+  return getGenre(genreId).portraitStyle;
+}
 
 async function getStyleRefParts(): Promise<any[]> {
   const fs = await import("fs");
@@ -63,7 +69,7 @@ export async function generateLocationBackground(
 
     const isShopOrIndoor = /shop|store|market|stall|wares|wonders|emporium|bazaar|inn|tavern|smithy|forge|library|temple|guild|hall/i.test(sceneTitle || locationName);
     const shopHint = isShopOrIndoor ? " This is an INTERIOR scene — show the inside of the building/shop with shelves, goods, and atmospheric lighting. Do NOT show underwater or ocean scenes even if the name sounds aquatic — it is a land-based shop." : "";
-    const prompt = `Wide cinematic fantasy environment painting of "${sceneTitle || locationName}".${descPart} The scene is set at "${locationName}".${shopHint} Paint exactly what this location looks like — if it is a shop, show its interior; if it is a city, market, forest, cave, etc., depict THAT environment faithfully. Do NOT assume underwater setting unless the scene explicitly says "underwater" or "submerged".${settingPart} Environment only, no people or characters in frame. Landscape orientation, immersive wide shot. ${STYLE_PROMPT}`;
+    const prompt = `Wide cinematic fantasy environment painting of "${sceneTitle || locationName}".${descPart} The scene is set at "${locationName}".${shopHint} Paint exactly what this location looks like — if it is a shop, show its interior; if it is a city, market, forest, cave, etc., depict THAT environment faithfully. Do NOT assume underwater setting unless the scene explicitly says "underwater" or "submerged".${settingPart} Environment only, no people or characters in frame. Landscape orientation, immersive wide shot. ${getStylePrompt()}`;
 
     const parts: any[] = await getStyleRefParts();
     parts.push({ text: prompt });
@@ -116,6 +122,7 @@ export async function generateCampaignWorldImage(campaignId: string): Promise<vo
       description: campaigns.description,
       name: campaigns.name,
       themes: campaigns.themes,
+      genre: campaigns.genre,
     }).from(campaigns).where(eq(campaigns.id, campaignId));
     if (!c || c.worldImage) return;
     const { GoogleGenAI, Modality } = await import("@google/genai");
@@ -132,7 +139,7 @@ export async function generateCampaignWorldImage(campaignId: string): Promise<vo
     const descPart = worldDesc ? ` World brief: ${worldDesc.slice(0, 600)}.` : "";
     const themesPart = themesArr ? ` Tonal themes: ${themesArr}.` : "";
 
-    const prompt = `Wide cinematic establishing matte painting of ${titlePart}.${descPart}${themesPart} Render the defining environment of THIS specific world — if it is a steampunk space-faring universe, paint a steampunk space scene; if it is a sunken kingdom, paint underwater ruins; if it is a feudal samurai land, paint that. Honor the world brief literally — do NOT default to generic medieval fantasy unless the brief calls for it. Establish the genre at a glance. Environment only, absolutely no people or characters in frame. Landscape orientation, immersive ultra-wide hero shot. ${STYLE_PROMPT}`;
+    const prompt = `Wide cinematic establishing matte painting of ${titlePart}.${descPart}${themesPart} Render the defining environment of THIS specific world — if it is a steampunk space-faring universe, paint a steampunk space scene; if it is a sunken kingdom, paint underwater ruins; if it is a feudal samurai land, paint that. Honor the world brief literally — do NOT default to generic medieval fantasy unless the brief calls for it. Establish the genre at a glance. Environment only, absolutely no people or characters in frame. Landscape orientation, immersive ultra-wide hero shot. ${getStylePrompt(c.genre)}`;
 
     let imageData: string | null = null;
     try {
@@ -218,7 +225,7 @@ export async function generateRegionMap(partyId: string, campaignSetting: string
     const terrainCtx = uniqueTerrain ? ` The landscape features ${uniqueTerrain}.` : "";
     const regionCtx = regionList ? ` Key regions: ${regionList}.` : "";
 
-    const prompt = `Top-down bird's eye view fantasy region map of ${settingDesc}.${regionCtx}${terrainCtx} Parchment and ink cartography style with aged paper texture. Show varied terrain: forests as clusters of tiny trees, mountains as small peaked ridges, rivers as winding blue lines, plains as open space, a coastline if appropriate. Include small settlement markers (tiny building clusters) where towns would be. Compass rose in one corner. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, forest green, dusty blue for water. Square aspect ratio. ${STYLE_PROMPT}`;
+    const prompt = `Top-down bird's eye view fantasy region map of ${settingDesc}.${regionCtx}${terrainCtx} Parchment and ink cartography style with aged paper texture. Show varied terrain: forests as clusters of tiny trees, mountains as small peaked ridges, rivers as winding blue lines, plains as open space, a coastline if appropriate. Include small settlement markers (tiny building clusters) where towns would be. Compass rose in one corner. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, forest green, dusty blue for water. Square aspect ratio. ${getStylePrompt()}`;
 
     let imageData: string | null = null;
     try {
@@ -311,7 +318,7 @@ export async function generateLocationMap(
     };
 
     const basePrompt = typePrompts[locationType] || typePrompts.generic;
-    const prompt = `${basePrompt}${ctx ? ` Context: ${ctx}.` : ""} Parchment and ink cartography style with aged paper texture. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, dark grey for walls, dusty blue for water. Square aspect ratio. Clear room/area boundaries. ${STYLE_PROMPT}`;
+    const prompt = `${basePrompt}${ctx ? ` Context: ${ctx}.` : ""} Parchment and ink cartography style with aged paper texture. NO TEXT, NO LABELS, NO WORDS anywhere on the map. Muted earth tones — sepia, burnt umber, dark grey for walls, dusty blue for water. Square aspect ratio. Clear room/area boundaries. ${getStylePrompt()}`;
 
     let imageData: string | null = null;
     try {
@@ -1753,6 +1760,9 @@ export async function runGM(
       knownLocations: knownLocationsForChronicler,
       currentLocation: parsed?.scene?.location ?? prevState.currentLocation ?? null,
       currentRegion: parsed?.scene?.region ?? null,
+      // Genre label flows from the campaign so the chronicler's system prompt
+      // reflects the right setting vocabulary (fantasy, sci-fi, etc.).
+      genreLabel: getGenre((campaign as any).genre).label,
     });
 
     // SAFETY: only strip-and-replace narrator's entity updates if the chronicler

@@ -92,210 +92,55 @@ export function statModifier(statValue: number): number {
   return Math.floor((statValue - 10) / 2);
 }
 
-// Character classes base HP
-export const CLASS_BASE_HP: Record<string, number> = {
-  fighter: 12,
-  rogue: 8,
-  wizard: 6,
-  cleric: 10,
-  ranger: 10,
-  paladin: 10,
-  barbarian: 12,
-  bard: 8,
-};
+// ─── Legacy fantasy-only shims ───────────────────────────────────────────────
+// These four exports used to hard-code fantasy classes; they now delegate to
+// the genre registry so the rest of the engine keeps working unchanged for
+// fantasy campaigns. New code should call the genre-aware helpers in
+// `@shared/genres` directly with an explicit genreId.
+import {
+  DEFAULT_GENRE_ID,
+  getClassBaseHp as _getClassBaseHpForGenre,
+  getClassBaseMp as _getClassBaseMpForGenre,
+  getDefaultStatsForClass as _getDefaultStatsForGenre,
+  getStartingInventoryForClass as _getStartingInventoryForGenre,
+  getStartingAbilitiesForClass as _getStartingAbilitiesForGenre,
+  getRaceBonusesFor as _getRaceBonusesForGenre,
+  getClassesForGenre,
+} from "@shared/genres";
 
-export const CLASS_BASE_MP: Record<string, number> = {
-  wizard: 20,
-  cleric: 15,
-  bard: 15,
-  paladin: 8,
-  ranger: 8,
-  fighter: 0,
-  rogue: 0,
-  barbarian: 0,
-};
+function _fantasyClassIds(): string[] {
+  return getClassesForGenre(DEFAULT_GENRE_ID).map(c => c.id);
+}
 
-// Default stats by class
+export const CLASS_BASE_HP: Record<string, number> = Object.fromEntries(
+  _fantasyClassIds().map(id => [id, _getClassBaseHpForGenre(DEFAULT_GENRE_ID, id)]),
+);
+
+export const CLASS_BASE_MP: Record<string, number> = Object.fromEntries(
+  _fantasyClassIds().map(id => [id, _getClassBaseMpForGenre(DEFAULT_GENRE_ID, id)]),
+);
+
 export function getDefaultStats(cls: string): Record<string, number> {
-  const base = { might: 10, agility: 10, endurance: 10, intellect: 10, will: 10, presence: 10 };
-  switch (cls) {
-    case "fighter":
-      return { ...base, might: 14, endurance: 12 };
-    case "rogue":
-      return { ...base, agility: 14, presence: 12 };
-    case "wizard":
-      return { ...base, intellect: 14, will: 12 };
-    case "cleric":
-      return { ...base, will: 14, presence: 12 };
-    case "ranger":
-      return { ...base, agility: 14, endurance: 12 };
-    case "paladin":
-      return { ...base, might: 14, will: 12 };
-    case "barbarian":
-      return { ...base, might: 14, endurance: 14 };
-    case "bard":
-      return { ...base, presence: 14, will: 12 };
-    default:
-      return base;
-  }
+  return _getDefaultStatsForGenre(DEFAULT_GENRE_ID, cls);
 }
 
-// Starting inventory by class
+// Starting inventory by class — fantasy default; for other genres call the
+// registry helper directly with the campaign's genreId.
 export function getStartingInventory(cls: string): any[] {
-  const common = [
-    { name: "Rations (3 days)", type: "consumable", qty: 1, properties: {} },
-    { name: "Torch", type: "tool", qty: 3, properties: {} },
-    { name: "Coin Pouch (10gp)", type: "treasure", qty: 1, properties: { value: 10 } },
-  ];
-  switch (cls) {
-    case "fighter":
-      return [...common,
-        { name: "Longsword", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d8", bonus: 2 } },
-        { name: "Chain Mail", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 14, slot: "body" } },
-        { name: "Shield", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac_bonus: 2 } },
-      ];
-    case "rogue":
-      return [...common,
-        { name: "Short Sword", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d6", bonus: 2 } },
-        { name: "Daggers", type: "weapon", qty: 3, rarity: "common", properties: { damage: "1d4", thrown: true } },
-        { name: "Leather Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 11, slot: "body" } },
-        { name: "Thieves' Tools", type: "tool", qty: 1, properties: {} },
-      ];
-    case "wizard":
-      return [...common,
-        { name: "Arcane Staff", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d6" } },
-        { name: "Spellbook", type: "tool", qty: 1, properties: {} },
-        { name: "Robes", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 10, slot: "body" } },
-        { name: "Focus Crystal", type: "misc", qty: 1, properties: { focus: 3 } },
-      ];
-    case "cleric":
-      return [...common,
-        { name: "Mace", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d6", bonus: 1 } },
-        { name: "Scale Mail", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 13, slot: "body" } },
-        { name: "Holy Symbol", type: "misc", qty: 1, properties: {} },
-        { name: "Prayer Beads", type: "misc", qty: 1, properties: { focus: 2 } },
-      ];
-    case "ranger":
-      return [...common,
-        { name: "Longbow", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d8", range: 150 } },
-        { name: "Arrows", type: "consumable", qty: 20, properties: {} },
-        { name: "Short Sword", type: "weapon", qty: 1, rarity: "common", properties: { damage: "1d6", bonus: 1 } },
-        { name: "Studded Leather Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 12, slot: "body" } },
-        { name: "Herbalism Kit", type: "tool", qty: 1, properties: {} },
-      ];
-    case "paladin":
-      return [...common,
-        { name: "Longsword", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d8", bonus: 2 } },
-        { name: "Shield", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac_bonus: 2 } },
-        { name: "Half-Plate", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 15, slot: "body" } },
-        { name: "Holy Symbol", type: "misc", qty: 1, properties: { focus: 3 } },
-        { name: "Healing Potion", type: "consumable", qty: 1, properties: { heal: "2d4+2" } },
-      ];
-    case "barbarian":
-      return [...common,
-        { name: "Greataxe", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d12", bonus: 2, two_handed: true } },
-        { name: "Handaxe", type: "weapon", qty: 2, rarity: "common", properties: { damage: "1d6", thrown: true } },
-        { name: "Hide Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 12, slot: "body" } },
-        { name: "Hunting Trap", type: "tool", qty: 1, properties: {} },
-      ];
-    case "bard":
-      return [...common,
-        { name: "Rapier", type: "weapon", qty: 1, rarity: "common", equipped: true, properties: { damage: "1d8", bonus: 1, finesse: true } },
-        { name: "Lute", type: "misc", qty: 1, properties: { focus: 3 } },
-        { name: "Leather Armor", type: "armor", qty: 1, rarity: "common", equipped: true, properties: { ac: 11, slot: "body" } },
-        { name: "Component Pouch", type: "misc", qty: 1, properties: {} },
-        { name: "Disguise Kit", type: "tool", qty: 1, properties: {} },
-      ];
-    default:
-      return common;
-  }
+  return _getStartingInventoryForGenre(DEFAULT_GENRE_ID, cls);
 }
 
-// Starting abilities by class
+
+// Starting abilities by class — fantasy default; for other genres call the
+// registry helper directly with the campaign's genreId.
 export function getStartingAbilities(cls: string): any[] {
-  switch (cls) {
-    case "fighter":
-      return [
-        { id: "second_wind", name: "Second Wind", description: "Regain 1d10+level HP as a bonus action (recharges after a rest)", usesMax: 1, usesLeft: 1, recharge: "per-rest" },
-        { id: "action_surge", name: "Action Surge", description: "Take an extra action on your turn (recharges after a rest)", usesMax: 1, usesLeft: 1, recharge: "per-rest" },
-      ];
-    case "rogue":
-      return [
-        { id: "sneak_attack", name: "Sneak Attack", description: "Deal 1d6 extra damage when you have advantage or an ally nearby", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-        { id: "cunning_action", name: "Cunning Action", description: "Dash, Disengage, or Hide as a bonus action", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-      ];
-    case "wizard":
-      return [
-        { id: "arcane_blast", name: "Arcane Blast", description: "Ranged spell attack dealing 1d10 force damage", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-        { id: "mage_armor", name: "Mage Armor", description: "Set AC to 13+agility modifier for 8 hours (uses 1 Focus)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-        { id: "sleep_spell", name: "Sleep", description: "Put creatures in a 20ft radius to sleep (uses 1 Focus). Affects up to 5d8 HP worth of creatures", usesMax: 2, usesLeft: 2, recharge: "per-rest" },
-      ];
-    case "cleric":
-      return [
-        { id: "sacred_flame", name: "Sacred Flame", description: "Ranged spell attack dealing 1d8 radiant damage", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-        { id: "healing_word", name: "Healing Word", description: "Heal a creature for 1d4+will modifier HP (uses 1 Focus)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-        { id: "divine_smite", name: "Divine Smite", description: "Add 2d8 radiant damage to a melee hit (uses 1 Focus)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-      ];
-    case "ranger":
-      return [
-        { id: "hunters_mark", name: "Hunter's Mark", description: "Mark a creature as your quarry. Deal 1d6 extra damage against it and track it unerringly (concentration)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-        { id: "volley", name: "Volley", description: "Fire a hail of arrows in a 10ft radius; each creature makes an Agility save (DC 13) or takes 1d8 damage", usesMax: 2, usesLeft: 2, recharge: "per-rest" },
-        { id: "natural_explorer", name: "Natural Explorer", description: "Advantage on Endurance checks in wilderness, never lost outdoors, double rations foraged", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-      ];
-    case "paladin":
-      return [
-        { id: "lay_on_hands", name: "Lay on Hands", description: "Touch a creature to restore up to 5 HP from a shared pool (pool refreshes after a rest)", usesMax: 5, usesLeft: 5, recharge: "per-rest" },
-        { id: "paladin_divine_smite", name: "Divine Smite", description: "After hitting with a melee weapon, expend 1 Focus to deal an extra 2d8 radiant damage", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-        { id: "aura_of_protection", name: "Aura of Protection", description: "Allies within 10ft add your Will modifier to all saving throws", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-      ];
-    case "barbarian":
-      return [
-        { id: "rage", name: "Rage", description: "Enter a furious rage for 1 minute: +2 damage on melee attacks, resistance to physical damage, advantage on Might checks (2 uses, recharges after a rest)", usesMax: 2, usesLeft: 2, recharge: "per-rest" },
-        { id: "reckless_attack", name: "Reckless Attack", description: "Attack with advantage, but enemies also have advantage against you until your next turn", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-        { id: "danger_sense", name: "Danger Sense", description: "Advantage on Agility saving throws against effects you can see (traps, spells, hazards)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-      ];
-    case "bard":
-      return [
-        { id: "bardic_inspiration", name: "Bardic Inspiration", description: "Grant an ally a d6 they can add to any roll in the next 10 minutes (Presence modifier uses, recharges after a long rest)", usesMax: 3, usesLeft: 3, recharge: "per-day" },
-        { id: "cutting_words", name: "Cutting Words", description: "Spend Bardic Inspiration to reduce an enemy's attack roll, damage roll, or ability check by 1d6", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-        { id: "vicious_mockery", name: "Vicious Mockery", description: "Psychic insult deals 1d4 damage and gives the target disadvantage on its next attack (Will save DC 13 to resist)", usesMax: -1, usesLeft: -1, recharge: "at-will" },
-      ];
-    default:
-      return [];
-  }
+  return _getStartingAbilitiesForGenre(DEFAULT_GENRE_ID, cls);
 }
 
-// Racial stat bonuses
+// Racial stat bonuses — fantasy default; for other genres call the registry
+// helper directly with the campaign's genreId.
 export function getRaceBonuses(race: string): Record<string, number> {
-  const r = race.toLowerCase();
-  switch (r) {
-    case "human":
-      return { might: 1, agility: 1, endurance: 1, intellect: 1, will: 1, presence: 1 };
-    case "elf":
-      return { agility: 2 };
-    case "dwarf":
-      return { endurance: 2 };
-    case "halfling":
-      return { agility: 2 };
-    case "half-orc":
-      return { might: 2, endurance: 1 };
-    case "tiefling":
-      return { presence: 2, intellect: 1 };
-    case "dragonborn":
-      return { might: 2, presence: 1 };
-    case "gnome":
-      return { intellect: 2 };
-    case "aasimar":
-      return { will: 2, presence: 1 };
-    case "tabaxi":
-      return { agility: 2, presence: 1 };
-    case "genasi":
-      return { intellect: 2, endurance: 1 };
-    case "firbolg":
-      return { will: 2, might: 1 };
-    default:
-      return {};
-  }
+  return _getRaceBonusesForGenre(DEFAULT_GENRE_ID, race);
 }
 
 // Background ability — one bonus ability tied to character background

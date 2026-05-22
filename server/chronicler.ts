@@ -73,9 +73,13 @@ export interface ChroniclerContext {
   knownLocations: Array<{ name: string; region?: string | null; rumored?: boolean }>;
   currentLocation?: string | null;
   currentRegion?: string | null;
+  /** Display label of the campaign genre (e.g. "Fantasy", "Sci-Fi"). Defaults
+   *  to "fantasy" if omitted so legacy callers keep working. */
+  genreLabel?: string | null;
 }
 
-const SYSTEM_PROMPT = `You are the CHRONICLER for an AI-driven fantasy RPG. The Game Master has just narrated a scene; your job is to read that prose and the player's intent, then extract a structured ledger of bookkeeping updates for the world state.
+function buildSystemPrompt(genreLabel: string): string {
+  return `You are the CHRONICLER for an AI-driven ${genreLabel.toLowerCase()} RPG. The Game Master has just narrated a scene; your job is to read that prose and the player's intent, then extract a structured ledger of bookkeeping updates for the world state.
 
 You are NOT a writer. You are a careful, conservative records clerk. You return ONLY a JSON object with one key, "updates", whose value is an array of update objects. Empty array is valid and often correct.
 
@@ -114,6 +118,7 @@ EVERY object in the updates array MUST include the "type" field. Do not omit it.
 ]}
 
 When a place is named that the party did not visit this turn, PREFER "LOCATION_MENTIONED" over "PLOT_FACT_SET" so the journey map can record it.`;
+}
 
 function buildUserPrompt(ctx: ChroniclerContext): string {
   const knownNpcList = ctx.knownNpcs.length
@@ -190,7 +195,7 @@ export async function runChronicler(ctx: ChroniclerContext): Promise<ChroniclerR
       temperature: 0.2,
       max_tokens: 800,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: buildSystemPrompt(ctx.genreLabel || "fantasy") },
         { role: "user", content: buildUserPrompt(ctx) },
       ],
     }, { signal: abortCtl.signal });

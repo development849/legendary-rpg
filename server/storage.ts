@@ -13,24 +13,34 @@ import {
 } from "@shared/schema";
 import { eq, and, or, desc, sql, ilike } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import { getDefaultStats, getStartingInventory, getStartingAbilities, getBackgroundAbility, CLASS_BASE_HP, CLASS_BASE_MP, getRaceBonuses } from "./gameEngine";
+import { getBackgroundAbility } from "./gameEngine";
+import {
+  DEFAULT_GENRE_ID,
+  getClassBaseHp,
+  getClassBaseMp,
+  getDefaultStatsForClass,
+  getStartingInventoryForClass,
+  getStartingAbilitiesForClass,
+  getRaceBonusesFor,
+} from "@shared/genres";
 
 // ─── Character Storage ─────────────────────────────────────────────────────────
 
 export async function createCharacter(userId: string, data: {
   name: string; class: string; race: string; background: string; appearance?: string; backstory?: string;
-  customBaseStats?: Record<string, number>; gender?: string; era?: string;
+  customBaseStats?: Record<string, number>; gender?: string; era?: string; genre?: string;
 }): Promise<Character> {
   const cls = data.class;
-  const baseHp = CLASS_BASE_HP[cls] ?? 10;
-  const baseMp = CLASS_BASE_MP[cls] ?? 0;
-  const baseStats = data.customBaseStats ?? getDefaultStats(cls);
-  const raceBonuses = getRaceBonuses(data.race);
+  const genre = data.genre ?? DEFAULT_GENRE_ID;
+  const baseHp = getClassBaseHp(genre, cls);
+  const baseMp = getClassBaseMp(genre, cls);
+  const baseStats = data.customBaseStats ?? getDefaultStatsForClass(genre, cls);
+  const raceBonuses = getRaceBonusesFor(genre, data.race);
   const stats = Object.fromEntries(
     Object.entries(baseStats).map(([k, v]) => [k, v + (raceBonuses[k] ?? 0)])
   );
-  const inventory = getStartingInventory(cls);
-  const classAbilities = getStartingAbilities(cls);
+  const inventory = getStartingInventoryForClass(genre, cls);
+  const classAbilities = getStartingAbilitiesForClass(genre, cls);
   const backgroundAbility = getBackgroundAbility(data.background, cls);
   const abilities = [...classAbilities, backgroundAbility];
 
@@ -41,6 +51,7 @@ export async function createCharacter(userId: string, data: {
     race: data.race,
     background: data.background,
     era: data.era ?? "high-fantasy",
+    genre,
     appearance: data.appearance ?? "",
     backstory: data.backstory ?? "",
     gender: data.gender ?? "",
@@ -85,7 +96,7 @@ export async function createCampaign(ownerId: string, data: {
   themes?: string[];
   contentRating?: string; noRomance?: boolean; noHorror?: boolean;
   fadeToBlack?: boolean; gmMode?: string; stylePack?: string;
-  npcControl?: string; era?: string;
+  npcControl?: string; era?: string; genre?: string;
 }): Promise<Campaign> {
   const [campaign] = await db.insert(campaigns).values({
     ownerId,
@@ -93,6 +104,7 @@ export async function createCampaign(ownerId: string, data: {
     description: data.description,
     setting: data.setting,
     era: data.era ?? "high-fantasy",
+    genre: data.genre ?? DEFAULT_GENRE_ID,
     worldName: data.worldName ?? null,
     worldDescription: data.worldDescription ?? null,
     worldSeed: data.worldSeed ?? null,

@@ -9,13 +9,14 @@ import { CYBERPUNK } from "./cyberpunk";
 import { SUPERNATURAL } from "./supernatural";
 import { POSTAPOC } from "./postapoc";
 import { COSMIC_HORROR } from "./cosmichorror";
+import { SUPERHERO } from "./superhero";
 import { STUB_GENRES } from "./stubs";
 
 export type { GenreDefinition, ClassDef, RaceDef } from "./types";
 
 export const DEFAULT_GENRE_ID = "fantasy";
 
-const REGISTRY: GenreDefinition[] = [FANTASY, SCIFI, CYBERPUNK, SUPERNATURAL, POSTAPOC, COSMIC_HORROR, ...STUB_GENRES];
+const REGISTRY: GenreDefinition[] = [FANTASY, SCIFI, CYBERPUNK, SUPERNATURAL, POSTAPOC, COSMIC_HORROR, SUPERHERO, ...STUB_GENRES];
 
 const BY_ID: Record<string, GenreDefinition> = Object.fromEntries(
   REGISTRY.map(g => [g.id, g]),

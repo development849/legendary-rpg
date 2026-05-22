@@ -35,14 +35,6 @@ function stub(args: {
   };
 }
 
-export const SUPERHERO = stub({
-  id: "superhero",
-  label: "Superhero",
-  tagline: "Cape, mask, mission.",
-  description: "Four-colour heroics. Powered protectors square off against villains, conspiracies, and their own demons.",
-  iconName: "Zap",
-});
-
 export const STEAMPUNK = stub({
   id: "steampunk",
   label: "Steampunk",
@@ -60,5 +52,5 @@ export const WEIRD_WEST = stub({
 });
 
 export const STUB_GENRES: GenreDefinition[] = [
-  SUPERHERO, STEAMPUNK, WEIRD_WEST,
+  STEAMPUNK, WEIRD_WEST,
 ];

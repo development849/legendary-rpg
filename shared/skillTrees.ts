@@ -886,6 +886,150 @@ export const CLASS_SKILL_TREES: Record<string, SkillTier[]> = {
       ],
     },
   ],
+  brawler: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "br_unbreakable", name: "Unbreakable", description: "Your skin laughs at small-arms fire.", mechanicalEffect: "Resistance to all non-energy physical damage" },
+        { id: "br_titanic_strike", name: "Titanic Strike", description: "One swing, one entire wall.", mechanicalEffect: "+1d8 damage on melee hits" },
+        { id: "br_second_breath", name: "Second Breath", description: "Take the hit, get back up.", mechanicalEffect: "Regain 1d10+level HP as a bonus action, per rest" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "br_ground_pound", name: "Ground-Pound", description: "Hit the deck hard enough that everyone in the room feels it.", mechanicalEffect: "AoE 3d6 + knockdown in 15ft, per encounter" },
+        { id: "br_human_shield", name: "Human Shield", description: "Step between the round and the bystander; eat it for them.", mechanicalEffect: "Redirect any attack on an adjacent ally to yourself with advantage on the soak" },
+        { id: "br_throw_it", name: "Throw It", description: "If it's heavier than you, it's a weapon.", mechanicalEffect: "Throw any object up to a car for 3d10 damage, per encounter" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "br_juggernaut", name: "Juggernaut", description: "Once you start moving, the wall is going to move, not you.", mechanicalEffect: "Plough through walls and crowds; cannot be stopped by mundane terrain" },
+        { id: "br_iron_lung", name: "Iron Lung", description: "Smoke, gas, vacuum — none of it slows you down.", mechanicalEffect: "Immune to suffocation, poison, and most environmental hazards" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "br_planetary_class", name: "Planetary Class", description: "There is nothing physical in this city that can put you down.", mechanicalEffect: "+4 Might, +4 Endurance; immune to non-magical physical damage" },
+        { id: "br_one_punch", name: "One Punch", description: "Once a day, the punch lands and that's the end of the fight.", mechanicalEffect: "Auto-knockout any non-boss enemy on a successful melee hit, per day" },
+      ],
+    },
+  ],
+  speedster: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "sp_blur", name: "Blur", description: "You are halfway out of frame at all times.", mechanicalEffect: "+3 AC; advantage on Agility saves" },
+        { id: "sp_multi_strike", name: "Multi-Strike", description: "Land four punches in the time the camera catches one.", mechanicalEffect: "+2 attacks per attack action (passive)" },
+        { id: "sp_evac", name: "Evac", description: "Get the civilian, the kid, and the cat out before the wall comes down.", mechanicalEffect: "Move up to 3 willing creatures 60ft each as one action, per encounter" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "sp_phase_run", name: "Phase-Run", description: "Run fast enough that the wall is a suggestion.", mechanicalEffect: "Move through solid objects up to 10ft thick, per encounter" },
+        { id: "sp_steal_the_round", name: "Steal the Round", description: "You go first. You go again.", mechanicalEffect: "Take an extra full turn at the start of each combat" },
+        { id: "sp_overspeed_perception", name: "Over-Speed Perception", description: "Bullets crawl. You step around them.", mechanicalEffect: "Cannot be surprised; reduce ranged damage taken by half" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "sp_sonic_punch", name: "Sonic Punch", description: "Wind up across the room and arrive with everything behind it.", mechanicalEffect: "4d8 damage single-target charge, per encounter" },
+        { id: "sp_running_on_water", name: "Running on Water", description: "Surface tension is a matter of velocity.", mechanicalEffect: "Run on water, walls, and ceilings as if they were ground" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "sp_speed_force", name: "Speed Force", description: "You are the fastest thing this city has ever known about.", mechanicalEffect: "+6 attacks per round; auto-act first; treat all terrain as open ground" },
+        { id: "sp_time_skip", name: "Time-Skip", description: "Step forward a heartbeat. Be where the fight isn't anymore.", mechanicalEffect: "Skip the next enemy turn directed at you, per day" },
+      ],
+    },
+  ],
+  mentalist: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "mn_mind_shield", name: "Mind Shield", description: "Other minds bounce off yours.", mechanicalEffect: "Advantage on all mental saves; resistance to psychic damage" },
+        { id: "mn_telekinetic_shove", name: "Telekinetic Shove", description: "Throw a car-door-sized force at someone across the room.", mechanicalEffect: "2d8 force damage + knockback 15ft, costs 2 Mental Strain" },
+        { id: "mn_read_the_room", name: "Read the Room", description: "Surface-thought scan of everyone present.", mechanicalEffect: "Learn one true intent or fear from every NPC in scene, per encounter" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "mn_charm_mind", name: "Charm Mind", description: "A gentle suggestion; the target thinks it was their idea.", mechanicalEffect: "Charm one target for 10 minutes (Will save DC 14), costs 3 Mental Strain" },
+        { id: "mn_telekinetic_armor", name: "Telekinetic Armor", description: "A constant shell of force keeps the worst of it off.", mechanicalEffect: "+3 AC; once per round, reduce incoming damage by 1d10 (costs 1 Mental Strain)" },
+        { id: "mn_psychic_burst", name: "Psychic Burst", description: "A scream behind their eyes that drops the whole room.", mechanicalEffect: "AoE 4d6 psychic in 20ft, costs 4 Mental Strain" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "mn_mind_control", name: "Mind Control", description: "Drop the suggestion, and the body follows.", mechanicalEffect: "Take full control of one target for 1 minute (Will save DC 16), costs 6 Mental Strain, per day" },
+        { id: "mn_telekinetic_flight", name: "Telekinetic Flight", description: "Float yourself the way you float everything else.", mechanicalEffect: "Fly at walking speed at will; sprint speed costs 1 Mental Strain/round" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "mn_alpha_class_psychic", name: "Alpha-Class Psychic", description: "There is no mind in this city you cannot brush.", mechanicalEffect: "+4 Will; psychic abilities at half Mental Strain cost; range becomes citywide" },
+        { id: "mn_thought_extraction", name: "Thought Extraction", description: "Pull every relevant fact out of a target's head in one moment.", mechanicalEffect: "Learn every fact the target knows on a chosen topic, per day" },
+      ],
+    },
+  ],
+  gadgeteer: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "gd_belt_specialist", name: "Belt Specialist", description: "The belt is deeper than it looks.", mechanicalEffect: "Utility Belt grants two uses per scene instead of one" },
+        { id: "gd_grapple_master", name: "Grapple-Master", description: "Rooftops are corridors, walls are floors.", mechanicalEffect: "Bonus-action 30ft swing; ignore vertical terrain" },
+        { id: "gd_field_medic", name: "Field Medic", description: "Patch the team up between rounds.", mechanicalEffect: "Restore 2d6 HP to an ally as a bonus action, per encounter" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "gd_emp_protocol", name: "EMP Protocol", description: "Drop the lights, the cameras, the henchmen's helmets.", mechanicalEffect: "Disable all electronics in 30ft, per encounter" },
+        { id: "gd_powered_suit", name: "Powered Suit Upgrade", description: "Mk II is plated, sealed, and runs hot.", mechanicalEffect: "+2 AC; resistance to one energy type of your choice" },
+        { id: "gd_drone_swarm", name: "Drone Swarm", description: "Eyes on every corner, fists on a few of them.", mechanicalEffect: "Deploy autonomous drones — reconnaissance, harassment, +1 to ally rolls in scene" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "gd_combat_protocols", name: "Combat Protocols", description: "The suit fires the gadget before you tell it to.", mechanicalEffect: "Two utility belt uses per round as bonus actions" },
+        { id: "gd_one_step_ahead", name: "One Step Ahead", description: "You ran the simulation before you arrived.", mechanicalEffect: "At the start of each encounter, the GM tells you one tactical detail the enemy is keeping back" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "gd_armory_complete", name: "Armory Complete", description: "There is a gadget on the belt for almost every problem.", mechanicalEffect: "+4 Intellect; unlimited belt uses per scene; auto-have the right gadget when narratively reasonable" },
+        { id: "gd_contingency", name: "Contingency", description: "Two months ago, you planned for exactly this.", mechanicalEffect: "Declare one pre-planned device or arrangement retroactively, per session" },
+      ],
+    },
+  ],
   investigator: [
     {
       level: 5,
@@ -1153,6 +1297,25 @@ export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
   ],
   Wayfarer: [
     { id: "wf_travelled_eye", name: "Travelled Eye", description: "Six continents and twenty-odd languages; little surprises you about people.", mechanicalEffect: "Recognise foreign sigils, customs, and currencies; +2 to social rolls with foreigners" },
+  ],
+  // ─── Superhero origin bonus skills ────────────────────────────────────────
+  Mutate: [
+    { id: "mut_native_power", name: "Native Power", description: "You were born with it. Nobody can take it away, nobody can shut it off.", mechanicalEffect: "Powers cannot be disarmed, suppressed, or dispelled by mundane means" },
+  ],
+  Tech: [
+    { id: "tech_workshop", name: "Workshop Access", description: "Between missions, the bench is yours. Rebuild, upgrade, refine.", mechanicalEffect: "Repair or upgrade one piece of gear between missions; +2 Intellect on technical rolls" },
+  ],
+  Cosmic: [
+    { id: "cos_star_sight", name: "Star-Sight", description: "You see the wider weather of the cosmos — fractures in reality others miss.", mechanicalEffect: "Always perceive cosmic, extra-dimensional, or reality-warping phenomena" },
+  ],
+  Trained: [
+    { id: "trd_peak_human", name: "Peak-Human Training", description: "You are not powered. You are simply better-prepared than anyone in the room.", mechanicalEffect: "Advantage on the first attack of any encounter; +2 to all skill checks" },
+  ],
+  Magical: [
+    { id: "mag_occult_sight", name: "Occult Sight", description: "Wards, pacts, summonings — they read to you the way street signs read to others.", mechanicalEffect: "Identify any ritual, sigil, or supernatural creature on sight" },
+  ],
+  Symbiotic: [
+    { id: "sym_symbiote_voice", name: "Symbiote Voice", description: "The thing bonded to you speaks. Sometimes it warns you. Sometimes it just gloats.", mechanicalEffect: "Once per session, the GM tells you one true thing the symbiote perceives that you would miss" },
   ],
 };
 

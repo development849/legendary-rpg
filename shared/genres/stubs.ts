@@ -35,14 +35,6 @@ function stub(args: {
   };
 }
 
-export const SUPERNATURAL = stub({
-  id: "supernatural",
-  label: "Supernatural",
-  tagline: "Modern world, hidden monsters.",
-  description: "Urban fantasy and modern horror. Hunters, witches, and werewolves in a world that only looks ordinary.",
-  iconName: "Moon",
-});
-
 export const POSTAPOC = stub({
   id: "postapoc",
   label: "Post-Apocalyptic",
@@ -84,6 +76,6 @@ export const WEIRD_WEST = stub({
 });
 
 export const STUB_GENRES: GenreDefinition[] = [
-  SUPERNATURAL, POSTAPOC,
+  POSTAPOC,
   COSMIC_HORROR, SUPERHERO, STEAMPUNK, WEIRD_WEST,
 ];

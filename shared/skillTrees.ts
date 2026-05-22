@@ -598,6 +598,150 @@ export const CLASS_SKILL_TREES: Record<string, SkillTier[]> = {
       ],
     },
   ],
+  occult_detective: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "od_eye_for_detail", name: "Eye for Detail", description: "You spot the wrong cufflink, the missing photograph, the dust nobody disturbed.", mechanicalEffect: "Advantage on investigation/perception in scenes" },
+        { id: "od_silver_tongue", name: "Silver Tongue", description: "You've talked your way out of two precincts and one nunnery.", mechanicalEffect: "+4 to persuasion and deception" },
+        { id: "od_dead_languages", name: "Dead Languages", description: "Latin, Enochian, Aramaic — you read enough to muddle through any ritual book.", mechanicalEffect: "Read any ancient/occult text fluently" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "od_contact_network", name: "Contact Network", description: "Across the country there's a librarian, a priest, or an ex-cop who owes you.", mechanicalEffect: "Summon NPC contact with relevant knowledge, per rest" },
+        { id: "od_press_them_harder", name: "Press Them Harder", description: "You break liars without raising your voice.", mechanicalEffect: "Force a single hidden truth from any NPC, per rest" },
+        { id: "od_quick_draw", name: "Quick Draw", description: "The revolver is in your hand before you've thought about it.", mechanicalEffect: "Draw and fire as a bonus action, advantage on initiative" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "od_supernatural_savant", name: "Supernatural Savant", description: "You've catalogued enough cases to recognise almost any creature on sight.", mechanicalEffect: "Always know type and one critical weakness of any supernatural foe" },
+        { id: "od_calculated_risk", name: "Calculated Risk", description: "You've thought three steps ahead and you've thought about the bad ones too.", mechanicalEffect: "Reroll one failed roll per encounter" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "od_lifetime_case", name: "Lifetime Case", description: "There is no investigation, mundane or otherwise, that you cannot eventually crack.", mechanicalEffect: "Auto-succeed on all investigation; +4 Intellect" },
+        { id: "od_called_in_a_favour", name: "Called In a Favour", description: "Somewhere, someone owes you something big enough to swing the scene.", mechanicalEffect: "Retroactively declare a major NPC ally owes you, per day" },
+      ],
+    },
+  ],
+  hunter: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "hu_iron_grip", name: "Iron Grip", description: "Your hands don't shake, even on the bad nights.", mechanicalEffect: "+2 to all weapon attack rolls" },
+        { id: "hu_creature_lore", name: "Creature Lore", description: "Vampire, wendigo, ghoul, ghost — you remember which round goes in which gun.", mechanicalEffect: "On first sight of any supernatural, learn its weakness" },
+        { id: "hu_trapsmith", name: "Trapsmith", description: "Salt circles, holy-water sprinklers, iron snares — you set them in your sleep.", mechanicalEffect: "Set anti-supernatural traps that deal 2d6 + restrain" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "hu_dual_wield", name: "Dual Wield", description: "Shotgun in one hand, sidearm in the other, both empty before the thing realises it's dead.", mechanicalEffect: "Wield two firearms, +1 attack per attack action" },
+        { id: "hu_blessed_rounds", name: "Blessed Rounds", description: "Every cartridge you fire was prayed over by someone who meant it.", mechanicalEffect: "+1d6 radiant damage vs. supernatural targets" },
+        { id: "hu_iron_will", name: "Iron Will", description: "You've seen worse. You'll see worse. You will not flinch.", mechanicalEffect: "Immune to fear, advantage on charm/possession saves" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "hu_vendetta", name: "Vendetta", description: "There is one specific thing you have been hunting your whole life — and you are very, very good at it.", mechanicalEffect: "+2d8 damage against a chosen creature-type" },
+        { id: "hu_last_round", name: "Last Round", description: "When the night gets bad, you get better.", mechanicalEffect: "When bloodied: +4 attack and crit on 18-20 until full HP" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "hu_apex_hunter", name: "Apex Hunter", description: "There is nothing walking, crawling, or drifting that you cannot put down.", mechanicalEffect: "+4 Might, first attack each round auto-hits, ignore supernatural resistances" },
+        { id: "hu_one_last_job", name: "One Last Job", description: "You came back for one more — and you came prepared for everything.", mechanicalEffect: "Once per day, take 3 actions on your turn" },
+      ],
+    },
+  ],
+  medium: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "md_seance", name: "Séance", description: "Gather the table, light the candle, ask the dead a real question.", mechanicalEffect: "Get a true answer from a known dead person, per rest" },
+        { id: "md_borrowed_skill", name: "Borrowed Skill", description: "Channel a spirit's expertise for the length of a single scene.", mechanicalEffect: "Gain temporary proficiency in any one skill for a scene" },
+        { id: "md_warding_circle", name: "Warding Circle", description: "Trace a circle of chalk, salt, or iron — nothing supernatural crosses it lightly.", mechanicalEffect: "Create a 10ft barrier vs. supernatural for 1 hour" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "md_possession", name: "Controlled Possession", description: "Invite a friendly spirit into your body — gain its strength for one fight, owe it a favour after.", mechanicalEffect: "+1 extra action and +2 to all attacks for 1 minute, per rest" },
+        { id: "md_psychometry", name: "Psychometry", description: "Touch an object and read the most important moment it has witnessed.", mechanicalEffect: "Read one critical past event from any object" },
+        { id: "md_dispel_spirit", name: "Dispel Spirit", description: "Force a hostile spirit, possession, or echo to release its hold.", mechanicalEffect: "Banish a possessing/spectral creature, per rest" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "md_other_side", name: "Walk the Other Side", description: "Step partially into the spirit world for a moment — pass through walls, ignore mortal attacks.", mechanicalEffect: "Phase out for 1 round (no damage, can move through obstacles), per rest" },
+        { id: "md_spectral_legion", name: "Spectral Legion", description: "Call several borrowed spirits to fight beside you, briefly.", mechanicalEffect: "Summon 3 spectral allies for 1 minute, per day" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "md_voice_of_the_dead", name: "Voice of the Dead", description: "Every spirit in the city has spoken to you at some point — and they remember.", mechanicalEffect: "Always know who died here, why, and one secret they kept" },
+        { id: "md_resurrection", name: "Call Them Back", description: "Pull a recently-departed soul back into its body — at a cost the GM names.", mechanicalEffect: "Revive 1 ally dead under 24 hours, per day" },
+      ],
+    },
+  ],
+  exorcist: [
+    {
+      level: 5,
+      pick: 1,
+      choices: [
+        { id: "ex_steady_faith", name: "Steady Faith", description: "Your faith does not waver, and creatures of the lower planes can feel it.", mechanicalEffect: "+2 AC vs. supernatural, advantage on fear saves" },
+        { id: "ex_warding_word", name: "Warding Word", description: "Speak the name your tradition gave you — supernatural creatures hesitate to cross you.", mechanicalEffect: "Force one supernatural target to lose its next action, per rest" },
+        { id: "ex_blessed_water", name: "Blessed Water", description: "Your supply of holy water never quite runs out.", mechanicalEffect: "Holy water restored at the start of every rest" },
+      ],
+    },
+    {
+      level: 10,
+      pick: 1,
+      choices: [
+        { id: "ex_mass_blessing", name: "Mass Blessing", description: "A sweeping rite that heals and shields every ally within arm's reach.", mechanicalEffect: "Heal all allies in 30ft for 2d6 HP, per rest" },
+        { id: "ex_anchor_the_soul", name: "Anchor the Soul", description: "Reach into a possessed ally and pin their soul firmly in place.", mechanicalEffect: "Cure 1 possessed/charmed ally and grant 1 hour immunity, per rest" },
+        { id: "ex_radiant_strike", name: "Radiant Strike", description: "Your blows ring with sanctified light.", mechanicalEffect: "+1d6 radiant damage on every melee hit" },
+      ],
+    },
+    {
+      level: 15,
+      pick: 1,
+      choices: [
+        { id: "ex_greater_banishment", name: "Greater Banishment", description: "A rite powerful enough to expel the highest demons.", mechanicalEffect: "Banish even powerful supernatural creatures, per day" },
+        { id: "ex_aegis_of_faith", name: "Aegis of Faith", description: "A radiant shield surrounds you, shrugging off the worst supernatural blows.", mechanicalEffect: "Resistance to all damage from supernatural creatures" },
+      ],
+    },
+    {
+      level: 20,
+      pick: 1,
+      choices: [
+        { id: "ex_living_sanctuary", name: "Living Sanctuary", description: "Wherever you stand becomes consecrated ground.", mechanicalEffect: "30ft aura: supernatural take 2d8 radiant/round, allies regen 5 HP/round" },
+        { id: "ex_miracle", name: "Miracle", description: "Once in a great while, faith is rewarded with something genuinely impossible.", mechanicalEffect: "Perform one true miracle, per day (GM-arbitrated)" },
+      ],
+    },
+  ],
 };
 
 export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
@@ -665,6 +809,25 @@ export const RACE_BONUS_SKILLS: Record<string, SkillOption[]> = {
   ],
   "Corpo-Defector": [
     { id: "cd_corp_access", name: "Lingering Corp Access", description: "Old credentials, still partially live.", mechanicalEffect: "Once per session, claim functioning low-level corporate access" },
+  ],
+  // ─── Modern Supernatural heritage bonus skills ────────────────────────────
+  Mundane: [
+    { id: "mun_refuses", name: "Refuses to Believe", description: "Your stubborn ordinariness is itself a kind of armour.", mechanicalEffect: "Once per session, ignore the effect of a single supernatural ability targeting you" },
+  ],
+  Touched: [
+    { id: "tch_sixth_sense", name: "Sixth Sense", description: "A prickle on the back of your neck has saved your life more than once.", mechanicalEffect: "Cannot be surprised by supernatural creatures; +2 to perception" },
+  ],
+  "Witch-Born": [
+    { id: "wb_inherited_craft", name: "Inherited Craft", description: "Old kitchen-magic answers when you call it.", mechanicalEffect: "Cast one minor cantrip-equivalent (light/ward/sense) at will" },
+  ],
+  "Half-Other": [
+    { id: "ho_other_sense", name: "Other-Sense", description: "You feel the supernatural the way you feel a draft.", mechanicalEffect: "Always know when supernatural is within 100ft and roughly where" },
+  ],
+  Cursed: [
+    { id: "cu_cursed_sight", name: "Cursed Sight", description: "You see what others cannot — and it sees you back.", mechanicalEffect: "See invisible/hidden supernatural at all times" },
+  ],
+  Reincarnated: [
+    { id: "re_past_life", name: "Past-Life Recall", description: "A buried lifetime surfaces at exactly the right moment.", mechanicalEffect: "Once per session, gain temporary proficiency and advantage on any one skill check" },
   ],
 };
 

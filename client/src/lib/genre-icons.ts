@@ -8,7 +8,8 @@ import {
   Sword, Swords, Dices, Shield, ScrollText, Target, Star, Flame, Music,
   Rocket, Cpu, Moon, Skull, Eye, Zap, Cog, Crosshair,
   Microscope, Bot, Brain,
-  Network, Users, Wrench, HelpCircle,
+  Network, Users, Wrench,
+  Search, Ghost, Cross, HelpCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Rocket, Cpu, Moon, Skull, Eye, Zap, Cog, Crosshair,
   Microscope, Bot, Brain,
   Network, Users, Wrench,
+  Search, Ghost, Cross,
 };
 
 export function resolveGenreIcon(iconName: string | null | undefined): LucideIcon {

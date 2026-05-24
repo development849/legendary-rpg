@@ -10,6 +10,7 @@ import {
   type ChatMessage, type InsertChatMessage,
   type Friendship,
   type CampaignSoundtrack,
+  eraIdForGenre,
 } from "@shared/schema";
 import { eq, and, or, desc, sql, ilike } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -54,7 +55,7 @@ export async function createCharacter(userId: string, data: {
     class: cls,
     race: data.race,
     background: data.background,
-    era: data.era ?? "high-fantasy",
+    era: eraIdForGenre(genre),
     genre,
     appearance: data.appearance ?? "",
     backstory: data.backstory ?? "",
@@ -107,7 +108,7 @@ export async function createCampaign(ownerId: string, data: {
     name: data.name,
     description: data.description,
     setting: data.setting,
-    era: data.era ?? "high-fantasy",
+    era: eraIdForGenre(data.genre ?? DEFAULT_GENRE_ID),
     genre: data.genre ?? DEFAULT_GENRE_ID,
     worldName: data.worldName ?? null,
     worldDescription: data.worldDescription ?? null,

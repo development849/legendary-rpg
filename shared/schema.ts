@@ -52,6 +52,12 @@ export const ERAS = [
     promptHint: "post-apocalyptic wasteland (ruined cities, scavenged gear, dust, makeshift armour)",
   },
   {
+    id: "weird-west",
+    label: "Weird West",
+    blurb: "Six-guns, dust, and frontier spirits.",
+    promptHint: "weird west frontier (six-guns, dusters, saloons, frontier towns, dark folk magic)",
+  },
+  {
     id: "custom",
     label: "Custom",
     blurb: "Describe your own setting.",
@@ -63,6 +69,26 @@ export type EraId = typeof ERAS[number]["id"];
 
 export function getEra(id: string | null | undefined) {
   return ERAS.find(e => e.id === id) ?? ERAS[0];
+}
+
+// Genre → Era map. Genre is now the authoritative setting selector in the UI;
+// era is derived from it server-side so existing era-based prompts (portrait,
+// backstory, GM context) automatically match the chosen genre.
+export const GENRE_TO_ERA: Record<string, EraId> = {
+  fantasy: "high-fantasy",
+  scifi: "sci-fi",
+  cyberpunk: "cyberpunk",
+  supernatural: "modern",
+  postapoc: "post-apocalyptic",
+  cosmichorror: "modern",
+  superhero: "modern",
+  steampunk: "steampunk",
+  weirdwest: "weird-west",
+};
+
+export function eraIdForGenre(genreId: string | null | undefined): EraId {
+  if (!genreId) return "high-fantasy";
+  return GENRE_TO_ERA[genreId] ?? "high-fantasy";
 }
 
 // ─── Characters ───────────────────────────────────────────────────────────────

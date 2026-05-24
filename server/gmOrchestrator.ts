@@ -797,10 +797,7 @@ Achievements: ${((c.achievements as any[]) || []).map((a: any) => `${a.title} [$
   }).join("\n\n");
 
   const campaignEra = getEra(campaign.era);
-  const mismatchedChars = (chars as any[]).filter(c => c.era && c.era !== campaign.era);
-  const mismatchBlock = mismatchedChars.length > 0
-    ? `\nDISPLACED TRAVELLERS — Some party members hail from a different era and have entered this world as outsiders. Treat them as fish-out-of-water characters who do not fully fit this setting:\n${mismatchedChars.map(c => `- ${c.name}: from ${getEra(c.era).label} (${getEra(c.era).blurb})`).join("\n")}\n`
-    : "";
+  const mismatchBlock = "";
 
   // Genre voice — registry-supplied tone/vocabulary directive that the GM
   // must adopt for the duration of the campaign. Fantasy's gmVoice keeps

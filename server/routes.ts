@@ -83,13 +83,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/characters/generate-backstory", requireAuth, async (req: any, res) => {
     try {
-      const { name, cls, race, background, personality, motivation, flaw, gender, era } = req.body;
+      const { name, cls, race, background, personality, motivation, flaw, gender, genre } = req.body;
       if (!cls || !race || !background) {
         return res.status(400).json({ error: "Missing required fields" });
       }
-      const { ERAS: ERAS_ALLOW } = await import("@shared/schema");
-      if (era !== undefined && era !== null && !ERAS_ALLOW.some(e => e.id === era)) {
-        return res.status(400).json({ error: "Invalid era" });
+      if (genre !== undefined && genre !== null && !isGenrePlayable(genre)) {
+        return res.status(400).json({ error: "Invalid or unavailable genre" });
       }
 
       const OpenAI = (await import("openai")).default;
@@ -108,8 +107,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const pronouns = gender && pronounMap[gender] ? pronounMap[gender] : null;
       const genderLabel = gender && gender !== "prefer-not-to-say" ? gender : null;
 
-      const { getEra } = await import("@shared/schema");
-      const eraDef = getEra(era);
+      const { getEra, eraIdForGenre } = await import("@shared/schema");
+      const eraDef = getEra(eraIdForGenre(genre));
 
       const prompt = [
         `Write a compelling 2–3 paragraph backstory for an RPG character set in ${eraDef.promptHint}.`,

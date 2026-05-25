@@ -354,8 +354,8 @@ export default function CreateCharacterPage() {
         {step === "class" && (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-sans font-bold tracking-widest">Choose Your Class</h2>
-              <p className="text-muted-foreground font-serif italic">Your calling defines your strengths and abilities</p>
+              <h2 className="text-2xl font-sans font-bold tracking-widest">Choose Your Role</h2>
+              <p className="text-muted-foreground font-serif italic">Your role adapts to the world you play in</p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {CLASSES.map((cls) => (
@@ -391,10 +391,10 @@ export default function CreateCharacterPage() {
             </div>
             <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-card/95 backdrop-blur-sm border-t border-border flex items-center justify-between gap-3 z-20" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
               <p className="text-xs text-muted-foreground font-serif italic min-w-0 flex-1">
-                {selectedClass ? `Class: ${CLASSES.find(c => c.id === selectedClass)?.name}` : "Select a class to continue"}
+                {selectedClass ? `Role: ${CLASSES.find(c => c.id === selectedClass)?.name}` : "Select a role to continue"}
               </p>
               <Button onClick={() => setStep("race")} disabled={!selectedClass} data-testid="button-next-race" className="min-h-11">
-                Next: Choose Race
+                Next: Choose Origin
               </Button>
             </div>
           </div>
@@ -404,8 +404,8 @@ export default function CreateCharacterPage() {
         {step === "race" && (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-sans font-bold tracking-widest">Choose Your Race</h2>
-              <p className="text-muted-foreground font-serif italic">Your heritage shapes your place in the world</p>
+              <h2 className="text-2xl font-sans font-bold tracking-widest">Choose Your Origin</h2>
+              <p className="text-muted-foreground font-serif italic">Your origin adapts to the world you play in</p>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
               {RACES.map((race) => (
@@ -435,9 +435,9 @@ export default function CreateCharacterPage() {
             <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-card/95 backdrop-blur-sm border-t border-border flex items-center justify-between gap-3 z-20" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
               <Button variant="outline" onClick={() => setStep("class")} data-testid="button-back-class" className="min-h-11">Back</Button>
               {!selectedRace && (
-                <p className="text-xs text-muted-foreground font-serif italic hidden sm:block min-w-0 flex-1 text-center">Select a race to continue</p>
+                <p className="text-xs text-muted-foreground font-serif italic hidden sm:block min-w-0 flex-1 text-center">Select an origin to continue</p>
               )}
-              <Button onClick={goToStats} disabled={!selectedRace} data-testid="button-next-stats" className="min-h-11" title={!selectedRace ? "Select a race to continue" : undefined}>Next: Attributes</Button>
+              <Button onClick={goToStats} disabled={!selectedRace} data-testid="button-next-stats" className="min-h-11" title={!selectedRace ? "Select an origin to continue" : undefined}>Next: Attributes</Button>
             </div>
           </div>
         )}

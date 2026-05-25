@@ -1,7 +1,7 @@
 import { Switch, Route, Redirect } from "wouter";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
@@ -70,6 +70,22 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
   return <Component {...rest} />;
 }
 
+// Phase 4 — admin route guard: redirects non-admin users immediately rather than
+// rendering AdminPage and showing a server-round-trip spinner then an in-page error.
+function AdminRoute() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data, isLoading: adminLoading } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+    retry: false,
+    enabled: !!isAuthenticated,
+  });
+
+  if (authLoading || adminLoading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Redirect to="/auth" />;
+  if (!data?.isAdmin) return <Redirect to="/dashboard" />;
+  return <AdminPage />;
+}
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   return (
@@ -91,7 +107,7 @@ function Router() {
       <Route path="/campaigns/new" component={() => <ProtectedRoute component={CreateCampaignPage} />} />
       <Route path="/lobby/:partyId" component={({ params }: any) => <ProtectedRoute component={LobbyPage} partyId={params.partyId} />} />
       <Route path="/play/:partyId" component={({ params }: any) => <ProtectedRoute component={GameSessionPage} partyId={params.partyId} />} />
-      <Route path="/admin" component={() => <ProtectedRoute component={AdminPage} />} />
+      <Route path="/admin" component={() => <AdminRoute />} />
       <Route component={() => <Redirect to="/" />} />
     </Switch>
   );
